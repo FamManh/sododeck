@@ -23,7 +23,7 @@ import {
 
 import { useUiStore, type ColumnRef, type Selection } from '../../state/ui-store';
 import { oneStep } from '../fields/one-step';
-import { LOCKED_HINT, lockableIds, refuseLocked } from '../lock';
+import { LOCKED_HINT, lockableIds, lockableImageIds, refuseLocked } from '../lock';
 import { focusRowSoon, leaveRows } from '../table/row-focus';
 import type { Action, ActionContext } from './types';
 
@@ -155,21 +155,40 @@ export function moveRow(editor: DeckEditor, deck: SododeckFile, row: ColumnRef, 
 export function toggleLockSelection(
   editor: DeckEditor,
   deck: SododeckFile,
-  selection: Pick<Selection, 'nodes' | 'groups'>,
+  selection: Pick<Selection, 'nodes' | 'groups'> & Partial<Pick<Selection, 'images'>>,
 ): void {
   const ids = new Set(lockableIds(deck, selection));
   const nodes = deck.nodes.filter((node) => ids.has(node.id));
-  if (nodes.length === 0) return;
-  const lock = !nodes.every(isLocked);
-  editor.setLocked(
-    nodes.map((node) => node.id),
-    lock,
-  );
+  const imageIds = new Set(lockableImageIds(deck, selection));
+  const images = (deck.images ?? []).filter((image) => imageIds.has(image.id));
+  if (nodes.length === 0 && images.length === 0) return;
+  const lock = !(nodes.every(isLocked) && images.every(isLocked));
+  // Cards and pictures lock together, so one undo step brings both back.
+  editor.batch(() => {
+    if (nodes.length > 0)
+      editor.setLocked(
+        nodes.map((node) => node.id),
+        lock,
+      );
+    if (images.length > 0)
+      editor.setLocked(
+        images.map((image) => image.id),
+        lock,
+        'images',
+      );
+  });
   const ui = useUiStore.getState();
   // A lock ends any editing of the card's rows (FR-023).
   if (lock && nodes.some((node) => node.id === ui.columnEdit?.tableId)) ui.endColumnEdit();
+  const count = nodes.length + images.length;
   const name =
-    nodes.length === 1 ? (nodes[0]?.title ?? 'card') : plural(nodes.length, 'card', 'cards');
+    count === 1
+      ? (nodes[0]?.title ?? 'image')
+      : nodes.length === 0
+        ? plural(images.length, 'image', 'images')
+        : images.length === 0
+          ? plural(nodes.length, 'card', 'cards')
+          : plural(count, 'item', 'items');
   ui.announce(`${lock ? 'Locked' : 'Unlocked'} ${name}`);
 }
 
@@ -181,7 +200,9 @@ export function toggleLock(editor: DeckEditor, deck: SododeckFile, ids: readonly
 const allLocked = (ctx: ActionContext) => {
   const ids = new Set(lockableIds(ctx.deck, ctx.selection));
   const nodes = ctx.deck.nodes.filter((node) => ids.has(node.id));
-  return nodes.length > 0 && nodes.every(isLocked);
+  const imageIds = new Set(lockableImageIds(ctx.deck, ctx.selection));
+  const images = (ctx.deck.images ?? []).filter((image) => imageIds.has(image.id));
+  return nodes.length + images.length > 0 && nodes.every(isLocked) && images.every(isLocked);
 };
 
 /** A row flag toggle: one `updateColumn`, `true` or removed. */
@@ -265,7 +286,10 @@ export const TABLE_ACTIONS: readonly Action[] = [
       toolbar: ['component', 'components', 'group', 'mixed'],
     },
     // Nothing to lock (a group with no cards, only notes and connectors): not offered.
-    applies: (ctx) => lockableIds(ctx.deck, ctx.selection).length > 0,
+    applies: (ctx) =>
+      lockableIds(ctx.deck, ctx.selection).length +
+        lockableImageIds(ctx.deck, ctx.selection).length >
+      0,
     checked: allLocked,
     run: (ctx) => {
       toggleLockSelection(ctx.editor, ctx.deck, ctx.selection);

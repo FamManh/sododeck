@@ -14,7 +14,13 @@
  * The session lives in a handler ref for the length of one drag; guides, the drop target and the
  * offset readout are UI-only store fields. Nothing here is document state.
  */
-import { isLocked, isSchemaGroupId, viewNodePosition, type DeckEditor } from '@sododeck/model';
+import {
+  imageBox,
+  isLocked,
+  isSchemaGroupId,
+  viewNodePosition,
+  type DeckEditor,
+} from '@sododeck/model';
 import type { Frame, Id } from '@sododeck/schema';
 import type { NodeChange } from '@xyflow/react';
 
@@ -28,7 +34,7 @@ import {
   type Point,
   type Rect,
 } from '../canvas-geometry';
-import { GROUP_NODE_PREFIX } from '../deck-to-flow';
+import { GROUP_NODE_PREFIX, IMAGE_NODE_PREFIX } from '../deck-to-flow';
 import { effectiveLevel, levelForZoom } from '../levels';
 import { scopeOf, visibleGraph } from '../visible-graph';
 import { readViewState } from '../views/use-current-view';
@@ -40,7 +46,7 @@ import { refuseLocked } from '../lock';
 import { equalGaps, nearestGap } from './gaps';
 import { membershipChanges, type MembershipChange } from './membership-changes';
 import { snap, snapCandidates, type SnapCandidates } from './snap';
-import { groupSubtree } from './subtree';
+import { groupSubtree, groupSubtreeImages } from './subtree';
 
 /** DESIGN.md "Snap guide": within 6 screen px. */
 const SNAP_SCREEN_PX = 6;
@@ -68,15 +74,21 @@ export interface DragSession {
   /** Dragged components (the selection), and dragged groups (their subtrees move along). */
   nodes: readonly Id[];
   groups: readonly Id[];
+  /** Dragged images (055): the selected ones; those inside a dragged group move along too. */
+  images: readonly Id[];
   /** Where every moving component and frame started, as the view draws them. */
   start: Readonly<Record<Id, Point>>;
   frames: Readonly<Record<Id, Frame>>;
+  /** Where every moving image started (the selected ones and the members of dragged groups). */
+  imageStart: Readonly<Record<Id, Point>>;
 }
 
 /** The copies of an ⌥ duplicate-drag (051 R2): they move instead of the originals. */
 interface Copies {
   nodes: readonly Id[];
   groups: readonly Id[];
+  images: readonly Id[];
+  imageStart: Readonly<Record<Id, Point>>;
   /** Where the copies start (the originals' start): the drag delta applies to these. */
   start: Readonly<Record<Id, Point>>;
   frames: Readonly<Record<Id, Frame>>;
@@ -212,7 +224,7 @@ export class DragController {
   /** A drag of the selected components (and selected groups, if the selection is mixed). */
   startNodes(anchor: Id): void {
     const { selection } = useUiStore.getState();
-    this.begin(anchor, 'nodes', selection.nodes, selection.groups);
+    this.begin(anchor, 'nodes', selection.nodes, selection.groups, undefined, selection.images);
   }
 
   /**
@@ -229,6 +241,7 @@ export class DragController {
       selection.nodes,
       selection.groups,
       { groupId, ...(via === undefined ? {} : { position: via.position }) },
+      selection.images,
     );
   }
 
@@ -238,6 +251,7 @@ export class DragController {
     nodes: readonly Id[],
     groups: readonly Id[],
     group?: { groupId: Id; position?: Point },
+    images: readonly Id[] = [],
   ) {
     // React Flow skips the stop of an aborted drag: never leave its gesture open.
     if (this.session !== null) this.stop();
@@ -280,6 +294,17 @@ export class DragController {
       start[node.id] = at;
       movingBoxes.push({ ...at, ...cardSize(node, level) });
     });
+    // Images (055): the selected ones that are not locked, and the members of dragged groups.
+    const deckImages = deck.images ?? [];
+    const lockedImages = new Set(deckImages.filter(isLocked).map((image) => image.id));
+    const draggedImages = images.filter((id) => !lockedImages.has(id));
+    const movingImages = new Set([...draggedImages, ...groupSubtreeImages(deck, movable)]);
+    const imageStart: Record<Id, Point> = {};
+    for (const image of deckImages) {
+      if (!movingImages.has(image.id)) continue;
+      imageStart[image.id] = image.position;
+      movingBoxes.push(imageBox(image));
+    }
     const frames: Record<Id, Frame> = {};
     for (const id of tree.groups) {
       const rect = bounds.get(id);
@@ -290,13 +315,17 @@ export class DragController {
         };
       }
     }
-    const anchorId = group?.groupId ?? anchor;
+    const anchorIsImage = anchor.startsWith(IMAGE_NODE_PREFIX);
+    const anchorId =
+      group?.groupId ?? (anchorIsImage ? anchor.slice(IMAGE_NODE_PREFIX.length) : anchor);
     const anchorStart =
       kind === 'group'
         ? (group?.position ??
           frames[anchorId]?.position ??
           pointOf(bounds.get(anchorId)) ?? { x: 0, y: 0 })
-        : start[anchorId];
+        : anchorIsImage
+          ? imageStart[anchorId]
+          : start[anchorId];
     if (anchorStart === undefined) return;
 
     // Snapping looks at the components on screen that are not moving (R7).
@@ -322,6 +351,10 @@ export class DragController {
           rect.y <= onScreen.y + onScreen.height);
       if (inView) others.push(rect);
     });
+    for (const image of view.deck.images ?? []) {
+      if (movingImages.has(image.id) || graph.hiddenImages.has(image.id)) continue;
+      others.push(imageBox(image));
+    }
     const box = union([
       ...movingBoxes,
       ...Object.values(frames).map((f) => ({ ...f.position, ...f.size })),
@@ -336,8 +369,10 @@ export class DragController {
       copies: null,
       nodes,
       groups: movable,
+      images: draggedImages,
       start,
       frames,
+      imageStart,
       anchorStart,
       box,
       candidates: snapCandidates(others),
@@ -354,7 +389,9 @@ export class DragController {
       home:
         kind === 'group'
           ? deck.groups.find((g) => g.id === anchorId)?.parent
-          : deck.nodes.find((n) => n.id === anchorId)?.group,
+          : anchorIsImage
+            ? deckImages.find((i) => i.id === anchorId)?.group
+            : deck.nodes.find((n) => n.id === anchorId)?.group,
       mods: { alt: false, shift: false, mod: false },
       arrow: { x: 0, y: 0 },
       lastRaw: null,
@@ -382,7 +419,11 @@ export class DragController {
   change(changes: NodeChange[]): NodeChange[] {
     const session = this.session;
     if (session === null) return changes;
-    const moving = new Set([...Object.keys(session.start), session.anchor]);
+    const moving = new Set([
+      ...Object.keys(session.start),
+      ...Object.keys(session.imageStart).map((id) => `${IMAGE_NODE_PREFIX}${id}`),
+      session.anchor,
+    ]);
     const rest: NodeChange[] = [];
     for (const change of changes) {
       if (change.type !== 'position') {
@@ -440,7 +481,16 @@ export class DragController {
     const y = session.anchorStart.y + session.delta.y;
     if (session.kind === 'group') return { x, y };
     const level = effectiveLevel(levelForZoom(this.deps.getViewport().zoom), scopeOf([]));
-    const anchorNode = readDeck(this.deps.editor.doc).nodes.find((n) => n.id === session.anchor);
+    const deck = readDeck(this.deps.editor.doc);
+    if (session.anchor.startsWith(IMAGE_NODE_PREFIX)) {
+      const id = session.anchor.slice(IMAGE_NODE_PREFIX.length);
+      const image = (deck.images ?? []).find((i) => i.id === id);
+      if (image !== undefined) {
+        const box = imageBox(image);
+        return { x: x + box.width / 2, y: y + box.height / 2 };
+      }
+    }
+    const anchorNode = deck.nodes.find((n) => n.id === session.anchor);
     const size = anchorNode === undefined ? nodeSize(level) : cardSize(anchorNode, level);
     return { x: x + size.width / 2, y: y + size.height / 2 };
   }
@@ -506,7 +556,11 @@ export class DragController {
     for (const [id, f] of Object.entries(startFrames)) {
       frames[id] = { position: { x: f.position.x + dx, y: f.position.y + dy }, size: f.size };
     }
+    const imageStart = session.copies?.imageStart ?? session.imageStart;
     editor.batch(() => {
+      for (const [id, p] of Object.entries(imageStart)) {
+        editor.moveImage(id, { x: p.x + dx, y: p.y + dy });
+      }
       if (Object.keys(positions).length > 0) editor.moveInView(session.viewId, positions);
       if (Object.keys(frames).length > 0) editor.setGroupFrames(session.viewId, frames);
     });
@@ -527,6 +581,7 @@ export class DragController {
       editor.moveInView(session.viewId, session.start);
       if (Object.keys(session.frames).length > 0)
         editor.setGroupFrames(session.viewId, session.frames);
+      for (const [id, p] of Object.entries(session.imageStart)) editor.moveImage(id, p);
     });
     const deck = readDeck(editor.doc);
     const fragment = selectionFragment(deck, session, session.viewId);
@@ -555,7 +610,19 @@ export class DragController {
         };
       }
     }
-    session.copies = { nodes: ids.nodes, groups: ids.groups, start, frames };
+    const pastedImages = new Set(ids.images);
+    const imageStart: Record<Id, Point> = {};
+    for (const image of view.deck.images ?? []) {
+      if (pastedImages.has(image.id)) imageStart[image.id] = image.position;
+    }
+    session.copies = {
+      nodes: ids.nodes,
+      groups: ids.groups,
+      images: ids.images,
+      imageStart,
+      start,
+      frames,
+    };
     useUiStore.getState().setDragCopyIds([...ids.nodes, ...ids.groups]);
   }
 
@@ -567,6 +634,10 @@ export class DragController {
     editor.batch(() => {
       for (const id of copies.nodes) {
         if (readDeck(editor.doc).nodes.some((n) => n.id === id)) editor.remove('nodes', id);
+      }
+      for (const id of copies.images) {
+        if ((readDeck(editor.doc).images ?? []).some((i) => i.id === id))
+          editor.remove('images', id);
       }
       // Pasted parents come first: remove the innermost copies first.
       for (const id of [...copies.groups].reverse()) {
@@ -606,7 +677,11 @@ export class DragController {
       }
       if (session.copies !== null) {
         const ui = useUiStore.getState();
-        ui.select({ nodes: [...session.copies.nodes], groups: [...session.copies.groups] });
+        ui.select({
+          nodes: [...session.copies.nodes],
+          groups: [...session.copies.groups],
+          images: [...session.copies.images],
+        });
         ui.announce(`Duplicated ${plural(session.copies.nodes.length, 'component')}`);
       } else if (session.moved) {
         this.drop(session);
@@ -629,6 +704,7 @@ export class DragController {
     editor.batch(() => {
       for (const change of changes) {
         if (change.kind === 'node') editor.update('nodes', change.id, { group: change.to ?? null });
+        else if (change.kind === 'image') editor.setImageGroup(change.id, change.to ?? null);
         else editor.update('groups', change.id, { parent: change.to ?? null });
       }
     });
@@ -671,13 +747,16 @@ function withLabels(guide: Guide, box: Rect, others: readonly Rect[]): Guide {
 
 /** "Moved Fraud check into Payments" / "Moved 3 components out of Payments" (contract). */
 export function moveMessage(
-  deck: Pick<ReturnType<typeof readDeck>, 'nodes' | 'groups'>,
+  deck: Pick<ReturnType<typeof readDeck>, 'nodes' | 'groups'> &
+    Partial<Pick<ReturnType<typeof readDeck>, 'images'>>,
   changes: readonly MembershipChange[],
 ): string {
   const title = (change: MembershipChange) =>
     change.kind === 'node'
       ? (deck.nodes.find((n) => n.id === change.id)?.title ?? change.id)
-      : (deck.groups.find((g) => g.id === change.id)?.title ?? change.id);
+      : change.kind === 'image'
+        ? 'image'
+        : (deck.groups.find((g) => g.id === change.id)?.title ?? change.id);
   const groupTitle = (id: Id) => deck.groups.find((g) => g.id === id)?.title ?? id;
   const [first] = changes;
   if (first === undefined) return '';

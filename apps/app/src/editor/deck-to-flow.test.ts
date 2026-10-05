@@ -1951,6 +1951,19 @@ describe('images in the stack (055)', () => {
     expect(draw(withImages([image('i', 0)]))).toEqual(['c0', 'image:i', 'c1']);
   });
 
+  it('draws no node for an image hidden inside a collapsed group, and a connector to it ends on the card', () => {
+    const file = {
+      ...withImages([{ ...image('i', 5), group: 'g' }]),
+      groups: [{ id: 'g', title: 'Core' }],
+      edges: [{ id: 'e', from: 'c0', to: 'i' }],
+    };
+    const graph = visibleGraph(file, { node: null, group: null }, new Set(['g']));
+    expect(toImageNodes(file, EMPTY_SELECTION, false, graph.hiddenImages)).toEqual([]);
+    expect(toImageNodes(file, EMPTY_SELECTION)).toHaveLength(1);
+    const edges = toFlowEdges(file, topLevelGraph(file), view());
+    expect(edges.map((edge) => [edge.source, edge.target])).toEqual([['c0', 'image:i']]);
+  });
+
   it('puts an image below every card under the connectors (negative z-index)', () => {
     const file = withImages([image('i', -1)]);
     expect(draw(file)).toEqual(['image:i', 'c0', 'c1']);

@@ -2,7 +2,7 @@
  * A group's lock (054, research R5): derived from its cards, never stored. Pure and free of the
  * app's stores, so the canvas projection (`deck-to-flow.ts`) can use it too.
  */
-import { descendantNodeIds, isLocked } from '@sododeck/model';
+import { descendantImageIds, descendantNodeIds, isLocked } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 export type GroupLockState = 'locked' | 'unlocked' | 'empty';
@@ -64,6 +64,22 @@ export function lockableIds(
   const out = new Set(selection.nodes.filter((id) => known.has(id)));
   for (const groupId of selection.groups) {
     for (const id of descendantNodeIds(deck, groupId)) out.add(id);
+  }
+  return [...out];
+}
+
+/**
+ * The images Lock acts on for a selection (055): the selected images and every image inside a
+ * selected group, each once. Locking a group locks its pictures with its cards.
+ */
+export function lockableImageIds(
+  deck: Pick<SododeckFile, 'nodes' | 'groups'> & Partial<Pick<SododeckFile, 'images'>>,
+  selection: { readonly images?: readonly Id[]; readonly groups: readonly Id[] },
+): Id[] {
+  const known = new Set((deck.images ?? []).map((image) => image.id));
+  const out = new Set((selection.images ?? []).filter((id) => known.has(id)));
+  for (const groupId of selection.groups) {
+    for (const id of descendantImageIds(deck, groupId)) out.add(id);
   }
   return [...out];
 }

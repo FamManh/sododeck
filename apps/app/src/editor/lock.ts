@@ -15,6 +15,7 @@ export {
   groupLockState,
   isGroupLocked,
   lockableIds,
+  lockableImageIds,
   lockedGroupIds,
   type GroupLockState,
 } from './group-lock';

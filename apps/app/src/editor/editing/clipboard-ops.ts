@@ -25,7 +25,7 @@ import { readViewState } from '../views/use-current-view';
 import { commonParent } from './common-parent';
 import { dropTarget, frameEntries } from './drop-target';
 import { PASTE_STEP, pastePlacement } from './paste-placement';
-import { groupSubtree } from './subtree';
+import { groupSubtree, groupSubtreeImages } from './subtree';
 
 /** A timestamp (never content) telling Paste items a fragment was copied (R9). */
 export const FRAGMENT_HINT_KEY = 'sododeck:fragment-copied';
@@ -65,14 +65,21 @@ export function countText(fragment: Pick<Fragment, 'deck'>): string {
  */
 export function selectionFragment(
   deck: SododeckFile,
-  selection: Pick<Selection, 'nodes' | 'groups'>,
+  selection: Pick<Selection, 'nodes' | 'groups'> & Partial<Pick<Selection, 'images'>>,
   viewId: Id,
 ): Fragment | null {
   const tree = groupSubtree(deck, selection.groups);
   const nodes = [...new Set([...selection.nodes, ...tree.nodes])];
-  if (nodes.length === 0 && tree.groups.length === 0) return null;
+  const images = [
+    ...new Set([...(selection.images ?? []), ...groupSubtreeImages(deck, selection.groups)]),
+  ];
+  if (nodes.length === 0 && tree.groups.length === 0 && images.length === 0) return null;
   // Tables keep their outgoing foreign keys (043 R10): paste keeps them when the target exists.
-  return toFragment(deck, { nodes, groups: tree.groups }, { viewId, keepOutgoing: true });
+  return toFragment(
+    deck,
+    { nodes, groups: tree.groups, ...(images.length === 0 ? {} : { images }) },
+    { viewId, keepOutgoing: true },
+  );
 }
 
 /** The group a paste at `point` goes into: the innermost frame there, else the drilled group. */

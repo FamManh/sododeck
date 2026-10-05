@@ -485,6 +485,9 @@ export function useCanvasHandlers() {
           if (!ui().selection.images.includes(imageId)) ui().select({ images: [imageId] });
           ui().focus(null);
           ui().focusEdge(null);
+          // Snapping, drop into groups, ⌥ copies and Esc live in the controller, as for cards.
+          controller.startNodes(node.id);
+          return;
         } else if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
           ui().focus(null);
@@ -536,9 +539,14 @@ export function useCanvasHandlers() {
           const viewId = readViewState(editor.doc).view.id;
           const positions: Record<string, { x: number; y: number }> = {};
           editor.batch(() => {
+            const lockedImages = new Set(
+              (readDeck(editor.doc).images ?? []).filter((i) => i.locked === true).map((i) => i.id),
+            );
             for (const { id, stickyId, imageId, x, y } of moves) {
-              if (imageId !== null) editor.moveImage(imageId, { x, y });
-              else if (stickyId !== null) moveStickyInView(editor, stickyId, { x, y });
+              if (imageId !== null) {
+                // A locked picture stays where it is (React Flow never drags one; this is the backstop).
+                if (!lockedImages.has(imageId)) editor.moveImage(imageId, { x, y });
+              } else if (stickyId !== null) moveStickyInView(editor, stickyId, { x, y });
               else positions[id] = { x, y };
             }
             if (Object.keys(positions).length > 0) editor.moveInView(viewId, positions);

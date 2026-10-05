@@ -91,3 +91,61 @@ describe('membershipChanges (016 R6, FR-018–020)', () => {
     ).toEqual([]);
   });
 });
+
+describe('images (055)', () => {
+  const withImages = {
+    ...deck,
+    images: [
+      {
+        id: 'i1',
+        asset: 'a'.repeat(64),
+        position: { x: 0, y: 0 },
+        size: { width: 80, height: 60 },
+      },
+      {
+        id: 'i2',
+        asset: 'a'.repeat(64),
+        position: { x: 0, y: 0 },
+        size: { width: 80, height: 60 },
+        group: 'inner',
+      },
+    ],
+  };
+
+  it('moves a dragged image into the target and out of its group', () => {
+    expect(
+      membershipChanges(
+        withImages,
+        { nodes: [], groups: [], images: ['i1', 'i2'] },
+        { target: 'shop', scope: undefined, keep: false },
+      ),
+    ).toEqual([
+      { kind: 'image', id: 'i1', from: undefined, to: 'shop' },
+      { kind: 'image', id: 'i2', from: 'inner', to: 'shop' },
+    ]);
+    expect(
+      membershipChanges(
+        withImages,
+        { nodes: [], groups: [], images: ['i2'] },
+        { target: null, scope: undefined, keep: false },
+      ),
+    ).toEqual([{ kind: 'image', id: 'i2', from: 'inner', to: undefined }]);
+  });
+
+  it('an image inside a dragged group stays in it; ⌥ changes nothing', () => {
+    expect(
+      membershipChanges(
+        withImages,
+        { nodes: [], groups: ['shop'], images: ['i2'] },
+        { target: null, scope: undefined, keep: false },
+      ),
+    ).toEqual([]);
+    expect(
+      membershipChanges(
+        withImages,
+        { nodes: [], groups: [], images: ['i1'] },
+        { target: 'shop', scope: undefined, keep: true },
+      ),
+    ).toEqual([]);
+  });
+});

@@ -5,10 +5,10 @@
  */
 import type { Id, SododeckFile } from '@sododeck/schema';
 
-import { groupAncestors, groupSubtree } from './subtree';
+import { groupAncestors, groupSubtree, groupSubtreeImages } from './subtree';
 
 export interface MembershipChange {
-  kind: 'node' | 'group';
+  kind: 'node' | 'group' | 'image';
   id: Id;
   from: Id | undefined;
   to: Id | undefined;
@@ -24,8 +24,8 @@ export interface DropOptions {
 }
 
 export function membershipChanges(
-  deck: Pick<SododeckFile, 'nodes' | 'groups'>,
-  dragged: { nodes: readonly Id[]; groups: readonly Id[] },
+  deck: Pick<SododeckFile, 'nodes' | 'groups'> & Partial<Pick<SododeckFile, 'images'>>,
+  dragged: { nodes: readonly Id[]; groups: readonly Id[]; images?: readonly Id[] },
   { target, scope, keep }: DropOptions,
 ): MembershipChange[] {
   if (keep) return [];
@@ -48,6 +48,14 @@ export function membershipChanges(
     const node = nodesById.get(id);
     if (node === undefined || members.has(id)) continue;
     if (node.group !== to) changes.push({ kind: 'node', id, from: node.group, to });
+  }
+  // Images (055) join and leave groups like cards; those inside a dragged group stay in it.
+  const carriedImages = new Set(groupSubtreeImages(deck, dragged.groups));
+  const imagesById = new Map((deck.images ?? []).map((i) => [i.id, i]));
+  for (const id of dragged.images ?? []) {
+    const image = imagesById.get(id);
+    if (image === undefined || carriedImages.has(id)) continue;
+    if (image.group !== to) changes.push({ kind: 'image', id, from: image.group, to });
   }
   return changes;
 }
