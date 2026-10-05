@@ -20,6 +20,9 @@ export interface CommandContext {
     openDetails: () => void;
     jsonShown: boolean;
     toggleJson: () => void;
+    /** The DBML / SQL drawer (054). */
+    codeOpen: boolean;
+    toggleCode: () => void;
     hideUi: () => void;
     /** Spreads the selection's connector ends (050 US7); absent when it cannot run now. */
     spreadEnds?: () => void;
@@ -82,6 +85,12 @@ export function buildCommands({
         title: shell.jsonShown ? 'Hide JSON' : 'Show JSON',
         aliases: ['json', 'code'],
         run: shell.toggleJson,
+      },
+      {
+        id: 'toggle-code',
+        title: shell.codeOpen ? 'Close DBML / SQL' : 'Open DBML / SQL',
+        aliases: ['dbml', 'sql', 'schema', 'code'],
+        run: shell.toggleCode,
       },
       { id: 'hide-ui', title: 'Hide UI', aliases: ['present', 'hide controls'], run: shell.hideUi },
     );

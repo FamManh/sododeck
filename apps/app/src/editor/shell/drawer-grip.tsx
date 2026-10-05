@@ -2,19 +2,28 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
 
-import { useUiStore } from '../../state/ui-store';
-import { DRAWER_MAX, DRAWER_MIN } from './shell-geometry';
-
 const STEP = 8;
 const BIG_STEP = 40;
 
+export interface DrawerGripProps {
+  width: number;
+  min: number;
+  max: number;
+  /** The separator's accessible name. */
+  label: string;
+  /** Follows the pointer during a drag. */
+  onChange: (px: number) => void;
+  /** A key press or the end of a drag: the width to keep. */
+  onCommit: (px: number) => void;
+}
+
 /**
- * The drawer's resize grip (018 FR-025, DESIGN.md "Detail drawer"): a vertical separator on the
- * drawer's left edge, 320–560 px. Dragging resizes live and saves once on release; ←/→ (8 px),
- * ⇧←/⇧→ (40 px), Home and End resize from the keyboard.
+ * A drawer's resize grip (018 FR-025, DESIGN.md "Detail drawer"; shared with the code drawer in
+ * 054): a vertical separator on the drawer's left edge between `min` and `max` px. Dragging
+ * resizes live and commits once on release; ←/→ (8 px), ⇧←/⇧→ (40 px), Home and End resize from
+ * the keyboard.
  */
-export function DrawerGrip({ width }: { width: number }) {
-  const setDrawerWidth = useUiStore((s) => s.setDrawerWidth);
+export function DrawerGrip({ width, min, max, label, onChange, onCommit }: DrawerGripProps) {
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -26,13 +35,13 @@ export function DrawerGrip({ width }: { width: number }) {
         : event.key === 'ArrowRight'
           ? width - step
           : event.key === 'Home'
-            ? DRAWER_MIN
+            ? min
             : event.key === 'End'
-              ? DRAWER_MAX
+              ? max
               : null;
     if (next === null) return;
     event.preventDefault();
-    setDrawerWidth(next, { commit: true });
+    onCommit(next);
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -46,22 +55,22 @@ export function DrawerGrip({ width }: { width: number }) {
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (drag.current === null) return;
-    setDrawerWidth(drag.current.startWidth + drag.current.startX - event.clientX);
+    onChange(drag.current.startWidth + drag.current.startX - event.clientX);
   };
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (drag.current === null) return;
     const next = drag.current.startWidth + drag.current.startX - event.clientX;
     drag.current = null;
-    setDrawerWidth(next, { commit: true });
+    onCommit(next);
   };
 
   return (
     <div
       role="separator"
-      aria-label="Resize details"
+      aria-label={label}
       aria-orientation="vertical"
-      aria-valuemin={DRAWER_MIN}
-      aria-valuemax={DRAWER_MAX}
+      aria-valuemin={min}
+      aria-valuemax={max}
       aria-valuenow={width}
       tabIndex={0}
       onKeyDown={onKeyDown}

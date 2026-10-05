@@ -82,6 +82,18 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
   });
 
+  it('opens and closes the DBML / SQL drawer from its menu (054)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Island />, shop);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Show DBML / SQL' }));
+    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Hide DBML / SQL' }));
+    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(false);
+  });
+
   it('switches the theme from its menu (§g-60)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);

@@ -11,6 +11,7 @@ import { preloadExportDialog } from '../editor/export/export-dialog-loader';
 import { ExportDialogMount } from '../editor/export/export-dialog-mount';
 import { DetailDrawer } from '../editor/shell/detail-drawer';
 import { JsonOverlay } from '../editor/shell/json-overlay';
+import { useDrawerWidths } from '../editor/shell/use-drawer-widths';
 import { SelectionToolbar } from '../editor/quick-edit/selection-toolbar';
 import { useTidyLayout } from '../editor/tidy-layout';
 import { JsonPanel } from '../editor/json-panel';
@@ -456,7 +457,7 @@ function BenchShell() {
   const deck = useDeckSnapshot(useEditor().doc);
   return (
     <>
-      <JsonOverlay drawerWidth={useUiStore((s) => (s.drawer.open ? s.drawer.width : null))} />
+      <JsonOverlay drawerWidth={useDrawerWidths().stack} />
       <DetailDrawer deck={deck} />
     </>
   );

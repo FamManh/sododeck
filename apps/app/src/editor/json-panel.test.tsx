@@ -47,16 +47,16 @@ vi.mock('./json-viewer', () => ({
   ),
 }));
 
-vi.mock('./code/dbml-tab', () => ({
-  DbmlTab: ({ scope }: { scope: string }) => (
-    <section role="region" aria-label="DBML schema" data-scope={scope} />
-  ),
-}));
-vi.mock('./code/sql-tab', () => ({
-  SqlTab: ({ scope }: { scope: string }) => (
-    <section role="region" aria-label="SQL schema" data-scope={scope} />
-  ),
-}));
+// The panel is JSON only (054): its test fails if it ever pulls in the DBML or SQL code.
+const codeChunks = vi.hoisted(() => ({ loaded: [] as string[] }));
+vi.mock('./code/dbml-tab', () => {
+  codeChunks.loaded.push('dbml');
+  return { DbmlTab: () => null };
+});
+vi.mock('./code/sql-tab', () => {
+  codeChunks.loaded.push('sql');
+  return { SqlTab: () => null };
+});
 
 function setup() {
   const { wrapper, editor, doc } = editorWrapper(demoDeck);
@@ -454,41 +454,29 @@ describe('tag colours in the Deck tab (033, US5)', () => {
   });
 });
 
-describe('JsonPanel — code formats (046)', () => {
-  it('opens on JSON and switches to DBML and SQL, remembering the choice', async () => {
-    const { user } = setup();
-    const tabs = screen.getByRole('tablist', { name: 'Code format' });
-    expect(within(tabs).getByRole('tab', { name: 'JSON' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    expect(screen.queryByRole('region', { name: 'DBML schema' })).not.toBeInTheDocument();
-
-    await user.click(within(tabs).getByRole('tab', { name: 'DBML' }));
-    expect(await screen.findByRole('region', { name: 'DBML schema' })).toBeInTheDocument();
-    expect(useUiStore.getState().jsonPanel.format).toBe('dbml');
-    expect(loadJsonPanelPrefs().format).toBe('dbml');
-    expect(screen.queryByText('Read-only · synced with canvas')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Copy JSON' })).not.toBeInTheDocument();
-
-    await user.click(within(tabs).getByRole('tab', { name: 'SQL' }));
-    expect(await screen.findByRole('region', { name: 'SQL schema' })).toBeInTheDocument();
-
-    await user.click(within(tabs).getByRole('tab', { name: 'JSON' }));
+describe('JsonPanel is JSON only (054)', () => {
+  it('has the JSON, Selection and Deck switch and no DBML or SQL tab', async () => {
+    setup();
     expect(await deckPre()).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'JSON' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'JSON view' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'DBML' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'SQL' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Code format' })).not.toBeInTheDocument();
   });
 
-  it('switches the scope of DBML and SQL between Selection and Whole schema', async () => {
-    const { user } = setup();
-    await user.click(screen.getByRole('tab', { name: 'DBML' }));
-    const scope = screen.getByRole('radiogroup', { name: 'Schema scope' });
-    expect(within(scope).getByRole('radio', { name: 'Selection' })).toBeChecked();
-    await user.click(within(scope).getByRole('radio', { name: 'Whole schema' }));
-    expect(useUiStore.getState().jsonPanel.schemaScope).toBe('schema');
-    expect(await screen.findByRole('region', { name: 'DBML schema' })).toHaveAttribute(
-      'data-scope',
-      'schema',
-    );
-    expect(screen.queryByRole('radiogroup', { name: 'JSON view' })).not.toBeInTheDocument();
+  it('has no schema scope control, and never loads the DBML or SQL code', async () => {
+    setup();
+    expect(await deckPre()).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Schema scope' })).not.toBeInTheDocument();
+    expect(codeChunks.loaded).toEqual([]);
+  });
+
+  it('shows JSON even when an older preference stored DBML', async () => {
+    localStorage.setItem('sododeck.jsonPanel', JSON.stringify({ format: 'dbml' }));
+    useUiStore.setState({ jsonPanel: loadJsonPanelPrefs() });
+    setup();
+    expect(await deckPre()).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy JSON' })).toBeInTheDocument();
   });
 });

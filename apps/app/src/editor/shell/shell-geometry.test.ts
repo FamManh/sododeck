@@ -6,10 +6,13 @@ import {
   fitRectInFreeArea,
   PLAYER_CLEARANCE,
   clampCodeDrawerWidth,
+  drawersFitTogether,
+  drawerStackWidth,
   clampDrawerWidth,
   CODE_DRAWER_DEFAULT,
   DRAWER_DEFAULT,
   drawerRect,
+  EDGE,
   FLYOUT_LEFT,
   intersects,
   islandRects,
@@ -108,6 +111,68 @@ describe('clampCodeDrawerWidth', () => {
   it('falls back to the default for a non-finite width', () => {
     expect(clampCodeDrawerWidth(Number.NaN, 1440, null, false)).toBe(CODE_DRAWER_DEFAULT);
     expect(CODE_DRAWER_DEFAULT).toBe(560);
+  });
+});
+
+describe('drawersFitTogether', () => {
+  it('never in a compact window', () => {
+    expect(drawersFitTogether(1279, 320, true)).toBe(false);
+  });
+
+  it('while the code drawer can keep 320 px and the canvas 240 px', () => {
+    // 1440 - 68 - 360 - 24 - 240 = 748 ≥ 320
+    expect(drawersFitTogether(1440, 360, false)).toBe(true);
+    // 1100 - 68 - 560 - 24 - 240 = 208 < 320
+    expect(drawersFitTogether(1100, 560, false)).toBe(false);
+  });
+});
+
+describe('drawerStackWidth', () => {
+  it('is null with no drawer, one width alone, and adds the gap for two', () => {
+    expect(drawerStackWidth(null, null)).toBeNull();
+    expect(drawerStackWidth(360, null)).toBe(360);
+    expect(drawerStackWidth(null, 560)).toBe(560);
+    expect(drawerStackWidth(360, 560)).toBe(932);
+  });
+
+  it('keeps the rail, the drawers and a canvas strip apart at 1440 with a 900 px code drawer', () => {
+    const code = clampCodeDrawerWidth(900, 1440, 360, false);
+    const stack = drawerStackWidth(360, code);
+    expect(stack).not.toBeNull();
+    const left = 1440 - 12 - (stack ?? 0);
+    // The code drawer's left edge, which is the canvas strip's right edge.
+    expect(left - FLYOUT_LEFT).toBeGreaterThanOrEqual(240);
+  });
+});
+
+describe('both drawers over the islands (054 FR-018)', () => {
+  it.each([1280, 1440, 1920, 2560])(
+    'at %i px the widest code drawer clears the rail, the islands and keeps a canvas strip',
+    (width) => {
+      const viewport = { width, height: 900 };
+      const details = 360;
+      const code = clampCodeDrawerWidth(5000, width, details, false);
+      const stack = drawerStackWidth(details, code) ?? 0;
+      const codeRect: Rect = {
+        x: width - EDGE - stack,
+        y: OVERLAY_TOP,
+        width: code,
+        height: viewport.height - OVERLAY_TOP - EDGE,
+      };
+      const detailsRect = drawerRect(viewport, details);
+      const rects = islandRects(viewport);
+      for (const island of [rects.deck, rects.tools, rects.rail, rects.history]) {
+        expect(intersects(codeRect, island), 'code drawer').toBe(false);
+        expect(intersects(detailsRect, island), 'details drawer').toBe(false);
+      }
+      expect(intersects(codeRect, detailsRect)).toBe(false);
+      expect(codeRect.x - FLYOUT_LEFT).toBeGreaterThanOrEqual(240);
+    },
+  );
+
+  it('opens one at a time in a compact window', () => {
+    expect(drawersFitTogether(1100, 360, true)).toBe(false);
+    expect(clampCodeDrawerWidth(900, 1100, null, true)).toBe(385);
   });
 });
 

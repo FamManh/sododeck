@@ -6,12 +6,11 @@ import type { KeyboardEvent } from 'react';
 import type { CodeFormat } from '../../state/json-panel-prefs';
 
 const CODE_FORMATS: readonly { id: CodeFormat; label: string }[] = [
-  { id: 'json', label: 'JSON' },
   { id: 'dbml', label: 'DBML' },
   { id: 'sql', label: 'SQL' },
 ];
 
-/** JSON | DBML | SQL tabs of the code panel header (046 contracts/code-panel-ui.md). */
+/** DBML | SQL tabs of the code drawer header (046 contracts/code-panel-ui.md, 054). */
 export function CodeFormatTabs({
   format,
   onChange,

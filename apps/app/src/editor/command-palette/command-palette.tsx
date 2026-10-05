@@ -59,6 +59,7 @@ function CommandPaletteSession({
     return nodes.length + edges.length + groups.length + stickies.length > 0;
   });
   const jsonShown = useUiStore((s) => s.jsonShown);
+  const codeOpen = useUiStore((s) => s.jsonPanel.codeDrawer.open);
   const { toast } = useToast();
   const commands = useMemo<readonly PaletteCommand[]>(() => {
     // Canvas actions offered as commands run exactly when their menu item would (019 FR-039).
@@ -102,6 +103,10 @@ function CommandPaletteSession({
               toggleJson: () => {
                 useUiStore.getState().toggleJsonShown();
               },
+              codeOpen,
+              toggleCode: () => {
+                useUiStore.getState().toggleCodeDrawer();
+              },
               hideUi: () => {
                 useUiStore.getState().setHideUi(true);
               },
@@ -119,6 +124,7 @@ function CommandPaletteSession({
     screen,
     hasSelection,
     jsonShown,
+    codeOpen,
     editor,
     fitView,
     screenToFlowPosition,
