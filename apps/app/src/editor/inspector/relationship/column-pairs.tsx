@@ -1,3 +1,4 @@
+import { deckDialect } from '@sododeck/model';
 import type { DbColumn, Edge, Id, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Combobox } from '@sododeck/ui/components/combobox';
@@ -52,6 +53,7 @@ export function ColumnPairs({
   const from = edge.fromColumns ?? [];
   const to = edge.toColumns ?? [];
   const count = Math.max(from.length, to.length);
+  const dialect = deckDialect(deck);
   const columnOf = (table: Node | undefined, id: Id | undefined): DbColumn | undefined =>
     id === undefined ? undefined : table?.columns?.find((c) => c.id === id);
   const options = (table: Node | undefined) =>
@@ -100,7 +102,9 @@ export function ColumnPairs({
           const source = columnOf(fromTable, from[i]);
           const target = columnOf(toTable, to[i]);
           const mismatch =
-            source !== undefined && target !== undefined ? typeMismatch(source, target) : undefined;
+            source !== undefined && target !== undefined
+              ? typeMismatch(source, target, dialect)
+              : undefined;
           return (
             <PairRow
               key={i}

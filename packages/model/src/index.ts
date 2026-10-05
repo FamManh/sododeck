@@ -11,6 +11,20 @@ export {
   type Scope,
 } from './layout';
 export { deckDialect } from './dialect';
+export {
+  COMMON_TYPES,
+  commonTypeOf,
+  DIALECT_HINTS,
+  DIALECT_TYPES,
+  idTypeOf,
+  INDEX_METHODS,
+  sameColumnType,
+  typeEntry,
+  type CommonType,
+  type SizeKind,
+  type TypeEntry,
+  type TypeKind,
+} from './db-types';
 export { groupingModeOf, type GroupingMode } from './read';
 export { isSchemaGroupId, schemaGroupId, splitStoredGroups } from './schema-groups';
 export {
@@ -62,11 +76,14 @@ export { endpointOf, endpointTitle, type Endpoint, type EndpointKind } from './e
 export {
   checkDeck,
   PROBLEM_KINDS,
+  SEVERITY,
   type DeckProblems,
   type Problem,
   type ProblemFix,
   type ProblemKind,
   type ProblemTarget,
+  type RenameTarget,
+  type Severity,
 } from './problems';
 export type { RemovalResult } from './ops/cascade';
 export type { StyleChannel, StyleTargets } from './ops/style';

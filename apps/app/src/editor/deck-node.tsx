@@ -5,7 +5,7 @@ import { nodeIcon } from '@sododeck/ui/icon-sets';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { type NodeProps } from '@xyflow/react';
-import { CornerDownLeft, Layers, Pin, Table, TriangleAlert } from 'lucide-react';
+import { CircleX, CornerDownLeft, Layers, Pin, Table, TriangleAlert } from 'lucide-react';
 import { memo, type CSSProperties } from 'react';
 
 import { CardFieldsBlock, HeaderStatus } from './card-fields-block';
@@ -266,9 +266,19 @@ export const DeckNode = memo(function DeckNode({
                 aria-hidden
                 title={data.problems.titles}
                 data-testid="problem-glyph"
-                className="flex h-5 shrink-0 items-center gap-1 rounded-full bg-clay-soft px-2 text-[11px] leading-none font-semibold text-clay-ink"
+                data-severity={data.problems.severity}
+                className={cn(
+                  'flex h-5 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] leading-none font-semibold',
+                  data.problems.severity === 'error'
+                    ? 'bg-clay-soft text-clay-ink'
+                    : 'bg-amber-soft text-amber-ink',
+                )}
               >
-                <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+                {data.problems.severity === 'error' ? (
+                  <CircleX strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+                ) : (
+                  <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+                )}
                 {data.problems.count}
               </span>
             )}
@@ -341,6 +351,7 @@ export const DeckNode = memo(function DeckNode({
                 locked={data.locked === true}
                 tinted={look?.namedFill === true || customText !== undefined}
                 touched={data.touchedColumns}
+                problems={data.problems}
               />
             ) : (
               <TableCompact layout={table} textClass={textRoleClass} />
@@ -448,7 +459,10 @@ export const DeckNode = memo(function DeckNode({
         <span
           aria-hidden
           data-testid="problem-outline"
-          className="pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed border-clay-ink"
+          className={cn(
+            'pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed',
+            data.problems?.severity === 'warning' ? 'border-amber-ink' : 'border-clay-ink',
+          )}
         />
       )}
       <NodeNotes nodeId={id} data={data} target={target} refusal={refusal} />

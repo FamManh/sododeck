@@ -119,7 +119,16 @@ describe('DeckNode', () => {
 
   it('shows a problem glyph and says the count in its name (015 FR-022, FR-025)', () => {
     renderNode(
-      props({ problems: { count: 2, titles: 'Duplicate connection', label: '2 problems' } }),
+      props({
+        problems: {
+          count: 2,
+          titles: 'Duplicate connection',
+          label: '2 problems',
+          severity: 'warning',
+          rows: new Map(),
+          rowText: new Map(),
+        },
+      }),
     );
     expect(
       screen.getByRole('group', { name: 'Service: Order Service, 2 problems' }),
@@ -127,9 +136,36 @@ describe('DeckNode', () => {
     expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Duplicate connection');
   });
 
+  it('colours the badge and outline by the worst severity (047)', () => {
+    const mark = (severity: 'error' | 'warning') => ({
+      count: 1,
+      titles: 'Type mismatch',
+      label: '1 problem',
+      severity,
+      rows: new Map(),
+      rowText: new Map(),
+    });
+    const { unmount } = renderNode(props({ problems: mark('error') }));
+    expect(screen.getByTestId('problem-glyph')).toHaveAttribute('data-severity', 'error');
+    expect(screen.getByTestId('problem-outline')).toHaveClass('border-clay-ink');
+    unmount();
+    renderNode(props({ problems: mark('warning') }));
+    expect(screen.getByTestId('problem-glyph')).toHaveAttribute('data-severity', 'warning');
+    expect(screen.getByTestId('problem-outline')).toHaveClass('border-amber-ink');
+  });
+
   it('puts the problem badge in the header, not on the corner (029 US2)', () => {
     renderNode(
-      props({ problems: { count: 2, titles: 'Duplicate connection', label: '2 problems' } }),
+      props({
+        problems: {
+          count: 2,
+          titles: 'Duplicate connection',
+          label: '2 problems',
+          severity: 'warning',
+          rows: new Map(),
+          rowText: new Map(),
+        },
+      }),
     );
     const badge = screen.getByTestId('problem-glyph');
     expect(screen.getByTestId('card-header')).toContainElement(badge);
@@ -143,7 +179,19 @@ describe('DeckNode', () => {
 
   it('draws the selection and the problem outline together', () => {
     renderNode(
-      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }, true),
+      props(
+        {
+          problems: {
+            count: 1,
+            titles: 'Duplicate connection',
+            label: '1 problem',
+            severity: 'warning',
+            rows: new Map(),
+            rowText: new Map(),
+          },
+        },
+        true,
+      ),
     );
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveClass('selected', 'has-problem');
@@ -174,7 +222,10 @@ describe('DeckNode', () => {
     it('shows the step chip with its verb and says it in the card name', () => {
       renderNode(
         dbProps({
-          database: { count: 2, dialect: 'Generic' },
+          database: {
+            count: 2,
+            dialect: 'Generic',
+          },
           touchChip: {
             text: 'writes orders +1',
             access: 'write',
@@ -224,7 +275,16 @@ describe('DeckNode', () => {
     connection.role = 'target:q';
     connection.connecting = true;
     renderNode(
-      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }),
+      props({
+        problems: {
+          count: 1,
+          titles: 'Duplicate connection',
+          label: '1 problem',
+          severity: 'warning',
+          rows: new Map(),
+          rowText: new Map(),
+        },
+      }),
     );
     expect(screen.queryByTestId('problem-glyph')).not.toBeInTheDocument();
   });
@@ -525,7 +585,17 @@ describe('DeckNode colour states (020 US6)', () => {
   it('shows the error ring marker and the alert badge, with a fill', () => {
     const look = resolveLook({ fill: 'green' });
     renderNode(
-      props({ look, problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }),
+      props({
+        look,
+        problems: {
+          count: 1,
+          titles: 'Duplicate connection',
+          label: '1 problem',
+          severity: 'warning',
+          rows: new Map(),
+          rowText: new Map(),
+        },
+      }),
     );
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('data-problem', '');
@@ -534,7 +604,16 @@ describe('DeckNode colour states (020 US6)', () => {
 
   it('shows the error ring marker and the alert badge, without a fill', () => {
     renderNode(
-      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }),
+      props({
+        problems: {
+          count: 1,
+          titles: 'Duplicate connection',
+          label: '1 problem',
+          severity: 'warning',
+          rows: new Map(),
+          rowText: new Map(),
+        },
+      }),
     );
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('data-problem', '');

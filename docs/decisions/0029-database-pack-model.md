@@ -115,8 +115,9 @@ default?, defaultExpr?, check?, enumRef?, note? }`; `size` is text (`255`, `10,2
   Yjs `meta.blockSqlExport`; the editor op is `setBlockSqlExport`. Only the export dialog reads it:
   SQL Copy and Download are disabled while the export scope has database problems. DBML, Mermaid,
   the data dictionary and JSON still export. The SQL writer ignores it.
-- **What counts as an error:** problems have no severity yet, so every `db-*` problem on a table
-  in the export scope counts (`TODO(047)`: filter by severity in `schemaProblems`).
+- **What counts as an error:** only problems with severity `error` (047 added severities).
+  `schemaProblems` returns `{ errors, warnings }` for the export scope; the switch looks at
+  `errors` only.
 - **Enum rename rules** are app helpers over editor ops (`db/enum-edits.ts`), each one undo step:
   renaming an enum rewrites the `type` text of its linked columns; renaming a value renames
   defaults that equal the old value on linked columns. Deleting a used enum unlinks the columns
@@ -124,3 +125,37 @@ default?, defaultExpr?, check?, enumRef?, note? }`; `size` is text (`255`, `10,2
   are unchanged, so DBML sync (046) is unaffected.
 - **Dialect change** converts column types in the same batch as `setDialect` (one undo step);
   enum-linked columns are not converted.
+
+## Amendment (047, 2026-10-05): lint kinds, type data in the model, reveal override
+
+- **Lint kinds.** `checkDeck` reports `db-no-primary-key`, `db-duplicate-table`,
+  `db-duplicate-column`, `db-duplicate-index`, `db-duplicate-enum`, `db-empty-column`,
+  `db-type-mismatch`, `db-null-default`, `db-fk-not-key`, `db-many-to-many`, `db-empty-enum`,
+  `db-default-type`, `db-required-loop`, `db-duplicate-relationship` and `db-unknown-type`, on top
+  of 040's `db-dangling-reference` and `db-composite-mismatch`. Errors: duplicates, empty column,
+  type mismatch, null default on a not-null column, dangling reference, composite mismatch.
+  Warnings: the rest. The rules live in `packages/model/src/db-lint.ts`.
+- **Foreign key side.** A relationship's referencing end is `from`, except `1-n`, where `to` holds
+  the key (the n side). Type, key and loop rules read it that way.
+- **Type data moved to the model.** The per-dialect type lists, aliases, size kinds, index methods
+  and `idTypeOf` (the PK type of a dialect) are in `packages/model/src/db-types.ts`, with
+  `sameColumnType(a, b, dialect)`: `int` and `integer` match, `timestamptz` and `timestamp` do not
+  on Postgres, sizes compare without spaces, an enum column matches only the same enum. The app's
+  type picker, SQL export, type conversion and the relationship drag warning all read it
+  (043's string comparison and its (!) mismatch icon on rows are replaced by the lint's
+  `db-type-mismatch` row glyph and relationship pill). The app's `dialect-types.ts` and the type half of
+  `table-keys.ts` are gone.
+- **Row problems and the reveal override.** A table row with a problem shows its glyph in the
+  key column: `TableBody` takes a `problems` prop (the table's `ProblemMark`, carried on the node's
+  data so a problem change never re-measures tables). Rows are drawn only at detail levels that
+  show them, so visiting a problem sets `problemReveal` (`ui-store`, `{ tableId, edges? }`), read
+  through `rowEditTableId` like a focused row: the table is drawn at All until the selection
+  leaves it (or its problem's relationships). Nothing is written to the deck.
+- **048's row limit.** The reveal projects the table like 048's row-edit override
+  (`views/view-state.ts` `withRowEdit`): detail All and expanded in the projected deck only, so a
+  faulty row past the 12-row limit is drawn and can take focus.
+- **Fix popover.** `problemPopover` (`ui-store`, `{ key }`) anchors the fix popover to the faulty
+  row, the table header, or a relationship's midpoint; it closes when its problem is gone.
+- **Junction table.** The `create-junction` fix plans (`db/junction-table.ts`) and applies one
+  undo step: a new table with one column per key column of each side and two `n-1` relationships
+  to the sides. The original n–n edge is removed.

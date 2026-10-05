@@ -1,6 +1,6 @@
+import { COMMON_TYPES } from '@sododeck/model';
 import { describe, expect, it } from 'vitest';
 
-import { COMMON_TYPES } from '../export/common-types';
 import { convertType, writtenType } from './convert-types';
 import type { SqlDialect } from './types';
 

@@ -363,7 +363,7 @@ export function largeSchemaDeck(tables = 150, columns = 12, relationships = 200)
       columns: Array.from({ length: columns }, (_, c) => ({
         id: `${id}c${String(c)}`,
         name: c === 0 ? 'id' : `column_${String(c)}`,
-        type: c === 0 ? 'bigint' : c === 2 ? 'status' : 'text',
+        type: c <= 1 ? 'bigint' : c === 2 ? 'status' : 'text',
         ...(c === 0 ? { pk: true } : {}),
         ...(c === 2 ? { enumRef: 'status' } : {}),
       })),
@@ -373,7 +373,8 @@ export function largeSchemaDeck(tables = 150, columns = 12, relationships = 200)
   }
   for (let r = 0; r < relationships; r++) {
     const from = r % tables;
-    const to = (r * 7 + 1) % tables;
+    // Shifted every lap so no two relationships are copies (047 lint stays clean).
+    const to = (r * 7 + 1 + Math.floor(r / tables)) % tables;
     file.edges.push({
       id: `r${String(r)}`,
       from: `t${String(from)}`,

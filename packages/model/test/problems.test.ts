@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { checkDeck, type Problem } from '../src';
+import { checkDeck, PROBLEM_KINDS, SEVERITY, type Problem, type ProblemKind } from '../src';
 import { readExample, shopDeck } from './helpers';
 
 type NodeData = SododeckFile['nodes'][number];
@@ -46,7 +46,13 @@ describe('checkDeck (015)', () => {
   describe('bundled decks (SC-001)', () => {
     it('finds nothing in the minimal example or an empty deck', async () => {
       expect(checkDeck(await readExample('minimal.sododeck.json')).total).toBe(0);
-      expect(checkDeck(emptySododeckFile())).toEqual({ list: [], total: 0, byObject: new Map() });
+      expect(checkDeck(emptySododeckFile())).toEqual({
+        list: [],
+        total: 0,
+        errors: 0,
+        warnings: 0,
+        byObject: new Map(),
+      });
     });
 
     // These examples contain real problems (a request that returns to the gateway breaks the
@@ -60,6 +66,9 @@ describe('checkDeck (015)', () => {
         'incomplete-flow',
         'rule-without-catch-all',
         'rule-without-catch-all',
+        // 047: the n–n "tagged with" and the 1–1 "latest order" (orders.customer_id is not unique).
+        'db-fk-not-key',
+        'db-many-to-many',
       ]);
     });
 
@@ -72,9 +81,9 @@ describe('checkDeck (015)', () => {
       expect(checkDeck(file).list.map((p) => p.detail)).toEqual([
         "Place order · step 4 doesn't continue from step 3",
         "Place order · step 5 doesn't continue from step 4",
+        "Reattempt policy · 1 cell can't be read",
         'Delivery tier · some inputs match no row',
         'Reattempt policy · some inputs match no row',
-        "Reattempt policy · 1 cell can't be read",
       ]);
     });
   });
@@ -326,12 +335,12 @@ describe('checkDeck (015)', () => {
         },
       });
       expect(checkDeck(file).list.map((p) => [p.kind, p.detail, p.target])).toEqual([
+        ['invalid-rule-cells', "Sizes · 1 cell can't be read", { type: 'rule', ruleId: 'S' }],
         [
           'rule-without-catch-all',
           'Delivery tier · some inputs match no row',
           { type: 'rule', ruleId: 'R' },
         ],
-        ['invalid-rule-cells', "Sizes · 1 cell can't be read", { type: 'rule', ruleId: 'S' }],
       ]);
     });
   });
@@ -372,10 +381,10 @@ describe('checkDeck (015)', () => {
         rules: { R: rule('R', []) },
       });
 
-    it('sorts by kind, then object title', () => {
+    it('sorts errors first, then by kind, then object title', () => {
       expect(checkDeck(messy()).list.map((p) => `${p.kind}/${p.objectTitle}`)).toEqual([
-        'duplicate-connection/A',
         'step-without-connection/F',
+        'duplicate-connection/A',
         'rule-without-catch-all/R',
       ]);
     });
@@ -476,12 +485,9 @@ describe('field-value-dangling (032 FR-017)', () => {
     expect(problem.title).toBe('Value without a field');
     expect(problem.detail).toBe(detail);
     expect(problem.target).toEqual({ type: 'node', id: 'w' });
-    expect(problem.fix).toEqual({
-      kind: 'remove-value',
-      nodeId: 'w',
-      fieldId,
-      label: 'Remove value',
-    });
+    expect(problem.fixes).toEqual([
+      { kind: 'remove-value', nodeId: 'w', fieldId, label: 'Remove value' },
+    ]);
     expect(problem.key).toBe(`field-value-dangling:w:${fieldId}`);
   });
 
@@ -500,7 +506,10 @@ describe('field-value-dangling (032 FR-017)', () => {
 });
 
 describe('database schema problems (040 FR-021)', () => {
-  const shop = shopDeck();
+  // The fixture links a bigint column to an enum to test the cascade (047: a type mismatch).
+  const shop = structuredClone(shopDeck());
+  const parent = shop.nodes.find((n) => n.id === 'categories')?.columns?.[1];
+  if (parent !== undefined) delete parent.enumRef;
   const dbProblems = (file: SododeckFile) =>
     checkDeck(file).list.filter((p) => p.kind.startsWith('db-'));
 
@@ -621,5 +630,531 @@ describe('groups as connector ends (050)', () => {
     expect(problem.kind).toBe('broken-reference');
     expect(problem.target).toEqual({ type: 'object', ref: { scope: 'groups', id: 'g' } });
     expect(problem.detail).toBe('Group "Payments" has the same id as a card');
+  });
+});
+
+describe('severity (047 R1)', () => {
+  const ERRORS: readonly ProblemKind[] = [
+    'broken-reference',
+    'step-without-connection',
+    'broken-chain',
+    'invalid-rule-cells',
+    'db-dangling-reference',
+    'db-composite-mismatch',
+    'db-duplicate-table',
+    'db-duplicate-column',
+    'db-duplicate-index',
+    'db-duplicate-enum',
+    'db-empty-column',
+    'db-type-mismatch',
+    'db-null-default',
+  ];
+
+  it('gives every kind the severity of contracts/lint-rules.md', () => {
+    for (const kind of PROBLEM_KINDS) {
+      expect(SEVERITY[kind], kind).toBe(ERRORS.includes(kind) ? 'error' : 'warning');
+    }
+    expect(Object.keys(SEVERITY).sort()).toEqual([...PROBLEM_KINDS].sort());
+  });
+
+  it('marks the missing-enum problem as an error', () => {
+    const file = structuredClone(shopDeck());
+    const customers = file.nodes.find((n) => n.id === 'customers');
+    const column = customers?.columns?.[2];
+    if (column === undefined) throw new Error('fixture changed');
+    column.enumRef = 'e-gone';
+    const problem = checkDeck(file).list.find((p) => p.title === 'Missing enum');
+    expect(problem?.severity).toBe('error');
+  });
+
+  it('counts errors and warnings and lists errors first', () => {
+    const file = deck({
+      nodes: [node('a'), node('b'), node('c')],
+      edges: [edge('e1', 'a', 'b'), edge('e2', 'a', 'b')],
+      flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'gone' }] }],
+      rules: { R: rule('R', []) },
+    });
+    const result = checkDeck(file);
+    expect(result.errors).toBe(1);
+    expect(result.warnings).toBe(2);
+    expect(result.errors + result.warnings).toBe(result.total);
+    expect(result.list.map((p) => p.severity)).toEqual(['error', 'warning', 'warning']);
+  });
+
+  it('sorts within a severity by kind rank, object title, order, key', () => {
+    const file = deck({
+      nodes: [node('a'), node('b'), node('z', { title: 'Zeta' })],
+      edges: [
+        edge('e1', 'a', 'b'),
+        edge('e2', 'a', 'b'),
+        edge('e3', 'z', 'b'),
+        edge('e4', 'z', 'b'),
+      ],
+    });
+    const list = checkDeck(file).list;
+    expect(list.map((p) => p.objectTitle)).toEqual(['A', 'Zeta']);
+    expect(list.every((p) => p.severity === 'warning')).toBe(true);
+  });
+});
+
+describe('schema lint rules (047)', () => {
+  type Col = NonNullable<NodeData['columns']>[number];
+  const col = (id: string, name: string, type: string, extra: Partial<Col> = {}): Col => ({
+    id,
+    name,
+    type,
+    ...extra,
+  });
+  const table = (id: string, title: string, columns: Col[], extra: Partial<NodeData> = {}) =>
+    node(id, { type: 'db-table', title, columns, ...extra });
+  const rel = (
+    id: string,
+    from: string,
+    to: string,
+    fromColumns: string[],
+    toColumns: string[],
+    extra: Partial<SododeckFile['edges'][number]> = {},
+  ): SododeckFile['edges'][number] => ({ id, from, to, fromColumns, toColumns, ...extra });
+  const pk = (prefix: string, type = 'int') => col(`${prefix}-id`, 'id', type, { pk: true });
+  const db = (patch: Partial<SododeckFile>) => deck({ dialect: 'postgres', ...patch });
+  const lint = (file: SododeckFile, kind?: ProblemKind) =>
+    checkDeck(file).list.filter((p) => p.kind.startsWith('db-') && (kind ? p.kind === kind : true));
+  const one = (file: SododeckFile, kind: ProblemKind): Problem => {
+    const found = lint(file, kind);
+    expect(found, kind).toHaveLength(1);
+    const [first] = found;
+    if (first === undefined) throw new Error('none');
+    return first;
+  };
+
+  it('reports nothing on a consistent shop', () => {
+    const shop = structuredClone(shopDeck());
+    // The fixture links a bigint column to an enum to test the cascade; here it must be clean.
+    const categories = shop.nodes.find((n) => n.id === 'categories');
+    const parent = categories?.columns?.[1];
+    if (parent !== undefined) delete parent.enumRef;
+    expect(lint(shop)).toEqual([]);
+  });
+
+  describe('db-no-primary-key', () => {
+    it('warns once per table with columns, offering make-pk when an id column exists', () => {
+      const file = db({
+        nodes: [
+          table('t', 'audit_log', [col('c1', 'ID', 'int')]),
+          table('u', 'events', [col('c2', 'at', 'timestamp')]),
+          table('v', 'empty', []),
+        ],
+      });
+      const [first, second] = lint(file, 'db-no-primary-key');
+      expect(lint(file, 'db-no-primary-key')).toHaveLength(2);
+      expect(first).toMatchObject({
+        severity: 'warning',
+        title: 'No primary key',
+        detail: 'audit_log has no primary key',
+        target: { type: 'node', id: 't' },
+        column: { tableId: 't', columnId: 'c1' },
+        fixes: [{ kind: 'make-pk', tableId: 't', columnId: 'c1', label: 'Make id the PK' }],
+      });
+      expect(second).toMatchObject({
+        detail: 'events has no primary key',
+        fixes: [{ kind: 'add-id-pk', tableId: 'u', type: 'uuid', label: 'Add id uuid PK' }],
+      });
+      expect(second?.column).toBeUndefined();
+    });
+
+    it('uses the dialect id type', () => {
+      const file = deck({ dialect: 'mysql', nodes: [table('t', 'a', [col('c', 'x', 'int')])] });
+      expect(one(file, 'db-no-primary-key').fixes?.[0]).toMatchObject({ type: 'char(36)' });
+    });
+  });
+
+  describe('duplicates', () => {
+    it('db-duplicate-table names both tables once per later table', () => {
+      const file = db({
+        nodes: [
+          table('a', 'Orders', [pk('a')], { schema: 'public' }),
+          table('b', 'orders ', [pk('b')], { schema: 'public' }),
+          table('c', 'orders', [pk('c')], { schema: 'sales' }),
+        ],
+      });
+      expect(one(file, 'db-duplicate-table')).toMatchObject({
+        severity: 'error',
+        title: 'Duplicate table',
+        detail: 'Two tables named orders in public',
+        target: { type: 'nodes', ids: ['a', 'b'] },
+        fixes: [{ kind: 'rename', target: { type: 'table', tableId: 'b' } }],
+      });
+    });
+
+    it('db-duplicate-column points at the second column', () => {
+      const file = db({
+        nodes: [
+          table('p', 'products', [pk('p'), col('c1', 'sku', 'text'), col('c2', 'SKU', 'text')]),
+        ],
+      });
+      expect(one(file, 'db-duplicate-column')).toMatchObject({
+        severity: 'error',
+        detail: 'products has two columns named SKU',
+        target: { type: 'node', id: 'p' },
+        column: { tableId: 'p', columnId: 'c2' },
+        fixes: [{ kind: 'rename', target: { type: 'column', tableId: 'p', columnId: 'c2' } }],
+      });
+    });
+
+    it('db-duplicate-index points at the second index', () => {
+      const file = db({
+        nodes: [
+          table('o', 'orders', [pk('o')], {
+            indexes: [
+              { id: 'i1', name: 'orders_idx', columns: ['o-id'] },
+              { id: 'i2', name: 'Orders_Idx', columns: ['o-id'] },
+              { id: 'i3', columns: ['o-id'] },
+              { id: 'i4', columns: ['o-id'] },
+            ],
+          }),
+        ],
+      });
+      expect(one(file, 'db-duplicate-index')).toMatchObject({
+        severity: 'error',
+        detail: 'orders has two indexes named Orders_Idx',
+        fixes: [{ kind: 'rename', target: { type: 'index', tableId: 'o', indexId: 'i2' } }],
+      });
+    });
+
+    it('db-duplicate-enum covers two enums and a repeated value', () => {
+      const v = (id: string, name: string) => ({ id, name });
+      const file = db({
+        enums: [
+          {
+            id: 'e1',
+            name: 'status',
+            schema: 'public',
+            values: [v('v1', 'paid'), v('v2', 'paid')],
+          },
+          { id: 'e2', name: 'Status', schema: 'public', values: [v('v3', 'x')] },
+        ],
+      });
+      const found = lint(file, 'db-duplicate-enum');
+      expect(found.map((p) => p.detail)).toEqual([
+        'status has the value paid twice',
+        'Two enums named Status in public',
+      ]);
+      expect(found[1]).toMatchObject({
+        severity: 'error',
+        target: {
+          type: 'object',
+          ref: { scope: 'meta', id: '', child: { kind: 'enum', id: 'e2' } },
+        },
+        fixes: [{ kind: 'rename', target: { type: 'enum', enumId: 'e2' } }],
+      });
+      expect(found[0]?.fixes).toEqual([{ kind: 'add-values', enumId: 'e1', label: 'Add values' }]);
+    });
+  });
+
+  describe('db-empty-column', () => {
+    it('reports a column without a name or a type', () => {
+      const file = db({
+        nodes: [table('o', 'orders', [pk('o'), col('n', '', 'text'), col('t', 'notes', ' ')])],
+      });
+      const found = lint(file, 'db-empty-column');
+      expect(found.map((p) => [p.title, p.severity])).toEqual([
+        ['Column without a name', 'error'],
+        ['Column without a type', 'error'],
+      ]);
+      expect(found[1]).toMatchObject({
+        detail: 'orders.notes has no type',
+        column: { tableId: 'o', columnId: 't' },
+        fixes: [{ kind: 'pick-type', tableId: 'o', columnId: 't' }],
+      });
+      expect(found[0]?.fixes?.[0]).toMatchObject({ kind: 'rename' });
+    });
+  });
+
+  describe('relationships', () => {
+    const pair = (fromType: string, toType: string, edgeExtra = {}) =>
+      db({
+        nodes: [
+          table('loyalty', 'loyalty_points', [pk('l'), col('ref', 'customer_ref', fromType)]),
+          table('customers', 'customers', [pk('c', toType)]),
+        ],
+        edges: [rel('r', 'loyalty', 'customers', ['ref'], ['c-id'], edgeExtra)],
+      });
+
+    it('db-type-mismatch lists the types and offers the referenced type', () => {
+      const problem = one(pair('int', 'uuid'), 'db-type-mismatch');
+      expect(problem).toMatchObject({
+        severity: 'error',
+        title: 'Type mismatch',
+        detail: 'loyalty_points.customer_ref is int, customers.id is uuid',
+        target: { type: 'edges', ids: ['r'] },
+        column: { tableId: 'loyalty', columnId: 'ref' },
+        short: 'int → uuid',
+        fixes: [
+          {
+            kind: 'match-type',
+            tableId: 'loyalty',
+            changes: [{ columnId: 'ref', type: 'uuid' }],
+            label: 'Change type',
+          },
+        ],
+      });
+      expect(
+        checkDeck(pair('int', 'uuid'))
+          .byObject.get('loyalty')
+          ?.map((p) => p.key),
+      ).toContain(problem.key);
+    });
+
+    it('reads the referencing end from the cardinality (1-n keeps the key on the to side)', () => {
+      const file = db({
+        nodes: [
+          table('o', 'orders', [pk('o', 'uuid')]),
+          table('i', 'items', [pk('i'), col('oid', 'order_id', 'int')]),
+        ],
+        edges: [rel('r', 'o', 'i', ['o-id'], ['oid'], { cardinality: '1-n' })],
+      });
+      expect(one(file, 'db-type-mismatch')).toMatchObject({
+        detail: 'items.order_id is int, orders.id is uuid',
+        column: { tableId: 'i', columnId: 'oid' },
+        fixes: [{ kind: 'match-type', tableId: 'i', changes: [{ columnId: 'oid', type: 'uuid' }] }],
+      });
+      expect(lint(file, 'db-fk-not-key')).toEqual([]);
+    });
+
+    it('does not treat int and integer or equal sizes as a mismatch', () => {
+      expect(lint(pair('int', 'integer'), 'db-type-mismatch')).toEqual([]);
+      expect(lint(pair('varchar(80)', 'varchar(100)'), 'db-type-mismatch')).toHaveLength(1);
+    });
+
+    it('changes every mismatched pair of a composite relationship', () => {
+      const file = db({
+        nodes: [
+          table('a', 'a', [pk('a'), col('a1', 'x', 'int'), col('a2', 'y', 'text')]),
+          table('b', 'b', [
+            col('b1', 'x', 'bigint', { pk: true }),
+            col('b2', 'y', 'text', { pk: true }),
+          ]),
+        ],
+        edges: [rel('r', 'a', 'b', ['a1', 'a2'], ['b1', 'b2'])],
+      });
+      const fix = one(file, 'db-type-mismatch').fixes?.[0];
+      expect(fix).toMatchObject({
+        kind: 'match-type',
+        changes: [{ columnId: 'a1', type: 'bigint' }],
+      });
+    });
+
+    it('db-null-default flags NULL on a not-null column', () => {
+      const file = db({
+        nodes: [
+          table('o', 'orders', [
+            pk('o'),
+            col('s', 'status', 'text', { notNull: true, defaultExpr: ' null ' }),
+            col('t', 'tag', 'text', { defaultExpr: 'NULL' }),
+          ]),
+        ],
+      });
+      expect(one(file, 'db-null-default')).toMatchObject({
+        severity: 'error',
+        detail: 'orders.status is not null with default NULL',
+        column: { tableId: 'o', columnId: 's' },
+        fixes: [
+          { kind: 'remove-default', tableId: 'o', columnId: 's', label: 'Remove default' },
+          { kind: 'allow-null', tableId: 'o', columnId: 's', label: 'Allow null' },
+        ],
+      });
+    });
+
+    it('db-fk-not-key warns when the referenced columns are not a key', () => {
+      const file = db({
+        nodes: [
+          table('rv', 'reviews', [pk('rv'), col('ref', 'order_ref', 'int')]),
+          table('o', 'orders', [pk('o'), col('n', 'number', 'int')]),
+        ],
+        edges: [rel('r', 'rv', 'o', ['ref'], ['n'])],
+      });
+      expect(one(file, 'db-fk-not-key')).toMatchObject({
+        severity: 'warning',
+        detail: 'reviews.order_ref → orders.number: not a primary key or unique',
+        short: 'not key',
+        column: { tableId: 'rv', columnId: 'ref' },
+        fixes: [{ kind: 'pick-column', edgeId: 'r', label: 'Pick column' }],
+      });
+      const unique = structuredClone(file);
+      const number = unique.nodes[1]?.columns?.[1];
+      if (number !== undefined) number.unique = true;
+      expect(lint(unique, 'db-fk-not-key')).toEqual([]);
+      const indexed = structuredClone(file);
+      const orders = indexed.nodes[1];
+      if (orders !== undefined) orders.indexes = [{ id: 'u', unique: true, columns: ['n'] }];
+      expect(lint(indexed, 'db-fk-not-key')).toEqual([]);
+    });
+
+    it('db-many-to-many offers a junction table', () => {
+      const file = db({
+        nodes: [table('p', 'products', [pk('p')]), table('c', 'categories', [pk('c')])],
+        edges: [{ id: 'nn', from: 'p', to: 'c', cardinality: 'n-n' }],
+      });
+      expect(one(file, 'db-many-to-many')).toMatchObject({
+        severity: 'warning',
+        detail: 'n–n between products and categories: create a junction table?',
+        target: { type: 'edges', ids: ['nn'] },
+        short: 'n–n',
+        fixes: [{ kind: 'create-junction', edgeId: 'nn', label: 'Create junction table' }],
+      });
+    });
+
+    it('db-required-loop finds loops of not-null references and ignores nullable ones', () => {
+      const tables = (nullable: boolean) => [
+        table('o', 'orders', [pk('o'), col('op', 'payment_id', 'int', { notNull: !nullable })]),
+        table('p', 'payments', [pk('p'), col('po', 'order_id', 'int', { notNull: true })]),
+      ];
+      const edges = [rel('r1', 'o', 'p', ['op'], ['p-id']), rel('r2', 'p', 'o', ['po'], ['o-id'])];
+      const problem = one(db({ nodes: tables(false), edges }), 'db-required-loop');
+      expect(problem).toMatchObject({
+        severity: 'warning',
+        detail: 'orders → payments → orders: every reference is not null',
+        target: { type: 'edges', ids: ['r1', 'r2'] },
+        short: 'loop',
+      });
+      expect(problem.key).toBe('db-required-loop:o:p');
+      expect(lint(db({ nodes: tables(true), edges }), 'db-required-loop')).toEqual([]);
+    });
+
+    it('treats a self-reference as a loop only when the column is not null', () => {
+      const file = (notNull: boolean) =>
+        db({
+          nodes: [table('c', 'categories', [pk('c'), col('pa', 'parent_id', 'int', { notNull })])],
+          edges: [rel('r', 'c', 'c', ['pa'], ['c-id'])],
+        });
+      expect(lint(file(true), 'db-required-loop')).toHaveLength(1);
+      expect(lint(file(false), 'db-required-loop')).toEqual([]);
+    });
+
+    it('db-duplicate-relationship keeps the first and no duplicate-connection', () => {
+      const file = db({
+        nodes: [
+          table('rv', 'reviews', [pk('rv'), col('oi', 'order_id', 'int')]),
+          table('o', 'orders', [pk('o')]),
+        ],
+        edges: [rel('r1', 'rv', 'o', ['oi'], ['o-id']), rel('r2', 'rv', 'o', ['oi'], ['o-id'])],
+      });
+      expect(one(file, 'db-duplicate-relationship')).toMatchObject({
+        severity: 'warning',
+        detail: 'reviews.order_id → orders.id appears twice',
+        target: { type: 'edges', ids: ['r2'] },
+        column: { tableId: 'rv', columnId: 'oi' },
+        fixes: [{ kind: 'delete-edge', edgeId: 'r2', label: 'Delete duplicate' }],
+      });
+      expect(kinds(file)).not.toContain('duplicate-connection');
+    });
+
+    it('gives no follow-on problems to a dangling or unequal-length relationship', () => {
+      const tables = [
+        table('a', 'a', [pk('a'), col('a1', 'x', 'int'), col('a2', 'y', 'int', { notNull: true })]),
+        table('b', 'b', [pk('b', 'uuid'), col('b1', 'z', 'uuid')]),
+      ];
+      const dangling = db({
+        nodes: tables,
+        edges: [rel('r1', 'a', 'b', ['a1'], ['gone']), rel('r2', 'a', 'b', ['a1'], ['gone'])],
+      });
+      expect(lint(dangling).map((p) => p.kind)).toEqual([
+        'db-dangling-reference',
+        'db-dangling-reference',
+      ]);
+      const unequal = db({
+        nodes: tables,
+        edges: [
+          rel('r1', 'a', 'b', ['a1', 'a2'], ['b-id']),
+          rel('r2', 'a', 'b', ['a1', 'a2'], ['b-id']),
+        ],
+      });
+      expect(lint(unequal).map((p) => p.kind)).toEqual([
+        'db-composite-mismatch',
+        'db-composite-mismatch',
+      ]);
+    });
+  });
+
+  describe('enums and defaults', () => {
+    it('db-empty-enum warns about an enum without values', () => {
+      const file = db({ enums: [{ id: 'e', name: 'shipment_status', values: [] }] });
+      expect(one(file, 'db-empty-enum')).toMatchObject({
+        severity: 'warning',
+        detail: 'Enum shipment_status has no values',
+        fixes: [{ kind: 'add-values', enumId: 'e', label: 'Add values' }],
+      });
+    });
+
+    it('db-default-type checks numbers, booleans and enum values only', () => {
+      const file = db({
+        enums: [{ id: 'e', name: 'st', values: [{ id: 'v', name: 'open' }] }],
+        nodes: [
+          table('o', 'orders', [
+            pk('o'),
+            col('q', 'qty', 'integer', { default: 'many' }),
+            col('q2', 'qty2', 'integer', { default: '12' }),
+            col('q3', 'active', 'integer', { default: 'true' }),
+            col('b', 'flag', 'boolean', { default: 'maybe' }),
+            col('b2', 'flag2', 'boolean', { default: true }),
+            col('s', 'state', 'st', { enumRef: 'e', default: 'closed' }),
+            col('s2', 'state2', 'st', { enumRef: 'e', default: 'open' }),
+            col('t', 'note', 'text', { default: 5 }),
+            col('x', 'expr', 'integer', { defaultExpr: "'many'" }),
+          ]),
+        ],
+      });
+      const found = lint(file, 'db-default-type');
+      expect(found.map((p) => p.detail)).toEqual([
+        "orders.flag is boolean with default 'maybe'",
+        "orders.qty is integer with default 'many'",
+        "orders.state is st with default 'closed'",
+      ]);
+      expect(found[1]).toMatchObject({
+        severity: 'warning',
+        title: 'Default does not fit the type',
+        column: { tableId: 'o', columnId: 'q' },
+        fixes: [{ kind: 'remove-default', tableId: 'o', columnId: 'q' }],
+      });
+    });
+
+    it('db-unknown-type groups columns by type name', () => {
+      const file = deck({
+        dialect: 'mysql',
+        nodes: [
+          table('a', 'a', [pk('a'), col('a1', 'x', 'citext'), col('a2', 'y', 'CITEXT')]),
+          table('b', 'b', [col('b0', 'k', 'int', { pk: true }), col('b1', 'z', 'citext')]),
+        ],
+      });
+      const problem = one(file, 'db-unknown-type');
+      expect(problem).toMatchObject({
+        severity: 'warning',
+        title: 'Type not in the MySQL list',
+        detail: 'citext is not a MySQL type · 3 columns',
+        target: { type: 'nodes', ids: ['a', 'b'] },
+        column: { tableId: 'a', columnId: 'a1' },
+        fixes: [{ kind: 'pick-type', tableId: 'a', columnId: 'a1' }],
+      });
+      expect(problem.key).toBe('db-unknown-type:citext');
+    });
+  });
+
+  it('qualifies names with the schema only when the deck has several', () => {
+    const one1 = db({ nodes: [table('a', 'a', [col('c', 'x', 'int')], { schema: 'sales' })] });
+    expect(lint(one1)[0]?.detail).toBe('a has no primary key');
+    const two = db({
+      nodes: [
+        table('a', 'a', [col('c', 'x', 'int')], { schema: 'sales' }),
+        table('b', 'b', [pk('b')], { schema: 'public' }),
+      ],
+    });
+    expect(lint(two)[0]?.detail).toBe('sales.a has no primary key');
+  });
+
+  it('stays within each object kind: other cards never get db rules', () => {
+    const file = db({
+      nodes: [node('svc', { columns: [col('c', '', '')] }), table('t', 't', [pk('t')])],
+    });
+    expect(lint(file)).toEqual([]);
   });
 });

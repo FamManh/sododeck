@@ -97,10 +97,10 @@ describe('createProblemsStore (015 R4)', () => {
     createEditor(doc).update('nodes', 'a', { title: 'A2' });
     await vi.advanceTimersByTimeAsync(PROBLEMS_DELAY_MS);
     expect(resolvers).toHaveLength(2);
-    const newer = { list: [], total: 0, byObject: new Map() };
+    const newer = { list: [], total: 0, errors: 0, warnings: 0, byObject: new Map() };
     resolvers[1]?.(newer);
     await flush();
-    resolvers[0]?.({ list: [], total: 9, byObject: new Map() });
+    resolvers[0]?.({ list: [], total: 9, errors: 0, warnings: 9, byObject: new Map() });
     await flush();
     expect(store.get()).toBe(newer);
     stop();

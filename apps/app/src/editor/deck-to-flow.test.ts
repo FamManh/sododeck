@@ -1,3 +1,4 @@
+import type { ProblemMark } from './problems/problem-marks';
 import { STICKY_DEFAULT_OFFSET, stickyCanvasPosition } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
@@ -344,7 +345,14 @@ describe('toFlowNodes', () => {
 
   it('carries problem marks and rebuilds only when they change (015 FR-022)', () => {
     const graph = topLevelGraph(deck);
-    const mark = { count: 1, titles: 'Duplicate connection', label: '1 problem' };
+    const mark: ProblemMark = {
+      count: 1,
+      titles: 'Duplicate connection',
+      label: '1 problem',
+      severity: 'warning',
+      rows: new Map(),
+      rowText: new Map(),
+    };
     const plain = toFlowNodes(deck, graph, view());
     const marked = toFlowNodes(deck, graph, view({ problems: new Map([['b', mark]]) }));
     const b = marked.find((n) => n.id === 'b') as DeckFlowNode;

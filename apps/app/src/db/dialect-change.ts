@@ -4,10 +4,10 @@
  * `translateType`; SQL → Generic maps to the common type's canonical name. The write
  * (`applyDialectChange`) lives with the drawer because it needs the editor.
  */
-import { isDbTable } from '@sododeck/model';
+import { commonTypeOf, isDbTable } from '@sododeck/model';
 import type { DbColumn, Dialect, Id, Node, SododeckFile } from '@sododeck/schema';
 
-import { COMMON_TYPES, translateType, type CommonType } from './export/common-types';
+import { translateType } from './export/common-types';
 import { convertType, writtenType } from './import/convert-types';
 import type { SqlDialect } from './export/types';
 
@@ -53,15 +53,6 @@ function splitType(type: string, size: string | undefined): { base: string; size
   return { base, ...(effective === undefined ? {} : { size: effective }) };
 }
 
-/** The common type of a SQL-dialect spelling or any common name. */
-function commonOf(base: string, from: SqlDialect): CommonType | undefined {
-  const name = normalise(base);
-  return (
-    COMMON_TYPES.find((entry) => !/\(/.test(entry[from]) && normalise(entry[from]) === name) ??
-    COMMON_TYPES.find((entry) => entry.canonical === name || entry.aliases.includes(name))
-  );
-}
-
 interface Converted {
   type: string;
   size?: string;
@@ -78,7 +69,7 @@ function convert(column: DbColumn, from: Dialect, to: Dialect): Converted {
   }
   if (to === 'generic') {
     if (!isSql(from)) return { type: base, mapped: false };
-    const common = commonOf(base, from);
+    const common = commonTypeOf(base, from);
     if (common === undefined)
       return { type: base, ...(size === undefined ? {} : { size }), mapped: false };
     const keeps = common.keepsSize.length > 0 && size !== undefined;
