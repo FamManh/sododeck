@@ -68,5 +68,5 @@ deliver <draft.sododeck> <target.sododeck> [lint options]
 
 Runs validate and lint on the draft. When there is no `error`, moves the draft over the target
 (write to a temporary file in the target's folder, then rename, so the target is never half
-written) and prints the lint report plus `Delivered <target>.` (text) on stderr; exit 0. Otherwise
-leaves both files untouched, prints the report, exit 1.
+written), prints the lint report only when it has warnings, and `Delivered <target>.` on stderr;
+exit 0. Otherwise leaves both files untouched, prints the report, exit 1.

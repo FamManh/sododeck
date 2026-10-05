@@ -38,8 +38,8 @@ deck instead of reading the whole file.
 ## 5. deliver
 
 `deliver.mjs <draft> <target> [--detail …] [--mode …]`: runs lint on the draft; when there is no
-error, replaces the target with the draft in one step and deletes the draft. Otherwise both files
-stay as they are.
+error, replaces the target with the draft in one step and deletes the draft (the report prints
+only when there are warnings). Otherwise both files stay as they are and the report prints.
 
 ## 6. Reading a problem
 

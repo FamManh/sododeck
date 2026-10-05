@@ -110,8 +110,9 @@ describe('skill command line (027 contracts/scripts-cli.md)', () => {
     const draft = join(dir, 'draft.sododeck');
     writeFileSync(target, 'OLD');
     writeFileSync(draft, exampleText('platform.sododeck'));
-    const { code, err } = await run('deliver', draft, target);
+    const { code, out, err } = await run('deliver', draft, target);
     expect(code).toBe(0);
+    expect(out).toBe('');
     expect(err).toMatch(/Delivered/);
     expect(readFileSync(target, 'utf8')).toBe(exampleText('platform.sododeck'));
     expect(existsSync(draft)).toBe(false);

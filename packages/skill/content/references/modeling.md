@@ -70,6 +70,10 @@ the Architecture pack need their pack listed in the root `packs` list (for examp
 
 An unknown type id is kept and drawn as a generic card, with a warning. Prefer a built-in one.
 
+People and their devices (a customer, a support agent, a courier app) are `client` cards. Outside
+companies' systems (a payment provider, an email service) are `external` cards. Shapes are for
+plain sketches; prefer cards in an architecture deck.
+
 ## 4. Connectors
 
 ```json

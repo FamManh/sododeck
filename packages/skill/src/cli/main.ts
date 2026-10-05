@@ -154,7 +154,8 @@ async function run(command: Command, parsed: Parsed, io: Io): Promise<number> {
     case 'deliver': {
       const text = await read(first);
       const { report } = lintText(text, basename(first), APP_LABEL, parsed.options);
-      printReport(io, report, parsed.format);
+      // A clean delivery prints nothing but the stderr line: the agent already linted the draft.
+      if (report.problems.length > 0) printReport(io, report, parsed.format);
       if (hasErrors(report)) {
         io.err(`Not delivered: fix the errors above; ${second} is unchanged.`);
         return 1;
