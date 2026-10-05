@@ -235,6 +235,14 @@ describe('Palette: Add flyout (030)', () => {
     expect(useUiStore.getState().importDialog.open).toBe(true);
   });
 
+  it('offers Import Mermaid in the footer whatever the packs', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />);
+    const button = screen.getByRole('button', { name: 'Import Mermaid…' });
+    await user.click(button);
+    expect(useUiStore.getState().mermaidDialog).toEqual({ open: true, returnFocus: button });
+  });
+
   it('a deck from before packs lists only Architecture', () => {
     renderWithEditor(<Palette />);
     expect(

@@ -513,6 +513,8 @@ export interface UiState {
   exportDialog: { open: boolean; returnFocus: HTMLElement | null; seed?: ExportSeed };
   /** The Import SQL or DBML dialog (044). */
   importDialog: { open: boolean; returnFocus: HTMLElement | null };
+  /** The editor's Import Mermaid dialog: into this deck or a new one. */
+  mermaidDialog: { open: boolean; returnFocus: HTMLElement | null };
   /**
    * The last import report (044 FR-023, research R14) and the deck it belongs to: UI-only, never
    * in the deck; dropped when another deck opens. `open` shows it when that deck opens (a new
@@ -692,6 +694,8 @@ export interface UiState {
   closeExport: () => void;
   openImport: (returnFocus?: HTMLElement | null) => void;
   closeImport: () => void;
+  openMermaidImport: (returnFocus?: HTMLElement | null) => void;
+  closeMermaidImport: () => void;
   setImportReport: (
     report: (ImportReport & { deckId: string | null; open?: boolean }) | null,
   ) => void;
@@ -1035,6 +1039,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     palette: { open: false, returnFocus: null },
     exportDialog: { open: false, returnFocus: null },
     importDialog: { open: false, returnFocus: null },
+    mermaidDialog: { open: false, returnFocus: null },
     importReport: null,
     focusedId: null,
     focusedEdgeId: null,
@@ -1372,6 +1377,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     closeImport: () => {
       set({ importDialog: { open: false, returnFocus: null } });
+    },
+    openMermaidImport: (returnFocus = null) => {
+      set({ mermaidDialog: { open: true, returnFocus } });
+    },
+    closeMermaidImport: () => {
+      set({ mermaidDialog: { open: false, returnFocus: null } });
     },
     setImportReport: (report) => {
       set({ importReport: report });
@@ -1976,6 +1987,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         palette: { open: false, returnFocus: null },
         exportDialog: { open: false, returnFocus: null },
         importDialog: { open: false, returnFocus: null },
+        mermaidDialog: { open: false, returnFocus: null },
         importReport: keptReport,
         ...(showReport ? { flyout: 'import-report' as const } : {}),
         titleEdit: null,

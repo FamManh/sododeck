@@ -24,6 +24,8 @@ export interface CommandContext {
     codeOpen: boolean;
     toggleCode: () => void;
     hideUi: () => void;
+    /** Opens Import Mermaid (into this deck by default). */
+    importMermaid: () => void;
     /** Spreads the selection's connector ends (050 US7); absent when it cannot run now. */
     spreadEnds?: () => void;
   };
@@ -93,6 +95,12 @@ export function buildCommands({
         run: shell.toggleCode,
       },
       { id: 'hide-ui', title: 'Hide UI', aliases: ['present', 'hide controls'], run: shell.hideUi },
+      {
+        id: 'import-mermaid',
+        title: 'Import Mermaid…',
+        aliases: ['mermaid', 'flowchart', 'sequence diagram', 'import'],
+        run: shell.importMermaid,
+      },
     );
     if (shell.spreadEnds !== undefined) {
       commands.push({
