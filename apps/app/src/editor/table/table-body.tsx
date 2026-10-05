@@ -1,3 +1,4 @@
+import type { TouchAccess } from '@sododeck/model';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { KeyRound, Link2, ListOrdered, TriangleAlert } from 'lucide-react';
@@ -9,6 +10,7 @@ import { rowKey } from '../relationships/row-key';
 import { startColumnDrag } from '../editing/column-connect-drag';
 import type { RelSide } from '../relationships/relationship-ends';
 import { matchOrder, TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
+import { AccessMarker } from './access-marker';
 import { ColumnLineEditor } from './column-line-editor';
 import { EnumChip } from './enum-chip';
 import { RowGrip } from './row-grip';
@@ -105,6 +107,10 @@ function RowPort({
  * Editing (043): the open line editor takes an edited row's place or the new-row slot the layout
  * reserved (`newRowIndex`); a row drag draws its drop line; rows at mismatched relationship ends
  * show the (!) icon. Double-click edits a row, right-click opens the row menu.
+ *
+ * Playback (049): rows the current flow step touches are tinted and carry an R / W marker just
+ * outside the card's left edge (a letter in a shape, so read and write differ without colour);
+ * the row's name says "reads" / "writes".
  */
 export const TableBody = memo(function TableBody({
   nodeId,
@@ -112,6 +118,7 @@ export const TableBody = memo(function TableBody({
   focused,
   tinted = false,
   locked = false,
+  touched,
 }: {
   nodeId: string;
   layout: TableLayout;
@@ -121,6 +128,8 @@ export const TableBody = memo(function TableBody({
   tinted?: boolean;
   /** A locked table (043): no grip, no editing; rows still highlight and connect. */
   locked?: boolean;
+  /** Flow mode (049): the columns the current step reads or writes. */
+  touched?: ReadonlyMap<string, TouchAccess> | undefined;
 }) {
   // This table's line editor and row drag only: other tables never re-render for them.
   const columnEdit = useUiStore((s) => (s.columnEdit?.tableId === nodeId ? s.columnEdit : null));
@@ -164,11 +173,17 @@ export const TableBody = memo(function TableBody({
     if (columnEdit?.columnId === row.columnId) {
       return [...before, editor(columnEdit, `edit:${row.columnId}`)];
     }
+    const access = touched?.get(row.columnId);
     return [
       ...before,
       <li
         key={row.columnId}
-        aria-label={rowLabel(row)}
+        aria-label={
+          access === undefined
+            ? rowLabel(row)
+            : `${rowLabel(row)}, ${access === 'write' ? 'writes' : 'reads'}`
+        }
+        data-touch-access={access}
         aria-posinset={index + 1}
         aria-setsize={count}
         title={row.nameCut || row.typeCut ? rowLabel(row) : undefined}
@@ -204,10 +219,17 @@ export const TableBody = memo(function TableBody({
         className={cn(
           'group/row relative -mx-[9px] flex h-6 shrink-0 items-center rounded-row px-[9px] outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-primary',
           rowDrag?.columnId === row.columnId && 'bg-surface-2 opacity-60',
+          access !== undefined && 'bg-deck-orange-soft hover:bg-deck-orange-soft',
           layout.matchIds.has(row.columnId) && 'bg-deck-orange-soft',
           filterIndex >= 0 && currentMatch === row.columnId && 'ring-1 ring-deck-orange-ink',
         )}
       >
+        {access !== undefined && (
+          <AccessMarker
+            access={access}
+            className="pointer-events-none absolute top-[5px] -left-[19px]"
+          />
+        )}
         <RowPort nodeId={nodeId} columnId={row.columnId} name={row.name} side="left" />
         {!locked && (
           <RowGrip

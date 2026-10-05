@@ -74,6 +74,11 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - Cascade: `remove('groups', id)` removes every edge with an end at the group in the same transaction (one undo step); `previewRemoval` lists them under `removed`; steps using them are reported in `broken`.
   - Clipboard: `toFragment` keeps an edge when both ends are selected nodes or kept (whole) groups; `pasteFragment` remaps group ends through its group id map.
   - `checkDeck` and the search index title connections and steps by `endpointTitle`. `analyzeFlow` is unchanged: a group id is an ordinary end id (into G, then out of a card inside G, is a chain break).
+- **Added by 049** (database architecture link, ADR 0035):
+  - `Step.touches` is a plain nested list on the step (no layout change). Ops (`src/ops/touches.ts`), each one undo step, validated first: `addTouch(flowId, stepId, touch)` (`invalid` for a duplicate pair, a bad access or a node that is not a `db-table`; `missing-reference` for a column of another table; `not-found` for an unknown table or step), `setTouchAccess(flowId, stepId, key, access)` and `removeTouch(flowId, stepId, key)` (`TouchKey = { table, column? }`, `not-found` when not listed; the field goes when emptied). `isTouch(touch, key)` is exported.
+  - `setTableOwner(tableId, cardId | null)` (`src/ops/db-owner.ts`): sets or clears a table's `parent` in one undo step; the card must be a `database` node. Ownership is `node.parent`; there is no owner field.
+  - Cascade: removing a table drops every touch naming it (table and column entries), removing a column the touches naming it; the steps are reported in `updated`, never `broken`. Removing a database card still only un-parents its tables (`previewRemoval` lists them as updated).
+  - `checkIntegrity` reports a touch whose table is missing or not a `db-table` (`field: touches.<i>.table`, `targetType: 'table'`) and a column not in that table (`touches.<i>.column`, `targetType: 'column'`).
 - **Added by 046** (schema code panel, ADR 0034): `editor.batch(fn, { merge })` (`BatchOptions`). Batches that repeat one merge key join the previous undo item whatever the time gap (`ctx.transact(fn, key, merge)` lifts `captureTimeout` for that transaction only). A run ends on a tracked write with another key or none, `undo`, `redo` or the new `stopCapturing()`; untracked (remote, storage) transactions never end it. Operations nested in a batch no longer touch the grouping state; only the outermost call decides the step.
 - **Added by 052** (database drawer): root `blockSqlExport` is a plain `meta` key like `dialect`. `editor.setBlockSqlExport(on)` (`ops/db-enums.ts`) writes `true` or removes the key; setting the current value writes nothing, so no undo step. `readDeck` returns it, `validateObject('meta')` accepts it. The Database pack's tools gain `'enum'` (`PackTool`, `card-types.ts`).
 
@@ -99,7 +104,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006) · `problems.ts` deck-wide problems (015)
 - `rules/`: `cells.ts`, `evaluate.ts`, `usage.ts` (008, pure)
 - `views.ts` presets and view resolution (011)
-- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `frames`, `paste`, `group-selection` (016), `meta`, `cascade`, `style`, `swatches` (020), `db-tables`, `db-enums` (040), plus `context` (what ops get from the editor), `patch`, `refs`, `types`
+- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `frames`, `paste`, `group-selection` (016), `meta`, `cascade`, `style`, `swatches` (020), `db-tables`, `db-enums` (040), `touches`, `db-owner` (049), plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 - `dialect.ts` the deck's SQL dialect (040)
 - `schema-groups.ts` the derived schema group ids `schema:<name>` (048): `schemaGroupId`, `isSchemaGroupId`, `splitStoredGroups` (skips and reports a stored group in that namespace)
 - `fragment.ts` clipboard fragments (016)

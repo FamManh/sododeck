@@ -35,6 +35,7 @@ import { oneStep } from '../fields/one-step';
 import { OwnerField } from '../fields/owner-field';
 import { TagsField } from '../fields/tags-field';
 import { notesOnStep } from '../stickies/sticky-flow';
+import { StepTouches } from './step-touches';
 
 /** Flow mode (007): the current step's place on the played path. */
 export interface StepPlayback {
@@ -234,6 +235,7 @@ export function InspectorStep({
         ruleIds={s.rules}
         inputs={s.ruleInputs}
       />
+      <StepTouches deck={deck} flowId={flow.id} step={s} />
       {playback !== undefined && stepNotes.length > 0 && (
         <PanelSection label="NOTES ON THIS STEP" aria-label="NOTES ON THIS STEP">
           <ul role="list" className="flex flex-col gap-1.5">

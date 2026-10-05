@@ -4,6 +4,7 @@
  * edit to one node returns the same React Flow objects for all the others and `memo` skips them.
  */
 import {
+  deckDialect,
   edgeShape,
   isDbTable,
   relationshipDisplayOf,
@@ -13,6 +14,7 @@ import {
   stickyLabel,
   type StickyPlacement,
 } from '@sododeck/model';
+import type { TouchAccess } from '@sododeck/model';
 import type { EdgeShape, SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
@@ -57,6 +59,8 @@ import { resolveLook, type CardLook, type StylePreview } from './style/card-styl
 import { cardTagLooks, sameTagLooks, tagColourMap, type TagColourMap } from './tags/card-tag-looks';
 import type { TagLook } from './tags/tag-colours';
 import { cardFieldView, sameFieldView, type CardFieldView } from './card-fields';
+import { dialectLabel, isDatabaseCard, tableCounts } from '../db/owner';
+import type { TouchChip } from '../db/touches';
 import { PROXY_SIZE, proxyLayout } from './proxy-layout';
 import { scopeBounds, type CollapsedMember, type VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
@@ -106,6 +110,20 @@ export interface DeckNodeData extends Record<string, unknown> {
   geometry?: Geometry;
   /** Locked (043): not draggable or resizable, a lock badge in the header. */
   locked?: boolean;
+  /** A database card (049): how many tables it owns and the deck's dialect chip. */
+  database?: DatabaseFace;
+  /** Flow mode (049): the database card's chip for the current step, "writes orders +1". */
+  touchChip?: TouchChip;
+  /** Flow mode (049): a table the current step reads or writes. */
+  touch?: TouchAccess;
+  /** Flow mode (049): the columns of this table the current step touches. */
+  touchedColumns?: ReadonlyMap<string, TouchAccess>;
+}
+
+/** What a database card's face shows (049). */
+export interface DatabaseFace {
+  count: number;
+  dialect: string;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -240,6 +258,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   flowInside?: StepState;
   /** The number the folded sticker prints; absent when played (✓). */
   flowNumber?: string;
+  /** Flow mode (049): the chip of the database cards inside, merged ("writes orders +2"). */
+  touchChip?: TouchChip;
   /** Resolved fill/stroke colour (020); absent when the group has no colour. */
   look?: CardLook;
 }
@@ -523,6 +543,7 @@ function toFlowNode(
   mark: NodeFlowMark | undefined,
   tagColours: TagColourMap,
   fields: CardFieldView,
+  database: DatabaseFace | undefined,
 ): DeckFlowNode {
   const cached = nodeCache.get(node);
   const tagLooks =
@@ -533,6 +554,9 @@ function toFlowNode(
   const currentStep = mark?.currentStep === true;
   const step = mark?.step ?? undefined;
   const inFlow = mark?.inPath === true;
+  const touchChip = mark?.chip;
+  const touch = mark?.touch;
+  const touchedColumns = mark?.columns;
   const selected = view.selection.nodes.includes(node.id);
   const focused = node.id === view.focusedId;
   const dimmed = view.focus !== null && !view.focus.members.has(node.id);
@@ -552,8 +576,13 @@ function toFlowNode(
   ]
     .filter(Boolean)
     .join(' ');
-  // The view's own subtitle and the "n inside" row take part, so the box fits what is drawn.
-  const layout = cardLayoutOf(node, { description: subtitle, childCount, fields });
+  // The view's own subtitle and the "n inside" row take part, so the box fits what is drawn. A
+  // database card always draws its row ("No tables yet" included, 049).
+  const layout = cardLayoutOf(node, {
+    description: subtitle,
+    childCount: database === undefined ? childCount : Math.max(1, childCount),
+    fields,
+  });
   const size = { width: layout.width, height: layout.height };
   const geometry = geometryOf(node) ?? undefined;
   const locked = node.locked === true;
@@ -583,6 +612,11 @@ function toFlowNode(
     (cached.data.currentStep === true) === currentStep &&
     cached.data.step?.state === step?.state &&
     cached.data.step?.number === step?.number &&
+    cached.data.database?.count === database?.count &&
+    cached.data.database?.dialect === database?.dialect &&
+    cached.data.touchChip?.text === touchChip?.text &&
+    cached.data.touch === touch &&
+    cached.data.touchedColumns === touchedColumns &&
     sameClassName(cached.className, className) &&
     cached.position.x === position.x &&
     cached.position.y === position.y &&
@@ -626,6 +660,10 @@ function toFlowNode(
       ...(look === undefined ? {} : { look }),
       ...(geometry === undefined ? {} : { geometry }),
       ...(locked ? { locked } : {}),
+      ...(database === undefined ? {} : { database }),
+      ...(touchChip === undefined ? {} : { touchChip }),
+      ...(touch === undefined ? {} : { touch }),
+      ...(touchedColumns === undefined ? {} : { touchedColumns }),
       layout,
     },
   };
@@ -753,13 +791,13 @@ function collapsedNodes(
     const dimmed = view.focus !== null && !inFocus;
     const flowInside = view.marks.cards.get(card.groupId);
     const flowNumber = view.marks.cardNumbers.get(card.groupId);
+    const touchChip = view.marks.chips?.get(card.groupId);
     const look = resolveLook(
       groupsById.get(card.groupId)?.style,
       selected ? (view.stylePreview ?? undefined) : undefined,
     );
-    const className = [flowInside !== undefined ? 'in-flow' : null, focusClass(view, id)]
-      .filter(Boolean)
-      .join(' ');
+    const lit = flowInside !== undefined || touchChip !== undefined;
+    const className = [lit ? 'in-flow' : null, focusClass(view, id)].filter(Boolean).join(' ');
     const cached = collapsedCache.get(id);
     if (
       cached?.selected === selected &&
@@ -767,6 +805,7 @@ function collapsedNodes(
       cached.data.dimmed === dimmed &&
       cached.data.flowInside === flowInside &&
       cached.data.flowNumber === flowNumber &&
+      cached.data.touchChip?.text === touchChip?.text &&
       sameLook(cached.data.look, look) &&
       sameClassName(cached.className, className) &&
       Boolean(cached.domAttributes?.['aria-hidden']) === dimmed &&
@@ -800,6 +839,7 @@ function collapsedNodes(
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),
         ...(flowNumber === undefined ? {} : { flowNumber }),
+        ...(touchChip === undefined ? {} : { touchChip }),
         ...(look === undefined ? {} : { look }),
       },
     };
@@ -941,6 +981,8 @@ export function toFlowNodes(
   const lookups = deckLookups(deck);
   const tagColours = tagColourMap(deck.tagColors);
   const ports = portNodesWithView(deck, graph, view);
+  const counts = tableCounts(deck);
+  const dialect = dialectLabel(deckDialect(deck));
   const components = graph.nodes.flatMap((nodeId) => {
     const node = lookups.nodesById.get(nodeId);
     const index = lookups.nodeIndexById.get(nodeId);
@@ -955,6 +997,7 @@ export function toFlowNodes(
         overlay.nodes.get(node.id),
         tagColours,
         cardFieldView(deck, node),
+        isDatabaseCard(node) ? { count: counts.get(node.id) ?? 0, dialect } : undefined,
       ),
     ];
   });

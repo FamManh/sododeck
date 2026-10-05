@@ -1,5 +1,5 @@
 /** Confirmation and toast wording for a delete (FR-017/018). Pure. */
-import { endpointTitle, type RemovalResult, type RemovalTarget } from '@sododeck/model';
+import { endpointTitle, isDbTable, type RemovalResult, type RemovalTarget } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import { selectionTargets, type Selection } from '../state/ui-store';
@@ -61,6 +61,37 @@ function brokenCounts(result: RemovalResult): { steps: number; notes: number } {
   return { steps: steps.size, notes: notes.size };
 }
 
+/**
+ * Tables a delete keeps but leaves without their database card (049): children of a removed
+ * node that stay, reported by the cascade as updated.
+ */
+export function keptTables(
+  deck: SododeckFile,
+  targets: readonly RemovalTarget[],
+  result: RemovalResult,
+): string[] {
+  const removed = new Set(targets.filter((t) => t.scope === 'nodes').map((t) => t.id));
+  if (removed.size === 0) return [];
+  const byId = new Map(deck.nodes.map((node) => [node.id, node]));
+  return result.updated.flatMap((ref) => {
+    if (ref.scope !== 'nodes' || ref.child !== undefined || removed.has(ref.id)) return [];
+    const node = byId.get(ref.id);
+    return node !== undefined &&
+      isDbTable(node) &&
+      node.parent !== undefined &&
+      removed.has(node.parent)
+      ? [ref.id]
+      : [];
+  });
+}
+
+function keptTablesSentence(count: number): string | null {
+  if (count === 0) return null;
+  return count === 1
+    ? '1 table is kept and becomes unowned.'
+    : `${String(count)} tables are kept and become unowned.`;
+}
+
 function freedNoteSentence(count: number): string | null {
   if (count === 0) return null;
   return `${plural(count, 'pinned note')} will stay on the canvas, unpinned.`;
@@ -109,6 +140,8 @@ export function describeRemoval(
   const stepsRemoved = result.removed.filter((r) => r.child?.kind === 'step').length;
   if (stepsRemoved > 0) sentences.push(`Its ${plural(stepsRemoved, 'step')} will be deleted.`);
   if (edges > 0) sentences.push(`Also removes ${plural(edges, 'connection')}.`);
+  const kept = keptTablesSentence(keptTables(deck, targets, result).length);
+  if (kept !== null) sentences.push(kept);
   const freed = freedNoteSentence(result.freed.length);
   if (freed !== null) sentences.push(freed);
   const broken = [
@@ -148,7 +181,9 @@ export function removalToast(
       ? `${subject(deck, targets)} and ${plural(edges, 'connection')}`
       : subject(deck, targets);
   const freed = result.freed.length > 0 ? ` · ${plural(result.freed.length, 'note')} unpinned` : '';
-  return `Deleted ${what}${freed} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  const keptCount = keptTables(deck, targets, result).length;
+  const kept = keptCount > 0 ? ` · ${plural(keptCount, 'table')} kept` : '';
+  return `Deleted ${what}${freed}${kept} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
 }
 
 /**

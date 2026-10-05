@@ -169,3 +169,31 @@ describe('collapseFlowMarks', () => {
     expect(marks.cards.size).toBe(0);
   });
 });
+
+describe('collapseFlowMarks: database chips (049)', () => {
+  it('merges the chips of database cards folded into a collapsed group, in deck order', () => {
+    const deck = deckOf({
+      nodes: [
+        { id: 'svc', type: 'service', title: 'Svc' },
+        { id: 'odb', type: 'database', title: 'Orders DB', group: 'data' },
+        { id: 'cdb', type: 'database', title: 'Customers DB', group: 'data' },
+      ],
+      groups: [{ id: 'data', title: 'Data' }],
+      edges: [{ id: 'e', from: 'svc', to: 'odb' }],
+    });
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set(['data']));
+    const chip = (title: string, access: 'read' | 'write') => ({
+      text: `${access === 'write' ? 'writes' : 'reads'} ${title}`,
+      access,
+      tables: [{ title, access }],
+    });
+    const overlay = {
+      edges: new Map([['e', { badges: [], style: 'path' as const, errorIcon: false }]]),
+      nodes: new Map([
+        ['odb', { chip: chip('orders', 'write') }],
+        ['cdb', { chip: chip('customers', 'read') }],
+      ]),
+    };
+    expect(collapseFlowMarks(overlay, graph).chips?.get('data')?.text).toBe('writes orders +1');
+  });
+});

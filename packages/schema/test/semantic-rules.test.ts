@@ -396,4 +396,45 @@ describe('checkSemanticRules', () => {
       ]);
     });
   });
+  describe('S15: a step touches a table or column once (049)', () => {
+    const deck = (touches: unknown[]) =>
+      ({
+        ...emptySododeckFile(),
+        flows: [{ id: 'f', title: 'f', steps: [{ id: 's', edge: 'e', touches }] }],
+      }) as SododeckFile;
+
+    it('accepts a table touch next to touches of its columns', () => {
+      expect(
+        checkSemanticRules(
+          deck([
+            { table: 't', access: 'write' },
+            { table: 't', column: 'c', access: 'read' },
+            { table: 't', column: 'd', access: 'write' },
+          ]),
+        ),
+      ).toEqual([]);
+    });
+
+    it('reports a second touch of the same table or column', () => {
+      expect(
+        checkSemanticRules(
+          deck([
+            { table: 't', access: 'write' },
+            { table: 't', column: 'c', access: 'read' },
+            { table: 't', access: 'read' },
+            { table: 't', column: 'c', access: 'write' },
+          ]),
+        ),
+      ).toEqual([
+        {
+          path: 'flows.0.steps.0.touches.2',
+          message: 'Step "s" touches table "t" twice; keep one entry.',
+        },
+        {
+          path: 'flows.0.steps.0.touches.3',
+          message: 'Step "s" touches column "c" of table "t" twice; keep one entry.',
+        },
+      ]);
+    });
+  });
 });

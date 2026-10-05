@@ -20,7 +20,17 @@ export interface IntegrityProblem {
   field: string;
   /** The missing, ambiguous or cyclic id. */
   target: Id;
-  targetType: 'node' | 'group' | 'edge' | 'feature' | 'branch' | 'rule' | 'rule-column' | 'object';
+  targetType:
+    | 'node'
+    | 'group'
+    | 'edge'
+    | 'feature'
+    | 'branch'
+    | 'rule'
+    | 'rule-column'
+    | 'table'
+    | 'column'
+    | 'object';
 }
 
 type TargetType = IntegrityProblem['targetType'];
@@ -124,6 +134,11 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
       if (!isSchemaGroupId(id)) check(object, 'collapsed', id, groups, 'group');
     }
   }
+  // Step touches (049) name a table node and, optionally, one of its columns.
+  const tableColumns = new Map<Id, ReadonlySet<Id>>();
+  for (const node of file.nodes) {
+    if (node.type === 'db-table') tableColumns.set(node.id, ids(node.columns ?? []));
+  }
   for (const flow of file.flows) {
     check({ scope: 'flows', id: flow.id }, 'feature', flow.feature, features, 'feature');
     const branches = ids(flow.branches ?? []);
@@ -149,6 +164,12 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
           check(object, `ruleInputs.${ruleId}.${columnId}`, columnId, columns, 'rule-column');
         }
       }
+      step.touches?.forEach((touch, index) => {
+        const field = `touches.${String(index)}`;
+        const columns = tableColumns.get(touch.table);
+        if (columns === undefined) report(object, `${field}.table`, touch.table, 'table');
+        else check(object, `${field}.column`, touch.column, columns, 'column');
+      });
     }
   }
   for (const sticky of file.stickies) {

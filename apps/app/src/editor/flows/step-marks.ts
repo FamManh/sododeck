@@ -1,5 +1,7 @@
 import type { PathStep } from '@sododeck/model';
 
+import { touchedTables } from '../../db/touches';
+
 /**
  * Where a card or connector sits relative to the current step of a played flow (035). Derived at
  * render time from the played path; nothing is stored (Principle I).
@@ -19,7 +21,8 @@ const RANK: Record<StepState, number> = { upcoming: 0, played: 1, current: 2 };
  * the current step; the source of the current step and of step 1, and every earlier target, are
  * played; later targets are upcoming and show the first later step that reaches them. A card
  * reached more than once keeps its most advanced state (current > played > upcoming). Broken steps
- * have no cards, so they mark nothing. One pass, O(steps).
+ * have no cards, so they mark nothing. The tables the current step reads or writes (049) are
+ * current too, at whatever level they are drawn. One pass, O(steps + touches).
  */
 export function stepMarks(
   steps: readonly PathStep[],
@@ -43,6 +46,10 @@ export function stepMarks(
     else if (k === currentIndex) raise(s.to, { state: 'current', number: s.number });
     else raise(s.to, { state: 'upcoming', number: s.number });
   });
+  const current = steps[currentIndex];
+  for (const tableId of touchedTables(current.step).keys()) {
+    raise(tableId, { state: 'current', number: current.number });
+  }
   return marks;
 }
 

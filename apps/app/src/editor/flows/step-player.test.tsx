@@ -216,3 +216,61 @@ describe('StepPlayer', () => {
     });
   });
 });
+
+describe('StepPlayer and step touches (049 US3)', () => {
+  const table = (id: string, parent?: string) => ({
+    id,
+    type: 'db-table' as const,
+    title: id,
+    columns: [{ id: `${id}-id`, name: 'id', type: 'int' }],
+    ...(parent === undefined ? {} : { parent }),
+  });
+  const touchDeck = {
+    ...playbackDeck,
+    nodes: [
+      ...playbackDeck.nodes,
+      { id: 'cdb', type: 'database', title: 'Customers DB', position: { x: 200, y: 400 } },
+      table('audit_log', 'z'),
+      table('customers', 'cdb'),
+      table('loose'),
+    ],
+    flows: playbackDeck.flows.map((flow) =>
+      flow.id === 'order'
+        ? {
+            ...flow,
+            steps: flow.steps.map((step) =>
+              step.id === 'o1'
+                ? {
+                    ...step,
+                    touches: [
+                      { table: 'audit_log', access: 'write' as const },
+                      { table: 'loose', access: 'read' as const },
+                    ],
+                  }
+                : step.id === 'o2'
+                  ? { ...step, touches: [{ table: 'customers', access: 'read' as const }] }
+                  : step,
+            ),
+          }
+        : flow,
+    ),
+  };
+
+  it('names nothing it can light at architecture level', () => {
+    const { player } = setup('order', 'o1', touchDeck);
+    expect(within(player).queryByTestId('touch-note')).toBeNull();
+  });
+
+  it('drilled into a card, names tables it cannot light and follows Next', async () => {
+    const { player, user, ui } = setup('order', 'o1', touchDeck);
+    act(() => {
+      ui().drillInto({ kind: 'node', id: 'z', viewport: { x: 0, y: 0, zoom: 1 } });
+    });
+    expect(within(player).getByTestId('touch-note')).toHaveTextContent('Also touches: loose');
+    await user.click(within(player).getByRole('button', { name: 'Next step' }));
+    expect(screen.getByRole('region', { name: 'Step player' })).toBeInTheDocument();
+    expect(within(player).getByTestId('touch-note')).toHaveTextContent(
+      'Also touches: Customers DB · customers',
+    );
+  });
+});

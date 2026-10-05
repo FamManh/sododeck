@@ -62,6 +62,7 @@ const FRAMES = 'views.2.groupFrames';
 const CUSTOMERS = 'nodes.12';
 const ORDERS = 'nodes.13';
 const RELATION = 'edges.7';
+const TOUCHES = 'flows.2.steps.1.touches';
 
 export const invalidFixtures: InvalidFixture[] = [
   // Envelope
@@ -758,6 +759,27 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'nodes.2.locked',
   },
   { name: 'locked is not a boolean', input: set('nodes.2.locked', 'yes'), path: 'nodes.2.locked' },
+  // 049: step touches.
+  {
+    name: 'touch without a table',
+    input: remove(`${TOUCHES}.0.table`),
+    path: `${TOUCHES}.0.table`,
+  },
+  {
+    name: 'touch access "update"',
+    input: set(`${TOUCHES}.0.access`, 'update'),
+    path: `${TOUCHES}.0.access`,
+  },
+  {
+    name: 'touch with an unknown key',
+    input: set(`${TOUCHES}.0.columns`, ['order-id']),
+    path: `${TOUCHES}.0`,
+  },
+  {
+    name: 'two touches of one step on the same table and column (S15)',
+    input: set(`${TOUCHES}.2`, { table: 'orders', access: 'read' }),
+    path: `${TOUCHES}.2`,
+  },
 ];
 
 /**
@@ -771,6 +793,12 @@ export const validFixtures: { name: string; input: unknown }[] = [
   { name: 'locked card', input: set('nodes.2.locked', true) },
   { name: 'locked shape', input: set('nodes.8.locked', true) },
   { name: 'locked table', input: set(`${CUSTOMERS}.locked`, true) },
+  // 049: a table touch and touches of its own columns coexist; an empty list is valid.
+  { name: 'empty touches', input: set(TOUCHES, []) },
+  {
+    name: 'a table touch next to its column touch',
+    input: set(`${TOUCHES}.3`, { table: 'customers', access: 'write' }),
+  },
   // 048: the only grouping mode that is stored, and a view with one schema and every detail level.
   { name: 'grouping mode schema', input: set('groupingMode', 'schema') },
   { name: 'view detail names', input: set('views.4.detail', 'names') },

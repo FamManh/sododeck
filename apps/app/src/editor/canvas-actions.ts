@@ -17,6 +17,7 @@ import {
 import { oneStep } from './fields/one-step';
 import { placeholderTitle } from './placeholder-title';
 import { readViewState } from './views/use-current-view';
+import { scopeOf } from './visible-graph';
 
 /** Marks the canvas wrapper, so focus helpers and the palette can find it. */
 export const CANVAS_ATTR = 'data-canvas';
@@ -35,6 +36,14 @@ export function centredOn(point: Point, type?: string): Point {
 }
 
 /**
+ * The card a new table belongs to (049): the card the canvas is drilled into, so a table made
+ * "Inside Orders DB" is one of its tables. `undefined` at the top level or inside a group.
+ */
+export function tableParent(): string | undefined {
+  return scopeOf(useUiStore.getState().drill).node ?? undefined;
+}
+
+/**
  * Adds "Untitled <type>" at `position` (moved to a free spot), selects it and announces it. With
  * `edit`, the new card starts in title edit with an empty field (019 FR-011); the stored title is
  * the fallback kept when the user leaves it empty (FR-014, ADR 0015: a title is never empty).
@@ -46,10 +55,12 @@ export function addComponent(
   { edit = false }: { edit?: boolean } = {},
 ): string {
   const title = placeholderTitle(type);
+  const parent = type === 'db-table' ? tableParent() : undefined;
   const id = editor.add('nodes', {
     type,
     title,
     position: freeSpot(readViewState(editor.doc).deck, round(position)),
+    ...(parent === undefined ? {} : { parent }),
   });
   const ui = useUiStore.getState();
   // A new component the current view hides stays visible here until the view is left (011).
@@ -74,13 +85,20 @@ export function nextTableName(deck: Pick<SododeckFile, 'nodes'>): string {
 /**
  * Adds a table centred on `point` (043 R12, FR-012): the first free `table_n`, one column
  * `id integer` primary key, one undo step. It is selected and its title opens for renaming.
+ * Drilled into a card, the table belongs to that card (049).
  */
 export function addTable(editor: DeckEditor, point: Point): string {
   const title = nextTableName(readDeck(editor.doc));
   const position = freeSpot(readViewState(editor.doc).deck, centredOn(point, 'db-table'));
+  const parent = tableParent();
   let id = '';
   oneStep(editor, () => {
-    id = editor.add('nodes', { type: 'db-table', title, position });
+    id = editor.add('nodes', {
+      type: 'db-table',
+      title,
+      position,
+      ...(parent === undefined ? {} : { parent }),
+    });
     editor.addColumn(id, { name: 'id', type: 'integer', pk: true, notNull: true });
   });
   const ui = useUiStore.getState();

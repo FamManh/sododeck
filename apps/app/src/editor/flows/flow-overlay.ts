@@ -3,9 +3,11 @@
  * candidate, preview and invalid styles on edges, and the "Step n starts here" ring on the next
  * start node; in flow mode (007) the played path, the current edge and its nodes. Pure; `toFlowEdges` / `toFlowNodes` read it through their per-object cache.
  */
-import type { FlowAnalysis, PathStep } from '@sododeck/model';
+import type { FlowAnalysis, PathStep, TouchAccess } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
+import { cardChip, touchSets, type TouchChip } from '../../db/touches';
+import { isDatabaseCard } from '../../db/owner';
 import type { FlowSession } from '../../state/ui-store';
 import { sessionPath } from './session-path';
 import { edgeStateOf, stepMarks, type NodeStepMark, type StepState } from './step-marks';
@@ -45,6 +47,12 @@ export interface NodeFlowMark {
   currentStep?: boolean;
   /** Flow mode: the card's sticker (035); absent for cards the played path does not touch. */
   step?: NodeStepMark | null;
+  /** Flow mode (049): a table the current step reads or writes (write beats read). */
+  touch?: TouchAccess;
+  /** Flow mode (049): the columns of this table the current step touches. */
+  columns?: ReadonlyMap<string, TouchAccess>;
+  /** Flow mode (049): a database card owning touched tables, "writes orders +1". */
+  chip?: TouchChip;
 }
 
 /** Flow mode input (007 data-model §3). */
@@ -103,7 +111,10 @@ export function flowOverlay(
   }
 
   const nodes = new Map<string, NodeFlowMark>();
-  if (playback !== null && analysis !== null) markPlayback(analysis, playback, edges, nodes);
+  if (playback !== null && analysis !== null) {
+    markPlayback(analysis, playback, edges, nodes);
+    markTouches(deck, analysis, playback, nodes);
+  }
   if (session === null) return { edges, nodes };
 
   const path = sessionPath(analysis, session.target);
@@ -153,6 +164,40 @@ function markPlayback(
   }
   for (const [nodeId, step] of stepMarks(steps, currentIndex)) {
     nodes.set(nodeId, { inPath: true, currentStep: step.state === 'current', step });
+  }
+}
+
+/**
+ * What the current step reads or writes (049): each touched table gets its access and touched
+ * columns (its `current` sticker comes from `stepMarks`), and each database card owning a touched
+ * table its chip ("writes orders +1"). Whichever is drawn at the current level shows.
+ */
+function markTouches(
+  deck: SododeckFile,
+  analysis: FlowAnalysis,
+  playback: PlaybackMarks,
+  nodes: Map<string, NodeFlowMark>,
+): void {
+  const step =
+    playback.currentStepId === null
+      ? undefined
+      : analysis.byStepId.get(playback.currentStepId)?.step;
+  const { tables, byTable } = touchSets(step);
+  if (step === undefined || tables.size === 0) return;
+  for (const [tableId, access] of tables) {
+    const mark = nodes.get(tableId) ?? { inPath: true, currentStep: true, step: null };
+    const own = byTable.get(tableId);
+    nodes.set(tableId, { ...mark, touch: access, ...(own === undefined ? {} : { columns: own }) });
+  }
+  for (const card of deck.nodes) {
+    if (!isDatabaseCard(card)) continue;
+    const chip = cardChip(deck, card.id, step);
+    if (chip === null) continue;
+    nodes.set(card.id, {
+      ...(nodes.get(card.id) ?? { currentStep: false, step: null }),
+      inPath: true,
+      chip,
+    });
   }
 }
 

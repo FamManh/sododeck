@@ -16,7 +16,15 @@ import { useMemo } from 'react';
 import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { newRowAt, rowEditTableId, useUiStore, type UiState } from '../../state/ui-store';
-import { viewStateOf, type RowEditView, type TableFilterView, type ViewState } from './view-state';
+import { touchSets } from '../../db/touches';
+import { currentFlowStep } from '../flows/current-step';
+import {
+  viewStateOf,
+  type RowEditView,
+  type TableFilterView,
+  type TouchedRows,
+  type ViewState,
+} from './view-state';
 import { viewCrumbTitle } from './view-title';
 
 function rowEditView(tableId: string | null, at: number | null): RowEditView | null {
@@ -28,6 +36,15 @@ function rowEditOf(state: UiState): RowEditView | null {
   return rowEditView(rowEditTableId(state), newRowAt(state));
 }
 
+/** The rows the current flow step touches (049), the same object while the step is unchanged. */
+function touchedRowsOf(
+  file: SododeckFile,
+  state: Pick<UiState, 'activeFlow' | 'flowSession'>,
+): TouchedRows | null {
+  const rows = touchSets(currentFlowStep(file, state)).rows;
+  return rows.size === 0 ? null : rows;
+}
+
 function tableFilterOf(state: UiState): TableFilterView | null {
   return state.tableFilter;
 }
@@ -35,12 +52,14 @@ function tableFilterOf(state: UiState): TableFilterView | null {
 /** The current view state without subscribing (event handlers). */
 export function readViewState(doc: DeckDoc): ViewState {
   const state = useUiStore.getState();
+  const file = readDeck(doc);
   return viewStateOf(
-    readDeck(doc),
+    file,
     state.currentViewId,
     state.revealed,
     rowEditOf(state),
     tableFilterOf(state),
+    touchedRowsOf(file, state),
   );
 }
 
@@ -53,6 +72,7 @@ export function canvasDeckOf(file: SododeckFile): SododeckFile {
     state.revealed,
     rowEditOf(state),
     tableFilterOf(state),
+    touchedRowsOf(file, state),
   ).deck;
 }
 
@@ -71,7 +91,9 @@ export function useViewState(): ViewState {
   const at = useUiStore(newRowAt);
   const rowEdit = useMemo(() => rowEditView(editTable, at), [editTable, at]);
   const filter = useUiStore(tableFilterOf);
-  return viewStateOf(deck, currentViewId, revealed, rowEdit, filter);
+  // The rows object is cached per step, so a step change without touches re-renders nothing.
+  const touched = useUiStore((s) => touchedRowsOf(deck, s));
+  return viewStateOf(deck, currentViewId, revealed, rowEdit, filter, touched);
 }
 
 /** Stored views, or the presets while the deck has none. */

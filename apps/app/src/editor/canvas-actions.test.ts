@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
 import {
+  addComponent,
   addTable,
   connectColumns,
   connectComponents,
@@ -270,5 +271,40 @@ describe('addTable (043 R12, FR-012)', () => {
     expect(ui.titleEdit).toEqual({ target: 'node', id, isNew: false, kind: 'db-table' });
     editor.undo();
     expect(toJSON(doc).nodes.map((n) => n.id)).toEqual(['t']);
+  });
+});
+
+describe('tables created inside a database card (049 US1)', () => {
+  const dbDeck = deckOf({
+    nodes: [
+      { id: 'odb', type: 'database', title: 'Orders DB', position: { x: 0, y: 0 } },
+      { id: 'svc', type: 'service', title: 'Svc', position: { x: 300, y: 0 } },
+    ],
+  });
+  const node = (doc: ReturnType<typeof fromJSON>, id: string) =>
+    toJSON(doc).nodes.find((n) => n.id === id);
+
+  it('belongs to the drilled-in card, in the same undo step', () => {
+    const doc = fromJSON(dbDeck);
+    const editor = createEditor(doc);
+    useUiStore.getState().drillInto({ kind: 'node', id: 'odb', viewport: { x: 0, y: 0, zoom: 1 } });
+    const id = addTable(editor, { x: 0, y: 0 });
+    expect(node(doc, id)?.parent).toBe('odb');
+    editor.undo();
+    expect(node(doc, id)).toBeUndefined();
+  });
+
+  it('a table dropped from the palette inside the card belongs to it too', () => {
+    const doc = fromJSON(dbDeck);
+    const editor = createEditor(doc);
+    useUiStore.getState().drillInto({ kind: 'node', id: 'odb', viewport: { x: 0, y: 0, zoom: 1 } });
+    expect(node(doc, addComponent(editor, 'db-table', { x: 0, y: 0 }))?.parent).toBe('odb');
+    expect(node(doc, addComponent(editor, 'service', { x: 0, y: 0 }))?.parent).toBeUndefined();
+  });
+
+  it('stays unowned at the top level', () => {
+    const doc = fromJSON(dbDeck);
+    const editor = createEditor(doc);
+    expect(node(doc, addTable(editor, { x: 0, y: 0 }))?.parent).toBeUndefined();
   });
 });

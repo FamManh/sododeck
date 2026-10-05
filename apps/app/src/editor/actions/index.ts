@@ -4,6 +4,7 @@ import { CANVAS_ACTIONS } from './canvas-actions';
 import { CLIPBOARD_ACTIONS } from './clipboard-actions';
 import { COMMON_ACTIONS } from './common-actions';
 import { CONNECTION_ACTIONS, SPREAD_ENDS_ACTION } from './connection-actions';
+import { DB_ACTIONS } from './db-actions';
 import { FIELD_ACTIONS } from './field-actions';
 import { GROUP_ACTIONS } from './group-actions';
 import { RELATIONSHIP_ACTIONS } from './relationship-actions';
@@ -29,6 +30,7 @@ export const ACTIONS: readonly Action[] = [
   ...SHAPE_FORM_ACTIONS,
   ...TABLE_DETAIL_ACTIONS,
   ...TABLE_ACTIONS,
+  ...DB_ACTIONS,
   ...FIELD_ACTIONS,
   ...STYLE_ACTIONS,
   ...CANVAS_ACTIONS,

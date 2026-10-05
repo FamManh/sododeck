@@ -140,6 +140,40 @@ describe('TableBody editing marks (043)', () => {
   });
 });
 
+describe('TableBody touched rows (049 US3)', () => {
+  const measure = fixedWidthMeasurer(0.6);
+
+  it('marks read and write rows by letter and shape and says it in the row name', () => {
+    const layout = tableLayout(
+      orders,
+      context({ detail: 'keys' }),
+      undefined,
+      measure,
+      new Set(['total_cents']),
+    );
+    render(
+      <TableBody
+        nodeId="orders"
+        layout={layout}
+        focused={false}
+        touched={
+          new Map([
+            ['total_cents', 'write'],
+            ['id', 'read'],
+          ])
+        }
+      />,
+    );
+    const written = screen.getByRole('listitem', { name: /^total_cents.*, writes$/ });
+    expect(within(written).getByText('W')).toHaveAttribute('data-access', 'write');
+    const read = screen.getByRole('listitem', { name: /^id.*, reads$/ });
+    expect(within(read).getByText('R')).toHaveAttribute('data-access', 'read');
+    expect(screen.getByRole('listitem', { name: /^customer_id/ })).not.toHaveAttribute(
+      'data-touch-access',
+    );
+  });
+});
+
 describe('Show all / Show fewer (048 contracts/scale-ui.md)', () => {
   const wideNode = {
     id: 'orders',

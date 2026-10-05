@@ -1,8 +1,9 @@
 import { previewRemoval, type RemovalTarget } from '@sododeck/model';
+import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import { describeRemoval, removalToast, withNewProblems } from './describe-removal';
+import { describeRemoval, keptTables, removalToast, withNewProblems } from './describe-removal';
 
 const deck = deckOf({
   nodes: [
@@ -233,5 +234,28 @@ describe('describeRemoval with group connectors (050 US4)', () => {
     const targets: RemovalTarget[] = [{ scope: 'edges', id: 'g2' }];
     const result = previewRemoval(grouped, targets);
     expect(describeRemoval(grouped, targets, result).title).toBe('Delete Edge → Data layer?');
+  });
+});
+
+describe('describeRemoval for a database card (049)', () => {
+  const dbDeck: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'odb', type: 'database', title: 'Orders DB' },
+      { id: 'orders', type: 'db-table', title: 'orders', parent: 'odb', columns: [] },
+      { id: 'svc', type: 'service', title: 'Inner', parent: 'odb' },
+    ],
+  };
+  const targets: RemovalTarget[] = [{ scope: 'nodes', id: 'odb' }];
+
+  it('says how many tables are kept and become unowned', () => {
+    const result = previewRemoval(dbDeck, targets);
+    expect(keptTables(dbDeck, targets, result)).toEqual(['orders']);
+    expect(describeRemoval(dbDeck, targets, result).body).toContain(
+      '1 table is kept and becomes unowned.',
+    );
+    expect(removalToast(dbDeck, targets, result, true)).toBe(
+      'Deleted Orders DB · 1 table kept · ⌘Z to undo',
+    );
   });
 });

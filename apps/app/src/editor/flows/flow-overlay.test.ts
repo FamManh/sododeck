@@ -9,6 +9,7 @@ import {
   playbackDeck,
   session,
 } from '../../test/flow-fixtures';
+import { deckOf } from '../../test/render-canvas';
 import { flowOverlay } from './flow-overlay';
 
 const place = flowDeck.flows[0] as Flow;
@@ -218,5 +219,89 @@ describe('flowOverlay in flow mode (007)', () => {
       errorIcon: false,
     });
     expect(overlay.nodes.size).toBe(0);
+  });
+});
+
+describe('flow overlay: step touches (049 US3)', () => {
+  const deck = deckOf({
+    nodes: [
+      { id: 'web', type: 'client', title: 'Web' },
+      { id: 'svc', type: 'service', title: 'Orders' },
+      { id: 'odb', type: 'database', title: 'Orders DB' },
+      { id: 'cdb', type: 'database', title: 'Customers DB' },
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        parent: 'odb',
+        columns: [{ id: 'o-total', name: 'total', type: 'int' }],
+      },
+      { id: 'items', type: 'db-table', title: 'items', parent: 'odb', columns: [] },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        parent: 'cdb',
+        columns: [{ id: 'c-email', name: 'email', type: 'text' }],
+      },
+    ],
+    edges: [
+      { id: 'e1', from: 'web', to: 'svc' },
+      { id: 'e2', from: 'svc', to: 'odb' },
+    ],
+    flows: [
+      {
+        id: 'f',
+        title: 'Checkout',
+        steps: [
+          { id: 's1', edge: 'e1' },
+          {
+            id: 's2',
+            edge: 'e2',
+            touches: [
+              { table: 'orders', access: 'write' },
+              { table: 'orders', column: 'o-total', access: 'write' },
+              { table: 'items', access: 'read' },
+              { table: 'customers', column: 'c-email', access: 'read' },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  const flow = deck.flows[0];
+  if (flow === undefined) throw new Error('flow');
+  const analysis = analyzeFlow(flow, deck.edges);
+  const at = (stepId: string) =>
+    flowOverlay(deck, analysis, null, null, stepId, {
+      played: new Set(['s1', 's2']),
+      currentStepId: stepId,
+      speed: 1,
+    });
+
+  it('lights touched tables with their access and touched columns', () => {
+    const nodes = at('s2').nodes;
+    expect(nodes.get('orders')).toMatchObject({
+      inPath: true,
+      currentStep: true,
+      touch: 'write',
+      step: { state: 'current', number: '2' },
+    });
+    expect([...(nodes.get('orders')?.columns ?? [])]).toEqual([['o-total', 'write']]);
+    expect(nodes.get('items')).toMatchObject({ touch: 'read' });
+    expect(nodes.get('customers')?.columns?.get('c-email')).toBe('read');
+  });
+
+  it('gives each database card its chip, verb first', () => {
+    const nodes = at('s2').nodes;
+    expect(nodes.get('odb')?.chip?.text).toBe('writes orders +1');
+    expect(nodes.get('odb')?.inPath).toBe(true);
+    expect(nodes.get('cdb')?.chip?.text).toBe('reads customers');
+  });
+
+  it('marks nothing for a step without touches', () => {
+    const nodes = at('s1').nodes;
+    expect(nodes.get('orders')).toBeUndefined();
+    expect(nodes.get('odb')?.chip).toBeUndefined();
   });
 });

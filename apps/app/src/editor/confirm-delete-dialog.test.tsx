@@ -195,3 +195,63 @@ describe('ConfirmDeleteDialog', () => {
     expect(toJSON(doc)).toEqual(ruleDeck);
   });
 });
+
+describe('deleting a database card that owns tables (049 US1)', () => {
+  const table = (id: string, x: number) => ({
+    id,
+    type: 'db-table' as const,
+    title: id,
+    parent: 'odb',
+    position: { x, y: 0 },
+    columns: [{ id: `${id}-id`, name: 'id', type: 'int' }],
+  });
+  const dbDeck = deckOf({
+    nodes: [
+      { id: 'odb', type: 'database', title: 'Orders DB', position: { x: 0, y: 0 } },
+      { id: 'web', type: 'client', title: 'Web', position: { x: 0, y: 300 } },
+      table('orders', 0),
+      table('items', 300),
+    ],
+  });
+
+  it('asks first, says the tables are kept, and one undo restores card and ownership', async () => {
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(<Harness />, dbDeck);
+    act(() => {
+      useUiStore.getState().select({ nodes: ['odb'] });
+      useUiStore.getState().requestDelete({ nodes: ['odb'], edges: [], stickies: [] });
+    });
+    const dialog = screen.getByRole('alertdialog', { name: 'Delete Orders DB?' });
+    expect(dialog).toHaveTextContent('2 tables are kept and become unowned.');
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    const after = toJSON(doc);
+    expect(after.nodes.map((n) => n.id)).toEqual(['web', 'orders', 'items']);
+    expect(after.nodes.filter((n) => n.type === 'db-table').map((n) => n.parent)).toEqual([
+      undefined,
+      undefined,
+    ]);
+    // Placed clear of Web, which sits where the tables were.
+    for (const id of ['orders', 'items']) {
+      expect(after.nodes.find((n) => n.id === id)?.position).not.toEqual({ x: 0, y: 0 });
+    }
+    expect(screen.getByText(/2 tables kept/)).toBeInTheDocument();
+
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(dbDeck);
+  });
+
+  it('deletes an empty database card at once, like any card', () => {
+    const { doc } = renderWithEditor(
+      <Harness />,
+      deckOf({ nodes: [{ id: 'odb', type: 'database', title: 'Orders DB' }] }),
+    );
+    act(() => {
+      useUiStore.getState().requestDelete({ nodes: ['odb'], edges: [], stickies: [] });
+    });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(toJSON(doc).nodes).toEqual([]);
+  });
+});

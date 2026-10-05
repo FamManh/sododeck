@@ -277,10 +277,13 @@ export interface RowDrag {
   overIndex: number;
 }
 
-/** The export dialog's first format and schema scope when an action opens it (043 R15). */
+/**
+ * The export dialog's first format and schema scope when an action opens it (043 R15): the
+ * selected tables, or (049) the one selected or drilled-into database card.
+ */
 export interface ExportSeed {
   format: 'sql';
-  scope: 'selection';
+  scope: 'selection' | 'database';
 }
 
 /** The Add flyout's own state (030 R5): never saved, reset when the flyout closes. */
