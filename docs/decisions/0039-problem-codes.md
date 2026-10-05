@@ -1,6 +1,6 @@
 # 0039. Problems have public, stable codes and one copyable report shape
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-05
 - **Feature:** `specs/062-fixable-import-errors`
 - **Builds on:** 0013 (derived problems), 0002 (file format), 0038 (Mermaid import), constitution
@@ -41,6 +41,12 @@ validate and lint files outside the app and must speak the same language.
 
 ## Consequences
 
+- Problem locations of the problems list are computed on demand (`problemLocator(file)`), not
+  inside `checkDeck`: adding them there cost about +17 % on the 2,000-node bench deck, which the
+  problems worker runs on every edit (`specs/062-fixable-import-errors/bench-after.md`).
+- The library worker returns the ready report with a refused or opened import, and the report
+  shapes and `stringifyReport` live in the type-only subpath `@sododeck/model/report-json`, so the
+  library route copies reports without loading the model.
 - Test expectations that asserted dot paths change once, mechanically.
 - `DeckValidationError` / `DeckEditError` messages read `/a/0/b: …` instead of `a.0.b: …`.
 - The 027 skill reuses the catalogue document and the report contract instead of inventing its own.
