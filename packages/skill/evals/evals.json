@@ -15,7 +15,7 @@
     },
     {
       "id": 3,
-      "prompt": "Sododeck refused my file and gave me this when I pressed Copy problems: {\"report\":\"sododeck-problems\",\"problems\":[{\"code\":\"step-without-connection\",\"severity\":\"error\",\"path\":\"/flows/0/steps/1/edge\",\"subject\":\"create\",\"message\":\"Step without connection\",\"fix\":\"Point the step's \\\"edge\\\" to an existing connector, or remove the step.\"}]}. Fix broken.sododeck please.",
+      "prompt": "Sododeck opened my deck with a problem and gave me this when I pressed Copy problems: {\"report\":\"sododeck-problems\",\"problems\":[{\"code\":\"step-without-connection\",\"severity\":\"error\",\"path\":\"/flows/0/steps/1\",\"subject\":\"create\",\"message\":\"Step without connection\",\"fix\":\"Point the step's \\\"edge\\\" to an existing connector, or remove the step.\"}]}. Fix broken.sododeck please.",
       "expected_output": "The agent edits only the step's edge (or adds the missing connector), lint exits 0, and the handover names the change.",
       "files": ["broken.sododeck"]
     }

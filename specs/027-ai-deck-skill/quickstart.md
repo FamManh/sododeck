@@ -30,7 +30,7 @@ node $S/scripts/lint.mjs broken.sododeck; echo "exit $?"
 ```
 
 Expected: JSON report with an entry `code: "step-without-connection"` (or `broken-reference`),
-`path: "/flows/0/steps/<i>/edge"`, `subject`, `evidence`, `fix`; `exit 1`. `deliver broken.sododeck
+`path: "/flows/0/steps/<i>"`, `subject`, `evidence`, `fix`; `exit 1`. `deliver broken.sododeck
 target.sododeck` leaves `target.sododeck` untouched.
 
 ## 4. Update mode diff (US3)

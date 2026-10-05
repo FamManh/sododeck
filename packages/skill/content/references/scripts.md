@@ -47,16 +47,16 @@ stay as they are.
 {
   "code": "step-without-connection",
   "severity": "error",
-  "path": "/flows/0/steps/2/edge",
-  "subject": "save",
-  "message": "Step without connection: Checkout · step 3 uses a connection that no longer exists.",
-  "evidence": "…",
-  "fix": "Point the step's \"edge\" to an existing connector, or remove the step."
+  "path": "/flows/0/steps/2",
+  "subject": "charge",
+  "message": "Step without connection: Checkout · step 3 used a deleted connection.",
+  "evidence": "Checkout · step 3 used a deleted connection",
+  "fix": "Point the step's \"edge\" to an existing connector id, or remove the step."
 }
 ```
 
-`path` is a JSON Pointer into the file (`/flows/0/steps/2/edge` = first flow, third step, its
-`edge`); `subject` is the id of the object; `fix` is what to change. A file that is not JSON gives
+`path` is a JSON Pointer into the file (`/flows/0/steps/2` = first flow, third step; a schema
+problem points at the exact key, such as `/nodes/3/title`); `subject` is the id of the object; `fix` is what to change. A file that is not JSON gives
 `line` and `column` instead of `path`. The same report comes out of Sododeck's **Copy problems**,
 so a user can paste the app's problems to you and you fix them the same way.
 
