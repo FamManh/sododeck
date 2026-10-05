@@ -49,7 +49,7 @@ export function BulkInspector({
   const n = nodes.length;
   const ids = nodes.map((node) => node.id);
   const same = (shared: Shared<unknown>) => (shared.mixed ? undefined : `Same on all ${String(n)}`);
-  const styleSelection = { nodes: ids, edges: edgeIds, groups: [], stickies: [] };
+  const styleSelection = { nodes: ids, edges: edgeIds, groups: [], stickies: [], images: [] };
   const style = styleView(nodes);
   const styleSkipped = skippedCount(styleSelection);
   const applyBulkStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {

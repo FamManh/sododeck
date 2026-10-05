@@ -109,9 +109,7 @@
               {
                 "id": "dbidx.1",
                 "name": "orders_customer_idx",
-                "columns": [
-                  "dbcol.7"
-                ]
+                "columns": ["dbcol.7"]
               }
             ]
           },
@@ -158,12 +156,8 @@
             "from": "node.2",
             "to": "node.1",
             "label": "orders_customer_fk",
-            "fromColumns": [
-              "dbcol.7"
-            ],
-            "toColumns": [
-              "dbcol.1"
-            ],
+            "fromColumns": ["dbcol.7"],
+            "toColumns": ["dbcol.1"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -172,12 +166,8 @@
             "from": "node.3",
             "to": "node.2",
             "label": "order_items_order_fk",
-            "fromColumns": [
-              "dbcol.11"
-            ],
-            "toColumns": [
-              "dbcol.6"
-            ],
+            "fromColumns": ["dbcol.11"],
+            "toColumns": ["dbcol.6"],
             "cardinality": "n-1"
           }
         ],

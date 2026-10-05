@@ -22,7 +22,13 @@ const cards = deckOf({
 function setup(nodes: string[], extra: { edges?: string[]; stickies?: string[] } = {}) {
   const env = renderWithEditor(
     <IconField
-      selection={{ nodes, edges: extra.edges ?? [], groups: [], stickies: extra.stickies ?? [] }}
+      selection={{
+        nodes,
+        edges: extra.edges ?? [],
+        groups: [],
+        stickies: extra.stickies ?? [],
+        images: [],
+      }}
       onDone={() => undefined}
     />,
     cards,
@@ -104,7 +110,7 @@ describe('IconField (038 T029)', () => {
     unmount();
     renderWithEditor(
       <IconField
-        selection={{ nodes: ['x'], edges: [], groups: [], stickies: [] }}
+        selection={{ nodes: ['x'], edges: [], groups: [], stickies: [], images: [] }}
         onDone={() => undefined}
       />,
       deckOf({ nodes: [{ id: 'x', type: 'service', title: 'X', icon: 'lucide:zap' }] }),

@@ -190,7 +190,8 @@ function useSelectionSync(): void {
               (c.scope === 'nodes' ||
                 c.scope === 'edges' ||
                 c.scope === 'groups' ||
-                c.scope === 'stickies'),
+                c.scope === 'stickies' ||
+                c.scope === 'images'),
           )
         ) {
           const deck = readDeck(editor.doc);
@@ -199,6 +200,7 @@ function useSelectionSync(): void {
             edges: new Set(deck.edges.map((e) => e.id)),
             groups: new Set(deck.groups.map((group) => group.id)),
             stickies: new Set(deck.stickies.map((s) => s.id)),
+            images: new Set((deck.images ?? []).map((i) => i.id)),
           });
         }
         // Restored objects may be off-screen: select them so the user can find them.

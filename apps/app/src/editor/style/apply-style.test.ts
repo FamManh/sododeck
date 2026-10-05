@@ -16,7 +16,7 @@ function fileWithNodesAndGroup() {
   });
 }
 
-const emptySelection = { nodes: [], edges: [], groups: [], stickies: [] };
+const emptySelection = { nodes: [], edges: [], groups: [], stickies: [], images: [] };
 
 describe('applyStyle (020 T030)', () => {
   it('is one undo step: one editor.undo() restores the original style', () => {
@@ -36,7 +36,7 @@ describe('applyStyle (020 T030)', () => {
 
     applyStyle(
       editor(),
-      { nodes: ['n1'], edges: ['e1'], groups: ['g1'], stickies: ['s1'] },
+      { nodes: ['n1'], edges: ['e1'], groups: ['g1'], stickies: ['s1'], images: [] },
       'stroke',
       'blue',
     );
@@ -80,7 +80,13 @@ describe('applyStyle (020 T030)', () => {
     expect(skippedCount({ ...emptySelection, nodes: ['n1'] })).toBe(0);
     expect(skippedCount({ ...emptySelection, nodes: ['n1'], edges: ['e1'] })).toBe(1);
     expect(
-      skippedCount({ ...emptySelection, nodes: ['n1'], edges: ['e1'], stickies: ['s1'] }),
+      skippedCount({
+        ...emptySelection,
+        nodes: ['n1'],
+        edges: ['e1'],
+        stickies: ['s1'],
+        images: [],
+      }),
     ).toBe(2);
   });
 });

@@ -75,7 +75,10 @@ describe('toFlowNodes', () => {
     const nodes = toFlowNodes(
       deck,
       topLevelGraph(deck),
-      view({ selection: { nodes: ['b'], edges: [], groups: [], stickies: [] }, focusedId: 'a' }),
+      view({
+        selection: { nodes: ['b'], edges: [], groups: [], stickies: [], images: [] },
+        focusedId: 'a',
+      }),
     );
     const [a, b] = nodes.filter((n) => n.type === 'deck');
     expect(a).toMatchObject({
@@ -151,6 +154,7 @@ describe('toFlowNodes', () => {
         edges: [],
         groups: [],
         stickies: ['st-free'],
+        images: [],
       });
       const freeSticky = deck.stickies[0];
       if (freeSticky === undefined) throw new Error('Missing free sticky fixture');
@@ -611,7 +615,7 @@ describe('toFlowEdges', () => {
     const edges = toFlowEdges(
       deck,
       topLevelGraph(deck),
-      view({ selection: { nodes: [], edges: ['e1'], groups: [], stickies: [] } }),
+      view({ selection: { nodes: [], edges: ['e1'], groups: [], stickies: [], images: [] } }),
     );
     expect(edges.map((e) => e.id)).toEqual(['e1', 'e3']);
     expect(edges[0]).toMatchObject({
@@ -1769,6 +1773,7 @@ describe('sticky connector ends (053 US1)', () => {
       { id: 'n3', text: 'Folded', position: { x: 600, y: 300 }, collapsed: true },
       { id: 'n4', text: 'Pinned to B', anchor: 'b' },
     ],
+    images: [],
     edges: [
       { id: 'e-card', from: 'a', to: 'n1' },
       { id: 'e-sized', from: 'n2', to: 'b' },

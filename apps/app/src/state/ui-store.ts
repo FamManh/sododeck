@@ -49,6 +49,7 @@ export interface Selection {
   readonly edges: readonly Id[];
   readonly groups: readonly Id[];
   readonly stickies: readonly Id[];
+  readonly images: readonly Id[];
 }
 
 /** A column of a table (042): `tableId:columnId` on the canvas rows. */
@@ -617,7 +618,7 @@ export interface UiState {
   pasteSerial: PasteSerial | null;
 
   select: (selection: Partial<Selection>) => void;
-  toggle: (id: Id, type: 'node' | 'edge' | 'sticky') => void;
+  toggle: (id: Id, type: 'node' | 'edge' | 'sticky' | 'image') => void;
   clearSelection: () => void;
   /** Drops every id that is not in the deck any more (after any document change). */
   pruneSelection: (existing: {
@@ -625,6 +626,7 @@ export interface UiState {
     edges: ReadonlySet<Id>;
     groups: ReadonlySet<Id>;
     stickies: ReadonlySet<Id>;
+    images: ReadonlySet<Id>;
     /** Derived ids (034): `port:` proxies and `bundle:` connectors; omitted = not checked. */
     ports?: ReadonlySet<string>;
     bundles?: ReadonlySet<string>;
@@ -840,9 +842,9 @@ export function hasDetailsTarget(
     const { enumId } = state.drawer;
     return deck === undefined || (deck.enums?.some((e) => e.id === enumId) ?? false);
   }
-  const { nodes, edges, groups, stickies } = state.selection;
+  const { nodes, edges, groups, stickies, images } = state.selection;
   return (
-    nodes.length + edges.length + groups.length + stickies.length > 0 ||
+    nodes.length + edges.length + groups.length + stickies.length + images.length > 0 ||
     state.activeFlow !== null ||
     state.flowSession !== null
   );
@@ -853,7 +855,13 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
   return state.activeFlow !== null && state.flowSession === null;
 }
 
-export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], groups: [], stickies: [] };
+export const EMPTY_SELECTION: Selection = {
+  nodes: [],
+  edges: [],
+  groups: [],
+  stickies: [],
+  images: [],
+};
 
 /**
  * The table in row editing (043 R4, FR-010a): row focus, an open line editor or a row drag. The
@@ -927,6 +935,7 @@ export function selectionTargets(selection: Partial<Selection>): RemovalTarget[]
     ...(selection.nodes ?? []).map((id): RemovalTarget => ({ scope: 'nodes', id })),
     ...(selection.edges ?? []).map((id): RemovalTarget => ({ scope: 'edges', id })),
     ...(selection.stickies ?? []).map((id): RemovalTarget => ({ scope: 'stickies', id })),
+    ...(selection.images ?? []).map((id): RemovalTarget => ({ scope: 'images', id })),
   ];
 }
 
@@ -1062,14 +1071,18 @@ export const useUiStore = create<UiState>()((set, get) => {
     marqueeCount: null,
     pasteSerial: null,
 
-    select: ({ nodes = [], edges = [], groups = [], stickies = [] }) => {
+    select: ({ nodes = [], edges = [], groups = [], stickies = [], images = [] }) => {
       const empty =
-        nodes.length === 0 && edges.length === 0 && groups.length === 0 && stickies.length === 0;
+        nodes.length === 0 &&
+        edges.length === 0 &&
+        groups.length === 0 &&
+        stickies.length === 0 &&
+        images.length === 0;
       set((state) => ({
-        selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
+        selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies, images },
         problemReveal: keepReveal(
           state.problemReveal,
-          empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
+          empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies, images },
         ),
         tableFilter: filterFor(state.tableFilter, nodes),
         tableDrawer: DEFAULT_TABLE_DRAWER,
@@ -1082,7 +1095,14 @@ export const useUiStore = create<UiState>()((set, get) => {
     toggle: (id, type) => {
       set((state) => {
         const { selection } = state;
-        const key = type === 'node' ? 'nodes' : type === 'edge' ? 'edges' : 'stickies';
+        const key =
+          type === 'node'
+            ? 'nodes'
+            : type === 'edge'
+              ? 'edges'
+              : type === 'image'
+                ? 'images'
+                : 'stickies';
         const list = selection[key];
         const next = { ...selection, [key]: list.includes(id) ? without(list, id) : [...list, id] };
         return {
@@ -1111,11 +1131,13 @@ export const useUiStore = create<UiState>()((set, get) => {
         const edges = state.selection.edges.filter((id) => existing.edges.has(id));
         const groups = state.selection.groups.filter((id) => existing.groups.has(id));
         const stickies = state.selection.stickies.filter((id) => existing.stickies.has(id));
+        const images = state.selection.images.filter((id) => existing.images.has(id));
         const selectionChanged =
           nodes.length !== state.selection.nodes.length ||
           edges.length !== state.selection.edges.length ||
           groups.length !== state.selection.groups.length ||
-          stickies.length !== state.selection.stickies.length;
+          stickies.length !== state.selection.stickies.length ||
+          images.length !== state.selection.images.length;
         const popoverGone =
           (state.popover?.kind === 'edge' && !existing.edges.has(state.popover.edgeId)) ||
           (state.popover?.kind === 'merged' && !existing.edges.has(state.popover.edgeId)) ||
@@ -1123,7 +1145,7 @@ export const useUiStore = create<UiState>()((set, get) => {
             !existing.nodes.has(state.popover.fromId) &&
             !existing.groups.has(state.popover.fromId));
         const patch: Partial<UiState> = {};
-        if (selectionChanged) patch.selection = { nodes, edges, groups, stickies };
+        if (selectionChanged) patch.selection = { nodes, edges, groups, stickies, images };
         if (state.focusedId !== null) {
           const known = state.focusedId.startsWith(PORT_ID_PREFIX)
             ? (existing.ports?.has(state.focusedId) ?? true)
@@ -1162,7 +1184,8 @@ export const useUiStore = create<UiState>()((set, get) => {
           (menu.ids.nodes.some((id) => !existing.nodes.has(id)) ||
             menu.ids.edges.some((id) => !existing.edges.has(id)) ||
             menu.ids.groups.some((id) => !existing.groups.has(id)) ||
-            menu.ids.stickies.some((id) => !existing.stickies.has(id)))
+            menu.ids.stickies.some((id) => !existing.stickies.has(id)) ||
+            menu.ids.images.some((id) => !existing.images.has(id)))
         )
           patch.contextMenu = null;
         return patch;

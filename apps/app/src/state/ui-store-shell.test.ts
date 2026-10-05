@@ -132,6 +132,7 @@ describe('detail drawer', () => {
       edges: new Set(),
       groups: new Set(),
       stickies: new Set(),
+      images: new Set(),
     });
     expect(ui().drawer.open).toBe(false);
   });

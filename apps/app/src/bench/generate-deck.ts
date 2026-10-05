@@ -613,7 +613,11 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
       // free note. No `random()` here, so the seeded positions above stay as they were.
       const target = deck.nodes[(i * 7) % Math.max(1, deck.nodes.length)];
       if (i % 2 === 0 && target !== undefined) {
-        deck.edges.push({ id: `sticky-edge${String(i)}`, from: `sticky${String(i)}`, to: target.id });
+        deck.edges.push({
+          id: `sticky-edge${String(i)}`,
+          from: `sticky${String(i)}`,
+          to: target.id,
+        });
       }
       if (i % 4 === 1 && i + 1 < freeCount) {
         deck.edges.push({

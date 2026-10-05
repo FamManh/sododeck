@@ -3,10 +3,7 @@
   "version": 1,
   "name": "Blog",
   "description": "Authors, posts, comments and tags.",
-  "packs": [
-    "architecture",
-    "database"
-  ],
+  "packs": ["architecture", "database"],
   "dialect": "postgres",
   "nodes": [
     {
@@ -241,24 +238,16 @@
       "id": "rel.posts-author",
       "from": "posts",
       "to": "authors",
-      "fromColumns": [
-        "posts.author_id"
-      ],
-      "toColumns": [
-        "authors.id"
-      ],
+      "fromColumns": ["posts.author_id"],
+      "toColumns": ["authors.id"],
       "cardinality": "n-1"
     },
     {
       "id": "rel.comments-post",
       "from": "comments",
       "to": "posts",
-      "fromColumns": [
-        "comments.post_id"
-      ],
-      "toColumns": [
-        "posts.id"
-      ],
+      "fromColumns": ["comments.post_id"],
+      "toColumns": ["posts.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -266,12 +255,8 @@
       "id": "rel.post-tags-post",
       "from": "post_tags",
       "to": "posts",
-      "fromColumns": [
-        "post_tags.post_id"
-      ],
-      "toColumns": [
-        "posts.id"
-      ],
+      "fromColumns": ["post_tags.post_id"],
+      "toColumns": ["posts.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -279,12 +264,8 @@
       "id": "rel.post-tags-tag",
       "from": "post_tags",
       "to": "tags",
-      "fromColumns": [
-        "post_tags.tag_id"
-      ],
-      "toColumns": [
-        "tags.id"
-      ],
+      "fromColumns": ["post_tags.tag_id"],
+      "toColumns": ["tags.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     }
