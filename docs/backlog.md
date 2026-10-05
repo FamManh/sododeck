@@ -219,7 +219,7 @@ and **027** ai-deck-skill are not scheduled.
 | 024 | domain-kind-packs              | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR          |
 | 025 | format-compatibility           | pre-launch | 005           | 2 d  | deferred (§g-81); re-confirm ADR 0020 before launch           |
 | 026 | diagram-as-code                | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps               |
-| 027 | ai-deck-skill                  | later      | 001, 025      | 3 d  | — (skill package + docs page)                                 |
+| 027 | ai-deck-skill                  | later      | 001, 025      | 7 d  | — (skill package + docs page); updated 2026-10-05             |
 | 028 | design-sync-card-system        | after M4   | —             | 1 d  | docs only; designed (Cards board B)                           |
 | 029 | card-look-deck                 | after M4   | 028, 036      | 6 d  | implemented (2026-10-03); visual check and quickstart partial |
 | 030 | card-types-and-packs           | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR                |
@@ -236,6 +236,12 @@ and **027** ai-deck-skill are not scheduled.
 | 055 | image-support                  | after 054  | 036           | 6 d  | founder feedback; ADR needed (schema, storage)                |
 | 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 6 d  | founder feedback; Mermaid flowchart + sequence (ER later)     |
 | 057 | image-editing                  | after 055  | 055           | 3 d  | crop and flip images; split from 055                          |
+| 058 | deep-links                     | later      | 007, 034      | 3 d  | — (copy-link menu items)                                      |
+| 059 | reach-and-route                | later      | 034           | 4 d  | highlight style for reach (reuse focus dim)                   |
+| 060 | deck-diff                      | later      | 025           | 5 d  | added/changed/removed marks need design                       |
+| 061 | share-cards                    | later      | 012, 059      | 3 d  | card layout needs design                                      |
+| 062 | fixable-import-errors          | later      | 005, 056      | 2 d  | —                                                             |
+| 063 | accessible-export              | later      | 012           | 1 d  | —                                                             |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1953,44 +1959,127 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 - **Added:** 2026-09-30, founder request: a skill, like the diagram skills for AI agents, that
   lets users generate a deck with their own AI and then just import it.
+- **Updated:** 2026-10-05 after reviewing popular diagram skills for agents (names kept out of the
+  repo). Added: update mode, fixable machine-readable errors, `summary` / `diff` scripts, detail
+  and audience dials, a fidelity report, source links, taste rules and a render self-check loop.
+  App-side ideas from the same review are 058–063.
 - **Milestone:** later · **Depends on:** 001 (schema), 025 (revision); soft: 024 (kind packs),
-  026 (paste a deck) · **Estimate:** 3 d
+  026 (paste a deck), 011 (auto-layout on import), 012 (PNG export, for the render check), 062
+  (fixable import errors) · **Estimate:** 7 d (core 3 d, codebase + text-format modes 2 d, render
+  check 2 d)
 - **Goal:** Users describe a system (or point their agent at a codebase) and get a valid
-  `.sododeck.json` with components, connections, groups, flows and rules, ready to import. The AI
+  `.sododeck` file with components, connections, groups, flows and rules, ready to import. The AI
   runs on the user's side, so Sododeck still never sends diagram content anywhere
   (constitution IV).
+- **Key difference from picture-drawing skills:** the agent writes a **model**, not a picture. The
+  app draws it. So the skill does not fight with coordinates; the work is getting structure right
+  (stable ids, flows that follow real connectors, rules attached to the right steps). Validation,
+  lint and the repair loop matter most; the render check is a final look, not the core.
 - **In scope:**
-  - **A skill package** (`SKILL.md` + references + scripts) for Claude Code / Claude.ai skills
-    and similar agents (Codex, others via a plain `AGENTS.md`-style prompt):
-    - how to model a system as a deck: kinds and levels, groups, flows with steps and branches,
-      decision tables, stickies; stable, readable ids (never from titles, constitution III);
-      when to omit positions so the app lays out;
-    - the bundled `v1.json` and a few example decks (small, logistics once 024 exists);
-    - `validate` script (Node, bundled Ajv or the generated Zod, no network) that checks the file
-      and prints fixable errors, so the agent loops until it is valid;
-    - modes: from a description, from a codebase (read services, queues, databases, calls), from
-      an existing Mermaid / C4 text.
-  - **Generated, not hand-kept:** a build step in this repo writes the skill's schema, examples
-    and `revision` from `packages/schema`, so the skill is never behind the app. Lives in
-    `skills/sododeck-deck/` (or `packages/skill/`), published as a public download or repo
-    while the app stays closed source.
+  - **Skill package layout** (plain Markdown + Node scripts, so it works in Claude Code / Claude.ai
+    skills, Codex and other agents via an `AGENTS.md`-style prompt):
+    ```
+    skills/sododeck-deck/          (generated from packages/schema, never hand-edited)
+    ├── SKILL.md                   short router: pick a mode → read one reference
+    ├── references/
+    │   ├── modeling.md            card kinds and levels, groups, id rules, when to omit positions
+    │   ├── flows.md               steps, branches, touches, playback
+    │   ├── rules.md               decision tables
+    │   ├── database.md            database pack (tables, relationships)
+    │   ├── from-codebase.md       scanning services, queues, databases, calls; source links
+    │   ├── from-text-formats.md   Mermaid / C4 / OpenAPI text → deck
+    │   └── taste.md               node budgets, label length, what to leave out
+    ├── schema/v1.json + examples/ generated, with `revision`
+    └── scripts/
+        ├── validate.mjs           schema check, bundled Ajv, no network
+        ├── lint.mjs               semantic checks (same derived-problems logic as the app, ADR 0013)
+        ├── summary.mjs            short outline of a deck
+        ├── diff.mjs               compare two decks by id
+        └── render.mjs             optional: lay out + render to PNG for a visual self-check
+    ```
+  - **Progressive disclosure:** `SKILL.md` stays small and routes; a request loads only the one
+    reference it needs (a flow-only edit never reads `database.md`).
+  - **Modes:**
+    - **from a description** (the default);
+    - **from a codebase** (read services, queues, databases, calls);
+    - **from text formats** (Mermaid, C4, OpenAPI);
+    - **update an existing deck:** change only what was asked, keep every other object and every
+      id untouched (constitution III). `diff.mjs` proves it: the agent shows the user what was
+      added, changed and removed before handing over the file.
+  - **Fixable, machine-readable errors:** `validate` and `lint` print JSON, one entry per problem:
+    `code` (stable rule id), `path` (JSON pointer), `subject` (object id), `evidence` (what was
+    found) and `fix` (what to change). The agent loops until both pass. Plain text output too, for
+    humans.
+  - **Atomic delivery:** the agent writes to a temporary file and only replaces the target once
+    `validate` and `lint` pass, so a half-broken deck never overwrites a good one.
+  - **Lint rules (draft):** every reference resolves (edges, flow steps, rules, groups, touches);
+    flow steps follow existing connectors; ids are short slugs, not derived from titles; positions
+    are either set for all objects or omitted for all; no orphan components unless intended; no
+    duplicate titles inside a group; labels under a length budget; node count within the chosen
+    detail level. Shares rule codes with the app's problems list where they overlap.
+  - **Only declared structure:** the agent never invents connectors or calls it did not see in the
+    description or code. Written into `taste.md` and checked where possible (codebase mode: every
+    connector has a source link).
+  - **Source links (codebase mode):** each component and connector built from code carries a link
+    in `links` to `file#Lstart-Lend` at a fixed commit, so a reader can check it. No schema change.
+  - **Evidence in notes:** real payloads or short code excerpts go into `note` when they explain a
+    step better than prose.
+  - **Detail and audience dials:** `faithful` (≤ 24 components per view), `balanced` (≤ 12),
+    `simplified` (≤ 7); audience `engineer` / `mixed` / `executive` changes wording and which
+    fields are filled, not the structure rules. Default `balanced` + `engineer`. Larger systems
+    split into groups and levels instead of one crowded view.
+  - **Fidelity report:** when the input is a codebase or another format, the agent ends with a
+    short list of what it merged, collapsed, left out or could not map, so nothing is dropped
+    silently (same principle as 056's import report).
+  - **Taste rules (`taste.md`):** shape follows meaning (a one-to-many fan-out is a group with
+    many connectors, a sequence is a flow, a decision is a rule, not a diamond card); every card
+    earns its place, deleting is usually the best edit; one accent colour for at most two focal
+    cards; short labels, details in notes and fields.
+  - **Render self-check loop (`render.mjs`, optional):** lays the deck out and renders it to PNG
+    with the **app's own** layout and export code (headless browser on the user's machine, no
+    network), then also prints a geometry report as JSON (overlapping cards, clipped or truncated
+    labels, connectors crossing cards, crowded groups, views over budget). The agent looks at the
+    PNG and the report, fixes the model (grouping, levels, labels), and renders again. Skipped
+    cleanly when no headless browser is installed; `validate` + `lint` stay the required gate.
+    Needs a headless render entry built from `apps/app` (layout + PNG export, ADR 0016) bundled
+    into the skill; that packaging is its own small decision (ADR).
+  - **Generated, not hand-kept:** a build step in this repo writes the skill's schema, examples,
+    lint rules and `revision` from `packages/schema` / `packages/model`, so the skill is never
+    behind the app. A test fails when the generated skill drifts from the schema, rule codes or
+    docs links. Lives in `skills/sododeck-deck/` (or `packages/skill/`), published as a public
+    download or repo while the app stays closed source.
   - **App side:** import already exists (005). Make sure a deck without positions is laid out on
-    import (check; add if missing) and that the import error lists schema issues with paths, so
-    the user can paste them back to their AI.
-  - **Docs page** on sododeck.com: install the skill, a prompt example, import.
+    import (check; add if missing) and that the import error lists schema issues with paths and
+    fixes (062), so the user can paste them back to their AI.
+  - **Docs page** on sododeck.com: install the skill, prompt examples per mode, import.
+- **Phases:** (1) core: description + update modes, `validate`, `lint`, `summary`, `diff`, three
+  examples, taste rules; (2) codebase and text-format modes with source links and fidelity
+  report; (3) render self-check loop.
 - **Out of scope:** an AI feature inside the app or any hosted AI (would send content, and needs
-  its own decision); an MCP server (later, next to the CLI).
+  its own decision); an MCP server and the `sododeck` CLI (AI-3, later, next to each other; the
+  skill's scripts are a starting point for the CLI).
 - **Acceptance criteria (draft):**
   - Given the skill and the prompt "an e-commerce checkout with web, API gateway, order service,
     payment provider, Kafka and Postgres, plus the checkout flow", When an agent runs it, Then it
-    writes a file that passes `validate` and imports without errors.
+    writes a file that passes `validate` and `lint` and imports without errors.
   - Given that file imported, When opened, Then components are laid out automatically and the
     checkout flow plays step by step.
-  - Given a schema change in this repo, When the skill build runs, Then its bundled schema and
-    `revision` match the app's (test).
-- **Risks:** quality of AI-written decks (examples and the validate loop matter more than prose);
-  skill formats differ per agent (keep the core as plain Markdown + a Node script); publishing the
-  schema publicly (ADR 0002 already plans `https://sododeck.com/schema/v1.json`).
+  - Given an existing deck and the prompt "add a refund flow", When the agent runs update mode,
+    Then `diff` shows only additions for the refund flow and every existing id is unchanged.
+  - Given a deck with a dangling flow step, When `lint` runs, Then it prints an entry with `code`,
+    `path`, `subject` and a `fix`, and exits non-zero.
+  - Given a codebase, When the agent runs codebase mode, Then every connector has a source link
+    and the run ends with a fidelity report.
+  - Given a headless browser is available, When `render.mjs` runs, Then it writes a PNG matching
+    the app's export and a geometry report; Given none is available, Then it exits with a clear
+    "skipped" message and success.
+  - Given a schema change in this repo, When the skill build runs, Then its bundled schema, rule
+    codes and `revision` match the app's (test).
+- **Risks:** quality of AI-written decks (examples, lint and the repair loop matter more than
+  prose); skill formats differ per agent (keep the core as plain Markdown + Node scripts);
+  publishing the schema publicly (ADR 0002 already plans `https://sododeck.com/schema/v1.json`);
+  bundling the renderer grows the skill and must stay in sync with the app (generated, tested).
+- **Prompt:** `/speckit.specify 027 from docs/backlog.md: AI deck skill (phase 1 first).`
 
 ## Card system, direction B "Deck" (028–035)
 
@@ -2375,3 +2464,80 @@ Deck-defined typed fields (text, number, select with coloured options, status, d
 person) with values per component and a per-deck choice of which fields show as chips on the card
 (like the founder's reference cards: year, status, date range). Needs its own schema design and ADR.
 Until then cards show the existing fields. **Now scheduled as 032-typed-fields (§g-61).**
+
+## Agent skill review batch (2026-10-05, 058–063)
+
+Source: review of popular diagram skills for AI agents (names kept out of the repo, AGENTS.md).
+The skill itself is 027 (rewritten the same day). These are the app-side ideas from the same
+review. None is scheduled; suggested order when picked up: 062 → 058 → 059 → 060 → 061 → 063.
+All run in the browser only (constitution IV: no backend, no network with content).
+
+## 058-deep-links
+
+- **Status:** not started. **Milestone:** later · **Depends on:** 007, 011, 034 · **Estimate:** 3 d
+- **Goal:** A URL fragment restores what the user was looking at, so a link in a doc, ticket or
+  chat opens the same place (for a deck the reader already has, e.g. a sample or an imported file).
+- **In scope:** `#focus=<id>` (select and centre a card), `#flow=<id>&step=<n>` (open the player
+  on a step), `#view=<id>`, `#route=<from>~<to>` (with 059); "Copy link" in the card and flow menus;
+  ids only, never titles or content in the URL; unknown ids show a quiet notice, not an error.
+  Keyboard shortcuts for the same places: `/` search, `F` presentation (flow player full screen).
+- **Out of scope:** sharing a deck by link (needs a backend, spec §9).
+- **Open questions:** how a link names the deck (local deck id vs file); fragment vs query.
+
+## 059-reach-and-route
+
+- **Status:** not started. **Milestone:** later · **Depends on:** 034 · **Estimate:** 4 d
+- **Goal:** Spec A-3 (impact analysis), first step: from one card, show everything upstream and
+  downstream along declared connectors, not just direct neighbours (034).
+- **In scope:** "Upstream" / "Downstream" in the card menu highlights the transitive reach and
+  dims the rest; a side list of reached cards, flows and rules with counts; route probe between
+  two cards (all directed paths, shortest first). Only declared connectors and flow steps count,
+  never inferred links. Graph walk is a pure function in `packages/model` (tested); large decks
+  run it in a worker (constitution, rule 4).
+- **Out of scope:** owners, tests and tickets in the impact list (Q-2, Q-3).
+
+## 060-deck-diff
+
+- **Status:** not started. **Milestone:** later · **Depends on:** 025 · **Estimate:** 5 d
+- **Goal:** Compare two versions of a deck by id (before / after): spec T-1 visual diff, T-2
+  as-is vs to-be, and the base for I-6 drift. Useful for reviewing an AI-updated deck (027 update
+  mode) or a pull request that changes a `.sododeck` file.
+- **In scope:** open a second file as "compare with"; canvas marks added / changed / removed
+  cards, connectors, flows and rules; a change list grouped by object type; the diff is a pure
+  function in `packages/model` shared with the skill's `diff.mjs` (027).
+- **Out of scope:** merge, version history storage, time-travel slider (T-3).
+
+## 061-share-cards
+
+- **Status:** not started. **Milestone:** later · **Depends on:** 012, 059 · **Estimate:** 3 d
+- **Goal:** Export one flow, one route or one reach as a 1200 × 630 PNG that reads on its own in a
+  slide, ticket or chat: the selected part in full colour, the rest of the deck faded behind as
+  context, plus title and step list.
+- **In scope:** "Export as card" in the flow, route and reach menus; light and dark; uses the
+  existing export renderer (ADR 0016), local only.
+
+## 062-fixable-import-errors
+
+- **Status:** not started. **Milestone:** later · **Depends on:** 005, 056 · **Estimate:** 2 d
+- **Goal:** When an import fails or is partial, the user can copy the problems and paste them
+  back to their AI to fix the file (pairs with 027).
+- **In scope:** every schema or lint problem has a stable `code`, a JSON `path`, the `subject`
+  id and a `fix` hint (same codes as the skill's `lint.mjs`); "Copy problems" copies them as JSON;
+  imports from other formats (056) end with a fidelity report: what was merged, collapsed, left
+  out or not supported, never silent.
+
+## 063-accessible-export
+
+- **Status:** not started. **Milestone:** later · **Depends on:** 012 · **Estimate:** 1 d
+- **Goal:** Exported SVG is readable by assistive technology.
+- **In scope:** `<title>` and `<desc>` resolved through `aria-labelledby` for the deck and each
+  card; flow order described in `<desc>`. (Reduced motion in playback already exists, 007.)
+
+### Later ideas from the same review (not scheduled)
+
+- **Density hints:** a quiet hint when a view goes past ~24 visible cards, suggesting a group or a
+  level (pairs with 010 semantic zoom and the skill's node budgets).
+- **Brand onboarding:** read a team's colours and fonts into a deck palette (DESIGN.md tokens stay
+  the app's own); check contrast before applying.
+- **Margin notes:** an annotation with a thin dashed leader to a card, for editorial asides in
+  exported pictures (could extend stickies, 053).
