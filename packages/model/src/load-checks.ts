@@ -15,6 +15,7 @@
 import { toPointer, type Issue } from '@sododeck/schema';
 
 import { isRecord } from './convert';
+import { cropOverflows, trimCrop } from './geometry';
 import { COLLECTIONS } from './layout';
 
 type Located = { id: string; path: string };
@@ -143,4 +144,51 @@ export function checkDuplicateIds(input: unknown): Issue[] {
   checkScope(databaseParts(file), issues);
   checkAmbiguousEnds(file, issues);
   return issues;
+}
+
+/** An image whose crop ran past the picture edge and was cut back on load (057, rule C2). */
+export interface TrimmedCrop {
+  imageId: string;
+  /** Where the crop is in the file, as a JSON Pointer: `/images/<i>/crop`. */
+  path: string;
+}
+
+/**
+ * Cuts back every image crop that runs past the picture's right or bottom edge (057 contract C2),
+ * so a hand-edited near-miss never refuses the deck (spec FR-016); a crop left with nothing to
+ * show is dropped. Crops the schema would refuse anyway (wrong type, out of 0–1) are left for it to
+ * report. `input` is not changed; the result shares everything it did not touch.
+ */
+export function trimCrops(input: unknown): { input: unknown; trimmed: TrimmedCrop[] } {
+  const trimmed: TrimmedCrop[] = [];
+  if (!isRecord(input) || !Array.isArray(input.images)) return { input, trimmed };
+  const images = input.images.map((image: unknown, i) => {
+    if (!isRecord(image) || !isRecord(image.crop)) return image;
+    const { x, y, width, height } = image.crop;
+    if (
+      typeof x !== 'number' ||
+      typeof y !== 'number' ||
+      typeof width !== 'number' ||
+      typeof height !== 'number' ||
+      x < 0 ||
+      y < 0 ||
+      x >= 1 ||
+      y >= 1 ||
+      width <= 0 ||
+      height <= 0 ||
+      width > 1 ||
+      height > 1 ||
+      !cropOverflows({ x, y, width, height })
+    ) {
+      return image;
+    }
+    trimmed.push({ imageId: String(image.id), path: toPointer(['images', i, 'crop']) });
+    const cut = trimCrop({ x, y, width, height });
+    if (cut.width <= 0 || cut.height <= 0) {
+      const { crop: _dropped, ...rest } = image;
+      return rest;
+    }
+    return { ...image, crop: cut };
+  });
+  return { input: trimmed.length > 0 ? { ...input, images } : input, trimmed };
 }

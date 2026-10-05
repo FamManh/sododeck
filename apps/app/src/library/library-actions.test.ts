@@ -184,6 +184,17 @@ describe('library actions', () => {
       expect(await listBlobIds(db, ids[0] ?? '')).toEqual([]);
     });
 
+    it('reports image crops trimmed to the picture edge (057)', async () => {
+      const text = imageDeckJson().replace(
+        /("size": \{[^}]*\})/,
+        '$1,\n"crop": { "x": 0.6, "y": 0, "width": 0.6, "height": 1 }',
+      );
+      expect(text).toContain('"crop"');
+      const result = await importDeckFile(ctx, text, null);
+      expect(result.report?.problems.map((entry) => entry.code)).toEqual(['crop-trimmed']);
+      expect((await importDeckFile(ctx, imageDeckJson(), null)).report).toBeNull();
+    });
+
     it('exports the pictures its images use, byte for byte', async () => {
       const stored = fromJSON(JSON.parse(imageDeckJson(false)));
       await insertDeck(db, deckRecord('d2', { name: 'Pics' }), Y.encodeStateAsUpdate(stored));

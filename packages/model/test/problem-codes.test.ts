@@ -36,6 +36,7 @@ describe('problem code catalogue (062 FR-019)', () => {
       'invalid-json',
       'unsupported-version',
       'picture-damaged',
+      'crop-trimmed',
     ]) {
       expect(isCode(code), code).toBe(true);
     }

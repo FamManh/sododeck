@@ -1290,9 +1290,48 @@ export const invalidFixtures: InvalidFixture[] = [
   },
   {
     name: 'unknown key on image',
-    input: set(`${IMAGE}.crop`, true),
-    path: `${IMAGE}.crop`,
+    input: set(`${IMAGE}.rotate`, 90),
+    path: `${IMAGE}.rotate`,
     code: 'schema-unknown-field',
+  },
+  // 057: crop and flip.
+  ...(
+    [
+      ['crop x of 1', { x: 1, y: 0, width: 0.5, height: 0.5 }, 'crop.x', 'schema-range'],
+      ['crop x below 0', { x: -0.1, y: 0, width: 0.5, height: 0.5 }, 'crop.x', 'schema-range'],
+      ['crop width of 0', { x: 0, y: 0, width: 0, height: 0.5 }, 'crop.width', 'schema-range'],
+      [
+        'crop height over 1',
+        { x: 0, y: 0, width: 0.5, height: 1.5 },
+        'crop.height',
+        'schema-range',
+      ],
+      ['crop x as a string', { x: '0.2', y: 0, width: 0.5, height: 0.5 }, 'crop.x', 'schema-type'],
+      ['crop without height', { x: 0, y: 0, width: 0.5 }, 'crop.height', 'schema-required'],
+      [
+        'crop with an extra key',
+        { x: 0, y: 0, width: 0.5, height: 0.5, r: 1 },
+        'crop.r',
+        'schema-unknown-field',
+      ],
+    ] as const
+  ).map(([name, crop, path, code]) => ({
+    name,
+    input: set(`${IMAGE}.crop`, crop),
+    path: `${IMAGE}.${path}`,
+    code,
+  })),
+  {
+    name: 'image flipX false',
+    input: set(`${IMAGE}.flipX`, false),
+    path: `${IMAGE}.flipX`,
+    code: 'schema-enum',
+  },
+  {
+    name: 'image flipY "yes"',
+    input: set(`${IMAGE}.flipY`, 'yes'),
+    path: `${IMAGE}.flipY`,
+    code: 'schema-enum',
   },
   {
     name: 'image group names no group (I3)',
@@ -1384,6 +1423,17 @@ export const validFixtures: { name: string; input: unknown }[] = [
   { name: 'image without z', input: remove(`${IMAGE}.z`) },
   { name: 'connector ends on an image', input: set('edges.0.to', 'img-wireframe') },
   { name: 'image of 32 px', input: set(`${IMAGE}.size`, { width: 32, height: 32 }) },
+  // 057: an image with crop and both flips (the full example's second image has them too).
+  {
+    name: 'image with crop, flipX and flipY',
+    input: set(IMAGE, {
+      ...(full as { images: Record<string, unknown>[] }).images[0],
+      crop: { x: 0.25, y: 0.1, width: 0.5, height: 0.5 },
+      flipX: true,
+      flipY: true,
+    }),
+  },
+  { name: 'whole-picture crop', input: set(`${IMAGE}.crop`, { x: 0, y: 0, width: 1, height: 1 }) },
   // 053: a sticky with every new field, a locked connector, and a connector that ends on a sticky.
   {
     name: 'sticky with size, fontSize, align, tags and locked',

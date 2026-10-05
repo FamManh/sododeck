@@ -5,7 +5,7 @@
  * whole drag is one undo step and Esc puts the picture back. The aspect ratio holds unless ⇧ is
  * held, because a picture stretched by accident is the common mistake (contracts/ui.md).
  */
-import { IMAGE_MIN_SIZE, clampImageSize, imageBox } from '@sododeck/model';
+import { IMAGE_MAX_SIDE, IMAGE_MIN_SIZE, clampImageSize, imageBox } from '@sododeck/model';
 import type { DeckEditor } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
@@ -23,7 +23,7 @@ const SNAP_SCREEN_PX = 6;
 /** Whole pixels, so the ratio holds; the largest side is the longest a scene stays sensible. */
 export const IMAGE_SIZE_LIMITS: SizeLimits = {
   min: IMAGE_MIN_SIZE,
-  max: { width: 4096, height: 4096 },
+  max: { width: IMAGE_MAX_SIDE, height: IMAGE_MAX_SIDE },
   step: 1,
 };
 

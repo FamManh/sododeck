@@ -4,6 +4,7 @@ import {
   edgeShape,
   isDbTable,
   relationshipDisplayOf,
+  type CropRect,
   type Geometry,
   imageBox,
   stackOrder,
@@ -233,6 +234,12 @@ export interface SceneImage {
   fileName: string;
   /** The deck does not know the picture (no `assets` entry): drawn as the "missing" placeholder. */
   placeholder: boolean;
+  /** The visible part of the picture (057); null for the whole picture. */
+  crop: CropRect | null;
+  flipX: boolean;
+  flipY: boolean;
+  /** The picture's natural size from `assets` (057); null when the deck does not know it. */
+  natural: { width: number; height: number } | null;
 }
 /** One entry of the shared stack of cards and images (055 R2), back to front. */
 export interface SceneStackItem {
@@ -632,6 +639,10 @@ function sceneImage(
     caption: image.caption === undefined || image.caption === '' ? null : image.caption,
     fileName: facts?.name ?? '',
     placeholder: facts === undefined,
+    crop: image.crop ?? null,
+    flipX: image.flipX === true,
+    flipY: image.flipY === true,
+    natural: facts === undefined ? null : { width: facts.width, height: facts.height },
   };
 }
 

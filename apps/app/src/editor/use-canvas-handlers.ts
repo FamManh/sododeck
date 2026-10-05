@@ -48,6 +48,7 @@ import { oneStep } from './fields/one-step';
 import { connectTarget, targetScene } from './routing/endpoint-target';
 import { addNoteAt } from './stickies/sticky-actions';
 import { isNodeLocked, refuseLocked } from './lock';
+import { cropUnavailable, NOTHING_TO_CROP, openCropMode } from './images/crop-commands';
 import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
 import { groupTitleOf } from './schema-groups';
@@ -350,13 +351,17 @@ export function useCanvasHandlers() {
           ui().startTitleEdit({ target: 'group', id: groupId, isNew: false });
           return;
         }
-        if (
-          stickyIdOf(node.id) !== null ||
-          imageIdOf(node.id) !== null ||
-          isPortNode(node.id) ||
-          isScopeLabel(node.id)
-        )
+        const imageId = imageIdOf(node.id);
+        if (imageId !== null) {
+          // Double-click crops a picture (057, founder decision); its caption stays in the toolbar.
+          if (isFlowMode(ui()) || ui().flowSession !== null) return;
+          const reason = cropUnavailable(deck, imageId);
+          if (reason === 'Locked') refuseLocked();
+          else if (reason !== null) ui().announce(NOTHING_TO_CROP);
+          else openCropMode(deck, imageId);
           return;
+        }
+        if (stickyIdOf(node.id) !== null || isPortNode(node.id) || isScopeLabel(node.id)) return;
         // Any component, with or without children, renames in place (019 FR-001); Enter still
         // opens details or drills in, and "Open inside" drills in by pointer.
         ui().select({ nodes: [node.id] });

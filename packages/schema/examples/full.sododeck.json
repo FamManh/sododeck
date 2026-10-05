@@ -747,7 +747,15 @@
         "width": 160,
         "height": 160
       },
-      "z": 2
+      "z": 2,
+      "crop": {
+        "x": 0.25,
+        "y": 0.1,
+        "width": 0.5,
+        "height": 0.5
+      },
+      "flipX": true,
+      "flipY": true
     },
     {
       "id": "img-diagram",

@@ -11,6 +11,7 @@ import { loadDeck, type LoadedDeck } from './deck';
 import { DeckValidationError } from './errors';
 import { CATALOGUE } from './problem-codes';
 import {
+  cropEntry,
   issueEntry,
   pictureEntry,
   problemEntries,
@@ -121,7 +122,8 @@ export function inspectDeckText(text: string): DeckTextResult {
   }
   // The file passed validation, so it is the deck as loaded, in the user's order: problem paths
   // point into the file they will fix. Damaged pictures were repaired into placeholders, which
-  // `checkDeck` does not see; they come from the load itself (062 R6). Every problems-list kind is
+  // `checkDeck` does not see; they come from the load itself (062 R6), as do crops trimmed to the
+  // picture edge (057). Every problems-list kind is
   // an error or a warning today; an `info` kind added later must be left out here (062 Q2).
   const file = input as SododeckFile;
   return {
@@ -129,6 +131,7 @@ export function inspectDeckText(text: string): DeckTextResult {
     loaded,
     entries: sortEntries([
       ...loaded.problems.map(pictureEntry),
+      ...loaded.trimmedCrops.map(cropEntry),
       ...problemEntries(checkDeck(file).list, file),
     ]),
   };

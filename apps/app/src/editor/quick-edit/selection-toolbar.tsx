@@ -50,6 +50,8 @@ function useToolbarShown(): boolean {
       toolbarVariant(s.selection) !== 'none' &&
       s.canvasGesture === null &&
       s.titleEdit === null &&
+      // Crop mode shows its own bar (057).
+      s.cropSession === null &&
       !isFlowMode(s) &&
       s.flowSession === null &&
       !s.hideUi,
@@ -232,6 +234,7 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
     <ToolbarButton
       aria-label={action.label}
       disabled={action.disabled !== null}
+      {...(action.pressed === undefined ? {} : { 'aria-pressed': action.pressed })}
       {...(action.disabled === null ? {} : { 'aria-description': action.disabled })}
       {...(action.keepFocus
         ? {

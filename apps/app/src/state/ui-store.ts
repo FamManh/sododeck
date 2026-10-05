@@ -1,5 +1,6 @@
 import {
   isSchemaGroupId,
+  type CropRect,
   type FlowCheckpoint,
   type Geometry,
   type RemovalTarget,
@@ -21,6 +22,7 @@ import type { DialectPlan } from '../db/dialect-change';
 import type { ImportReport, SuggestionState } from '../db/import/types';
 import type { ConnectionCheck } from '../editor/connection-rules';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
+import type { CropHandle } from '../editor/images/crop-session';
 import {
   loadJsonPanelPrefs,
   CODE_DRAWER_MIN_WIDTH,
@@ -344,6 +346,13 @@ export type MenuTarget =
   | { kind: 'row'; ids: Selection; row: ColumnRef }
   | { kind: 'canvas' };
 
+/** Crop mode on one image (057): see `UiState.cropSession`. */
+export interface CropSession {
+  imageId: Id;
+  crop: CropRect;
+  handle: CropHandle | null;
+}
+
 /** The open canvas menu: where it is anchored, how it was opened and who gets focus back. */
 export interface ContextMenuState {
   target: MenuTarget;
@@ -494,6 +503,11 @@ export interface UiState {
   focusMode: boolean;
   stickyEditing: Id | null;
   stickyDraft: Id | null;
+  /**
+   * Crop mode on one image (057 R4): the working frame in picture fractions (unflipped) and the
+   * handle being dragged. UI-only: nothing reaches the document until confirm writes it once.
+   */
+  cropSession: CropSession | null;
   canvasPointer: { x: number; y: number } | null;
   palette: { open: boolean; returnFocus: HTMLElement | null };
   exportDialog: { open: boolean; returnFocus: HTMLElement | null; seed?: ExportSeed };
@@ -663,6 +677,12 @@ export interface UiState {
   pruneFannedBundles: (existing: ReadonlySet<string>) => void;
   pruneView: (existing: { nodes: ReadonlySet<Id>; groups: ReadonlySet<Id> }) => void;
   setStickyEditing: (id: Id | null) => void;
+  /** Opens crop mode on `imageId` with `crop` as the starting frame (057). */
+  openCrop: (imageId: Id, crop: CropRect) => void;
+  /** Moves the working frame; `handle` is the one being dragged (`null` when none). */
+  updateCrop: (crop: CropRect, handle?: CropHandle | null) => void;
+  /** Leaves crop mode without writing anything. */
+  closeCrop: () => void;
   setStickyDraft: (id: Id | null) => void;
   setCanvasPointer: (point: { x: number; y: number } | null) => void;
   openPalette: (returnFocus?: HTMLElement | null) => void;
@@ -1010,6 +1030,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     focusMode: false,
     stickyEditing: null,
     stickyDraft: null,
+    cropSession: null,
     canvasPointer: null,
     palette: { open: false, returnFocus: null },
     exportDialog: { open: false, returnFocus: null },
@@ -1309,6 +1330,25 @@ export const useUiStore = create<UiState>()((set, get) => {
     setStickyEditing: (stickyEditing) => {
       set({ stickyEditing });
     },
+    openCrop: (imageId, crop) => {
+      set({ cropSession: { imageId, crop, handle: null } });
+    },
+    updateCrop: (crop, handle) => {
+      set((state) =>
+        state.cropSession === null
+          ? {}
+          : {
+              cropSession: {
+                ...state.cropSession,
+                crop,
+                handle: handle === undefined ? state.cropSession.handle : handle,
+              },
+            },
+      );
+    },
+    closeCrop: () => {
+      set({ cropSession: null });
+    },
     setStickyDraft: (stickyDraft) => {
       set({ stickyDraft });
     },
@@ -1417,6 +1457,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         drill: [],
         focusMode: false,
         stickyEditing: null,
+        cropSession: null,
         stickyDraft: null,
         focusedEdgeId: null,
         popover: null,
@@ -1483,6 +1524,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         selection: EMPTY_SELECTION,
         focusMode: false,
         stickyEditing: null,
+        cropSession: null,
         stickyDraft: null,
         popover: null,
         hoverEdgeId: null,
@@ -1514,6 +1556,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         toolbarField: null,
         selection: EMPTY_SELECTION,
         stickyEditing: null,
+        cropSession: null,
         stickyDraft: null,
         popover: null,
         hoverEdgeId: null,
@@ -1907,6 +1950,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         problemPopover: null,
         problemReveal: null,
         stickyEditing: null,
+        cropSession: null,
         stickyDraft: null,
         focusedId: null,
         focusedEdgeId: null,

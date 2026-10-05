@@ -18,6 +18,7 @@ import {
 } from '@sododeck/schema';
 
 import type { AssetProblem, AssetProblemReason } from './assets';
+import type { TrimmedCrop } from './load-checks';
 import { CATALOGUE, isCode } from './problem-codes';
 import { problemLocator, type Problem, type ProblemLocation } from './problems';
 import type { EntrySeverity, ProblemEntry, ProblemReport } from './report-json';
@@ -100,6 +101,18 @@ export function pictureEntry(problem: AssetProblem): ProblemEntry {
     message: `Picture ${name} is damaged: ${PICTURE_REASON[problem.reason]}.`,
     evidence: problem.reason,
     fix: defaultFix('picture-damaged'),
+  };
+}
+
+/** An image crop cut back to the picture edge on load (057 rule C2): the deck opens as trimmed. */
+export function cropEntry(trimmed: TrimmedCrop): ProblemEntry {
+  return {
+    code: 'crop-trimmed',
+    severity: 'warning',
+    path: trimmed.path,
+    subject: trimmed.imageId,
+    message: `The crop of image "${trimmed.imageId}" ran past the picture edge and was trimmed.`,
+    fix: defaultFix('crop-trimmed'),
   };
 }
 

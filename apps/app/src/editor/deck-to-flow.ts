@@ -9,6 +9,7 @@ import {
   isDbTable,
   relationshipDisplayOf,
   type ResolvedRelationshipDisplay,
+  type CropRect,
   type Geometry,
   STICKY_DEFAULT_SIZE,
   stackOrder,
@@ -346,6 +347,12 @@ export interface ImageNodeData extends Record<string, unknown> {
   size: Size;
   /** A locked image cannot be moved, resized, restacked, regrouped or deleted (055). */
   locked: boolean;
+  /** The visible part of the picture (057); absent for the whole picture. */
+  crop: CropRect | undefined;
+  flipX: boolean;
+  flipY: boolean;
+  /** The picture's natural size from `meta.assets` (057); absent when its facts are gone. */
+  natural: Size | undefined;
 }
 
 /** A component: a card (`deck`) or a shape (`shape`, 031), from the same data. */
@@ -1247,6 +1254,10 @@ export function toImageNodes(
         known,
         size: image.size,
         locked,
+        crop: image.crop,
+        flipX: image.flipX === true,
+        flipY: image.flipY === true,
+        natural: facts === undefined ? undefined : { width: facts.width, height: facts.height },
       },
     };
     imageNodeCache.set(image, flowNode);

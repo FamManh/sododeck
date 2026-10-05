@@ -10,6 +10,8 @@ import { readDeck } from '../../model/use-deck-snapshot';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { ImageFlowNode } from '../deck-to-flow';
 import { toImageNodes } from '../deck-to-flow';
+import { resizeImageByKey } from '../editing/image-resize';
+import { useUiStore } from '../../state/ui-store';
 import { ImageNode } from './image-node';
 
 const ASSET = assetId(PNG_1X1);
@@ -68,14 +70,14 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function renderImage(imageId: string) {
+async function renderImage(imageId: string, file = deck) {
   const store = memoryPictureStore();
   await store.put(ASSET, { type: 'image/png', bytes: PNG_1X1 });
   const rendered = renderWithEditor(
     <PictureStoreContext value={store}>
-      <ImageNode {...props(deck, imageId)} />
+      <ImageNode {...props(file, imageId)} />
     </PictureStoreContext>,
-    deck,
+    file,
   );
   return rendered;
 }
@@ -133,5 +135,111 @@ describe('ImageNode (055)', () => {
     await user.click(screen.getByRole('button', { name: 'Unlock image' }));
     act(() => undefined);
     expect(readDeck(doc).images?.find((image) => image.id === 'i3')?.locked).toBeUndefined();
+  });
+});
+
+describe('ImageNode: crop and flip (057)', () => {
+  /** A 400 × 200 picture: `e` shows its right half in a 100 × 100 box, mirrored left to right. */
+  const edited = deckOf({
+    images: [
+      {
+        id: 'e',
+        asset: ASSET,
+        position: { x: 0, y: 0 },
+        size: { width: 100, height: 100 },
+        alt: 'Arrow',
+        caption: 'Mirrored',
+        crop: { x: 0.5, y: 0, width: 0.5, height: 1 },
+        flipX: true,
+      },
+      {
+        id: 'v',
+        asset: ASSET,
+        position: { x: 200, y: 0 },
+        size: { width: 200, height: 100 },
+        flipY: true,
+      },
+      {
+        id: 'lost',
+        asset: GONE,
+        position: { x: 400, y: 0 },
+        size: { width: 100, height: 100 },
+        flipX: true,
+      },
+    ],
+    assets: {
+      [ASSET]: { ...meta('arrow.png'), width: 400, height: 200, data: '' },
+      [GONE]: { ...meta('gone.png'), data: '' },
+    },
+  });
+
+  it('draws an unedited picture as one contained <img>, with no clipping box', async () => {
+    const { container } = await renderImage('i1');
+    const img = await screen.findByRole('img', { name: 'Logo' });
+    expect(img).toHaveClass('object-contain');
+    expect(img.style.transform).toBe('');
+    expect(container.querySelector('[data-testid="image-view"]')).toBeNull();
+  });
+
+  it('clips a cropped picture to its view and mirrors only the picture', async () => {
+    const { container } = await renderImage('e', edited);
+    const img = await screen.findByRole('img', { name: 'Arrow' });
+    const view = container.querySelector<HTMLElement>('[data-testid="image-view"]');
+    expect(view).not.toBeNull();
+    expect(view?.style.width).toBe('100px');
+    expect(view?.style.height).toBe('100px');
+    expect(view).toHaveClass('overflow-hidden');
+    // The whole picture at scale 0.5: 200 × 100, placed so its right half fills the view once
+    // mirrored (the right half is drawn on the left).
+    expect(img.style.width).toBe('200px');
+    expect(img.style.height).toBe('100px');
+    expect(img.style.left).toBe('0px');
+    expect(img.style.transform).toBe('scale(-1, 1)');
+    const caption = screen.getByTestId('image-caption');
+    expect(caption.style.transform).toBe('');
+    expect(caption.closest('[data-testid="image-view"]')).toBeNull();
+  });
+
+  it('mirrors top to bottom without a crop', async () => {
+    await renderImage('v', edited);
+    const img = await screen.findByRole('img', { name: 'arrow.png' });
+    expect(img.style.transform).toBe('scale(1, -1)');
+  });
+
+  it('never mirrors the placeholder of a missing picture', async () => {
+    const { container } = await renderImage('lost', edited);
+    await waitFor(
+      () => {
+        expect(screen.getByText('Picture missing')).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+    expect(container.querySelector('[data-testid="image-view"]')).toBeNull();
+    expect(container.querySelector('[style*="scale"]')).toBeNull();
+  });
+
+  it('cancels crop mode and says so when the picture is missing', async () => {
+    const { container } = await renderImage('lost', edited);
+    act(() => {
+      useUiStore.getState().select({ images: ['lost'] });
+      useUiStore.getState().openCrop('lost', { x: 0, y: 0, width: 1, height: 1 });
+    });
+    await waitFor(
+      () => {
+        expect(useUiStore.getState().cropSession).toBeNull();
+      },
+      { timeout: 3000 },
+    );
+    expect(useUiStore.getState().announcement.text).toBe('Picture missing, nothing to crop');
+    expect(container.querySelector('[data-crop-overlay]')).toBeNull();
+  });
+
+  it('resizes a cropped picture at the cropped ratio (US1-7)', async () => {
+    const { editor, doc } = await renderImage('e', edited);
+    act(() => {
+      resizeImageByKey(editor(), 'e', 'ArrowRight', true);
+    });
+    const size = readDeck(doc).images?.find((image) => image.id === 'e')?.size;
+    expect(size).toEqual({ width: 132, height: 132 });
   });
 });

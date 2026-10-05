@@ -72,7 +72,7 @@ import {
   type AssetMeta,
   type AssetProblem,
 } from './assets';
-import { checkDuplicateIds } from './load-checks';
+import { checkDuplicateIds, trimCrops, type TrimmedCrop } from './load-checks';
 import { keysBetween } from './order-key';
 import { readAssets, readCollection, readMeta, readObject, readRule, readRules } from './read';
 import { blankKey } from './text';
@@ -102,21 +102,26 @@ export interface LoadedDeck {
   bytes: Map<string, Uint8Array>;
   /** Pictures whose data in the file could not be used: shown as missing, never an error (055). */
   problems: AssetProblem[];
+  /** Images whose crop ran past the picture edge and was cut back (057): reported once. */
+  trimmedCrops: TrimmedCrop[];
 }
 
 /**
  * Validates `input` against the v1 schema and loads it into a new Y.Doc, returning the picture
  * bytes next to it (055). A picture whose data is damaged (bad base64, wrong size, hash that is
  * not its id, type outside the allow-list, over 5 MiB) does not refuse the file: it is listed in
- * `problems` and its images show a placeholder. The document never holds picture bytes.
+ * `problems` and its images show a placeholder. The document never holds picture bytes. An image
+ * crop past the picture edge is cut back and listed in `trimmedCrops` (057).
  * @throws DeckValidationError when the input is not a valid v1 file.
  */
 export function loadDeck(input: unknown): LoadedDeck {
   const repaired = repairAssets(input);
+  const crops = trimCrops(repaired.input);
   return {
-    doc: buildDoc(repaired.input, repaired.metas),
+    doc: buildDoc(crops.input, repaired.metas),
     bytes: repaired.bytes,
     problems: repaired.problems,
+    trimmedCrops: crops.trimmed,
   };
 }
 

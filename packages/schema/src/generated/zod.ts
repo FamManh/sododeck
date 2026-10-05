@@ -1771,6 +1771,46 @@ export const sododeckFileSchema = z
                 '`true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
               )
               .optional(),
+            crop: z
+              .object({
+                x: z
+                  .number()
+                  .gte(0)
+                  .lt(1)
+                  .describe('Left edge as a fraction of the picture width.'),
+                y: z
+                  .number()
+                  .gte(0)
+                  .lt(1)
+                  .describe('Top edge as a fraction of the picture height.'),
+                width: z
+                  .number()
+                  .gt(0)
+                  .lte(1)
+                  .describe('Width as a fraction of the picture width.'),
+                height: z
+                  .number()
+                  .gt(0)
+                  .lte(1)
+                  .describe('Height as a fraction of the picture height.'),
+              })
+              .strict()
+              .describe(
+                'The visible part of the picture (057). Absent means the whole picture. `size` and `position` are the box of this visible part.',
+              )
+              .optional(),
+            flipX: z
+              .literal(true)
+              .describe(
+                '`true` mirrors the picture left to right (057). Absent means not flipped; `false` is not valid, so unflipping removes the key.',
+              )
+              .optional(),
+            flipY: z
+              .literal(true)
+              .describe(
+                '`true` mirrors the picture top to bottom (057). Absent means not flipped; `false` is not valid, so unflipping removes the key.',
+              )
+              .optional(),
           })
           .strict()
           .describe(

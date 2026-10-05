@@ -66,6 +66,7 @@ Identity checks on a structurally valid file (refused), and damaged pictures (th
 | `duplicate-id` | error | Duplicate id | Give one of these objects a new, unique id and update references to it. |
 | `ambiguous-end` | error | Ambiguous connector end | Give the node, group or sticky its own id and update the connectors that name it. |
 | `picture-damaged` | warning | Damaged picture | Export the picture again, or put the base64 of the original file in "data" with its SHA-256 as the key. |
+| `crop-trimmed` | warning | Image crop past the picture | Keep "x" + "width" and "y" + "height" of the crop at most 1; the deck shows it cut back to the picture edge. |
 
 ## Deck problems
 

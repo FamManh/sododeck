@@ -72,6 +72,7 @@ export type Code =
   | 'invalid-json'
   | 'unsupported-version'
   | 'picture-damaged'
+  | 'crop-trimmed'
   | ProblemKind
   | 'orphan'
   | FidelityCode;
@@ -237,6 +238,12 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
     severity: 'warning',
     title: 'Damaged picture',
     fix: 'Export the picture again, or put the base64 of the original file in "data" with its SHA-256 as the key.',
+  },
+  'crop-trimmed': {
+    family: 'load',
+    severity: 'warning',
+    title: 'Image crop past the picture',
+    fix: 'Keep "x" + "width" and "y" + "height" of the crop at most 1; the deck shows it cut back to the picture edge.',
   },
 
   // Deck: the problems list of an open deck (ADR 0013). Codes are the kinds.

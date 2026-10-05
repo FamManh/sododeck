@@ -1,5 +1,12 @@
 // @vitest-environment node
-import { assetId, createEditor, fromJSON, serializeDeck, toJSON } from '@sododeck/model';
+import {
+  assetId,
+  createEditor,
+  encodeBase64,
+  fromJSON,
+  serializeDeck,
+  toJSON,
+} from '@sododeck/model';
 import full from '@sododeck/schema/examples/full.sododeck.json' with { type: 'json' };
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
@@ -58,6 +65,45 @@ describe('library ops', () => {
     expect(imported.summary).toMatchObject({ name: 'Bench', nodeCount: 500, edgeCount: 1000 });
     const exported = exportDeck([imported.bytes]);
     expect(exported).toEqual({ json: text, name: 'Bench' });
+  });
+
+  it('reports image crops trimmed on import and keeps crop and flips on export (057)', () => {
+    const asset = assetId(PNG_1X1);
+    const file = {
+      ...emptySododeckFile(),
+      name: 'Crops',
+      images: [
+        {
+          id: 'img',
+          asset,
+          position: { x: 0, y: 0 },
+          size: { width: 100, height: 100 },
+          crop: { x: 0.6, y: 0, width: 0.6, height: 1 },
+          flipX: true as const,
+        },
+      ],
+      assets: {
+        [asset]: {
+          type: 'image/png' as const,
+          bytes: PNG_1X1.length,
+          width: 10,
+          height: 10,
+          name: 'p.png',
+          data: encodeBase64(PNG_1X1),
+        },
+      },
+    };
+    const imported = importFile(JSON.stringify(file));
+    expect(imported.openReport?.problems).toEqual([
+      expect.objectContaining({ code: 'crop-trimmed', path: '/images/0/crop', subject: 'img' }),
+    ]);
+    const exported = exportDeck(
+      [imported.bytes],
+      new Map(imported.pictures.map((p) => [p.id, p.bytes])),
+    );
+    const out = JSON.parse(exported.json) as typeof file;
+    expect(out.images[0]).toMatchObject({ crop: { x: 0.6, width: 0.4 }, flipX: true });
+    expect(out.assets[asset]?.data).toBe(encodeBase64(PNG_1X1));
   });
 
   it('keeps every icon value as written through import and export (038 T041)', () => {
