@@ -21,11 +21,11 @@ What makes a large deck look tangled is almost never the number of cards; it is 
 tied together. Measured on a real 56-card, 112-connector deck: 771 crossing connectors as first
 drawn, 220 after removing groups of one kind, 25 after also trimming connectors to shared stores.
 
-- **Groups are boundaries, not categories.** Use a group for another company's systems, the UI,
-  or one deployable whose insides you draw. Never group cards because they share a type ("Sync
-  use cases", "Event listeners", "Data stores"): the layout keeps a group together, so its members
-  leave their flows and every connector to them crosses the canvas. No groups at all is better
-  than groups by kind (lint: `group-by-kind`).
+- **No groups on a big deck.** Over ~25 cards, leave groups out: the layout keeps a group
+  together, so its members leave their flows and every connector to them crosses the canvas (even
+  a group for one deployable cost 363 crossings against 220 without). Put the boundary in each
+  card's `host` or `tech` ("work-order backend"). On a small deck, group only another company's
+  systems or the UI; never cards that share a type (lint: `group-by-kind`).
 - **Hubs get few connectors.** A store, event bus, job table or worker that everything touches
   becomes a hub whose connectors cut through the whole picture. Draw its connectors only where a
   flow walks through it, plus its one owner; list the other readers and writers in its

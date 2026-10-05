@@ -87,18 +87,25 @@ Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the rig
 - **Leave positions out** of new decks. The app lays the deck out on import. In update mode, keep
   the positions that exist and give new cards none.
 
-- **Draw it so it reads.** A big deck stays tidy when (1) groups are only real boundaries
-  (another company, the UI, one deployable), never "all use cases", "all listeners", "all
-  stores": a group of one kind pulls its cards out of their flow and every connector crosses the
-  canvas; (2) a shared store, bus or job table gets connectors only where a flow walks through it
-  or where it is the point, never one from every reader and writer; name the others in its
-  `description`; (3) every card has at least one connector. Measured on a 56-card deck, these two
-  habits were the difference between 771 crossing connectors and 25. Lint warns `group-by-kind`
-  and `hub-card`; clear both.
+- **Draw it so it reads.** Measured on a 56-card deck: 771 crossing connectors as first drawn,
+  25 after two changes. (1) **No groups on a big deck** (over ~25 cards): the layout keeps a group
+  together, so its cards leave their flows and every connector crosses the canvas; say the
+  boundary in each card's `host` or `tech` instead. On small decks, group only another company's
+  systems or the UI, never cards that share a type. (2) **A shared store, bus, job table or worker
+  gets connectors only where a flow walks through it**, plus its owner; name the other readers
+  and writers in its `description`. Every card still has at least one connector. Lint warns
+  `group-by-kind` and `hub-card`: fix them, don't explain them away.
 - **Explanations go in descriptions and step notes**, not sticky notes: notes on the canvas are
   for a few one-line warnings.
 - **Features, views and rules are optional.** Add them only when the user asks for them; spend
   the effort on cards, connectors and flows first.
+
+## New deck or update?
+
+When the user gives a source to draw (a description, a code map, a whiteboard, a repository),
+draw a **new** deck into a new file, even if an older deck or a generator script sits next to it:
+the older one was drawn under older rules and is what they want replaced. Use update mode only
+when they name an existing deck and ask to change it.
 
 ## Update mode
 
