@@ -8,10 +8,11 @@
  * connector end names (050, 053). An image id that equals one of those is refused earlier, by the
  * format's rule I5.
  */
-import type { Issue, SododeckFile } from '@sododeck/schema';
+import { toPointer, type Issue, type SododeckFile } from '@sododeck/schema';
 
 import { COLLECTIONS } from './layout';
 
+/** Every location of the id after the first is reported once, naming all of them (062). */
 function checkScope(items: readonly { id: string; path: string }[], issues: Issue[]): void {
   const paths = new Map<string, string[]>();
   for (const { id, path } of items) {
@@ -22,28 +23,30 @@ function checkScope(items: readonly { id: string; path: string }[], issues: Issu
   for (const [id, list] of paths) {
     if (list.length > 1) {
       issues.push({
+        code: 'duplicate-id',
         path: list[1] ?? '',
+        subject: id,
         message: `Id "${id}" is used more than once (${list.join(', ')}).`,
+        evidence: JSON.stringify(id),
       });
     }
   }
 }
 
-const withPaths = (items: readonly { id: string }[], prefix: string) =>
-  items.map((item, i) => ({ id: item.id, path: `${prefix}.${String(i)}.id` }));
+const withPaths = (items: readonly { id: string }[], prefix: readonly (string | number)[]) =>
+  items.map((item, i) => ({ id: item.id, path: toPointer([...prefix, i, 'id']) }));
 
 /** Every column, index and check of every node, then every enum and enum value, with paths. */
 function databaseParts(file: SododeckFile): { id: string; path: string }[] {
   const parts: { id: string; path: string }[] = [];
   file.nodes.forEach((node, i) => {
-    const prefix = `nodes.${String(i)}`;
-    parts.push(...withPaths(node.columns ?? [], `${prefix}.columns`));
-    parts.push(...withPaths(node.indexes ?? [], `${prefix}.indexes`));
-    parts.push(...withPaths(node.checks ?? [], `${prefix}.checks`));
+    parts.push(...withPaths(node.columns ?? [], ['nodes', i, 'columns']));
+    parts.push(...withPaths(node.indexes ?? [], ['nodes', i, 'indexes']));
+    parts.push(...withPaths(node.checks ?? [], ['nodes', i, 'checks']));
   });
   (file.enums ?? []).forEach((item, i) => {
-    parts.push({ id: item.id, path: `enums.${String(i)}.id` });
-    parts.push(...withPaths(item.values, `enums.${String(i)}.values`));
+    parts.push({ id: item.id, path: toPointer(['enums', i, 'id']) });
+    parts.push(...withPaths(item.values, ['enums', i, 'values']));
   });
   return parts;
 }
@@ -57,18 +60,21 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
   const ends = new Set(file.edges.flatMap((edge) => [edge.from, edge.to]));
   const nodePaths = new Map<string, string>();
   file.nodes.forEach((node, i) => {
-    if (!nodePaths.has(node.id)) nodePaths.set(node.id, `nodes.${String(i)}.id`);
+    if (!nodePaths.has(node.id)) nodePaths.set(node.id, toPointer(['nodes', i, 'id']));
   });
   const reported = new Set<string>();
   const groupPaths = new Map<string, string>();
   file.groups.forEach((group, i) => {
-    const path = `groups.${String(i)}.id`;
+    const path = toPointer(['groups', i, 'id']);
     if (!groupPaths.has(group.id)) groupPaths.set(group.id, path);
     const nodePath = nodePaths.get(group.id);
     if (nodePath === undefined || !ends.has(group.id) || reported.has(group.id)) return;
     reported.add(group.id);
     issues.push({
+      code: 'ambiguous-end',
       path,
+      subject: group.id,
+      evidence: JSON.stringify(group.id),
       message: `Id "${group.id}" names both a node and a group, so connector ends naming it are ambiguous (${nodePath}, ${path}).`,
     });
   });
@@ -79,9 +85,12 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
     const other = nodePath ?? groupPath;
     if (other === undefined) return;
     reported.add(sticky.id);
-    const path = `stickies.${String(i)}.id`;
+    const path = toPointer(['stickies', i, 'id']);
     issues.push({
+      code: 'ambiguous-end',
       path,
+      subject: sticky.id,
+      evidence: JSON.stringify(sticky.id),
       message: `Id "${sticky.id}" names both a ${nodePath === undefined ? 'group' : 'node'} and a sticky, so connector ends naming it are ambiguous (${other}, ${path}).`,
     });
   });
@@ -90,21 +99,20 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
 /** One issue per duplicated id per scope, naming every location. Empty when ids are unique. */
 export function checkDuplicateIds(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
-  for (const c of COLLECTIONS) checkScope(withPaths(file[c] ?? [], c), issues);
+  for (const c of COLLECTIONS) checkScope(withPaths(file[c] ?? [], [c]), issues);
   file.flows.forEach((flow, i) => {
-    checkScope(withPaths(flow.steps, `flows.${String(i)}.steps`), issues);
-    checkScope(withPaths(flow.branches ?? [], `flows.${String(i)}.branches`), issues);
+    checkScope(withPaths(flow.steps, ['flows', i, 'steps']), issues);
+    checkScope(withPaths(flow.branches ?? [], ['flows', i, 'branches']), issues);
   });
   for (const [ruleId, rule] of Object.entries(file.rules)) {
-    const prefix = `rules.${ruleId}`;
     checkScope(
       [
-        ...withPaths(rule.inputs, `${prefix}.inputs`),
-        ...withPaths(rule.outputs, `${prefix}.outputs`),
+        ...withPaths(rule.inputs, ['rules', ruleId, 'inputs']),
+        ...withPaths(rule.outputs, ['rules', ruleId, 'outputs']),
       ],
       issues,
     );
-    checkScope(withPaths(rule.rows, `${prefix}.rows`), issues);
+    checkScope(withPaths(rule.rows, ['rules', ruleId, 'rows']), issues);
   }
   checkScope(databaseParts(file), issues);
   checkAmbiguousEnds(file, issues);

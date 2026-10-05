@@ -48,7 +48,7 @@
  * taken from Y.Map; `toJSON` rebuilds every object in schema order (key-order.ts).
  */
 import type { Id, Rule, SododeckFile } from '@sododeck/schema';
-import { parseSododeckFile } from '@sododeck/schema';
+import { checkSemanticRules, sododeckFileSchema, toIssues } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { NEW_DECK_PACKS } from './card-types';
@@ -129,12 +129,23 @@ export function fromJSON(input: unknown): DeckDoc {
   return loadDeck(input).doc;
 }
 
-function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Map()): DeckDoc {
-  const parsed = parseSododeckFile(input);
-  if (!parsed.success) throw new DeckValidationError(parsed.issues);
+/**
+ * Validates `input` in as few rounds as possible (062 R5): every structural issue at once; when
+ * the structure holds, the format rules and the duplicate / ambiguous id checks together, so a
+ * structurally valid file reports everything wrong with it in one error.
+ * @throws DeckValidationError when the input is not a valid v1 file.
+ */
+export function validateDeckFile(input: unknown): SododeckFile {
+  const parsed = sododeckFileSchema.safeParse(input);
+  if (!parsed.success) throw new DeckValidationError(toIssues(parsed.error, input));
   const file = parsed.data;
-  const duplicates = checkDuplicateIds(file);
-  if (duplicates.length > 0) throw new DeckValidationError(duplicates);
+  const issues = [...checkSemanticRules(file), ...checkDuplicateIds(file)];
+  if (issues.length > 0) throw new DeckValidationError(issues);
+  return file;
+}
+
+function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Map()): DeckDoc {
+  const file = validateDeckFile(input);
 
   const doc = new Y.Doc();
   doc.transact(() => {

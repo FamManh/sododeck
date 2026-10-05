@@ -138,9 +138,9 @@ describe('virtual schema group ids (048 T008)', () => {
     ];
     const { groups: kept, skipped } = splitStoredGroups(groups);
     expect(kept.map((g) => g.id)).toEqual(['core', 'data']);
-    expect(skipped).toEqual([
+    expect(skipped).toMatchObject([
       {
-        path: 'groups.1.id',
+        path: '/groups/1/id',
         message: 'Group id "schema:billing" is reserved for schema groups and is not used.',
       },
     ]);
