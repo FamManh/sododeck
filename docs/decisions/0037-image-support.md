@@ -43,3 +43,32 @@ belong to groups.
 - Cross-deck paste of images shows placeholders until bytes travel with fragments (TODO(M5)).
 - Export becomes async (blob reads) and must inline `data:` URIs.
 - Decks without images: no new keys, no new bytes.
+
+## Addendum: crop and flip (057, 2026-10-05)
+
+Spec: `specs/057-image-editing/` (research R1–R12, contracts `file-format.md` and `ui.md`).
+
+- **Fields.** `Image` gains optional `crop` (`$defs/Crop`: `x`, `y`, `width`, `height`, fractions of
+  the picture's natural size, in its own **unflipped** coordinates), `flipX: true` and `flipY: true`
+  (`const: true`, unflipping removes the key, as `locked`). Appended after `locked`. Additive, no
+  `version` bump; a 055 file re-saves byte-identically. A crop equal to the whole picture is never
+  written; values are rounded to 6 decimals. `size` and `position` stay the box of the visible part.
+- **Why fractions in unflipped coordinates.** Independent of the on-canvas size, of the stored copy
+  (the 2048 px downscale) and of the SVG fallback size; flip is then a pure mirror of the visible
+  part, and crop and flip change independently.
+- **One geometry.** `pictureLayout` / `visibleRegion` in `@sododeck/model` give what to draw; the
+  canvas node and the SVG export both use them. The SVG export writes an unedited picture exactly as
+  before and an edited one as a nested `<svg viewBox="<visible region in natural px>">` holding the
+  whole original picture, mirrored by a `transform`. A nested `<svg>` clips to its viewport, so no
+  `clipPath` ids. PNG rasterises the same SVG. The stored bytes are never edited or copied.
+- **One write per crop session.** Crop mode is UI state (`cropSession` in the UI store); confirm
+  calls `setImageCrop`, which writes `crop`, `size` and `position` in one transaction (one undo
+  step), keeping the picture's on-canvas scale (`cropFrame`). Cancel and interruptions write nothing.
+- **Soft trim (C2).** Per-field ranges are schema rules; a crop that runs past the picture edge
+  (`x + width > 1`) is trimmed on load and reported once in the import toast, so the deck opens.
+
+Rejected: crop in natural or canvas pixels (breaks on compression or resize); one `flip` enum or a
+transform matrix (harder toggles, invites rotate); CSS `object-view-box` (not in every target
+browser, export would still need the maths); `clipPath` export (unique ids per export); a baked
+cropped copy (new bytes, slower, loses SVG pictures); live writes during the crop drag (a remote tab
+would see the frame flicker); refusing a file with an overflowing crop.

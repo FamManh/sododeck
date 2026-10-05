@@ -72,6 +72,16 @@ const CURSOR: Record<Exclude<CropHandle, 'frame'>, string> = {
   left: 'cursor-ew-resize',
 };
 
+/** A button, a text field or editable text handles Enter itself (the bar's Cancel cancels). */
+function ownsEnter(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLButtonElement ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 /**
  * Crop mode on one image (057 US1, contracts/ui.md): the whole picture at its current scale
  * around the visible part (it may reach past the image box), the area outside the crop frame
@@ -118,7 +128,7 @@ export function CropOverlay({
         event.preventDefault();
         event.stopPropagation();
         cancelCrop();
-      } else if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
+      } else if (event.key === 'Enter' && !ownsEnter(event.target)) {
         event.preventDefault();
         event.stopPropagation();
         confirmCrop(editor);
