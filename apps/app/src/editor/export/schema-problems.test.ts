@@ -18,6 +18,7 @@ function problem(
     objectTitle: key,
     order: 0,
     severity,
+    path: '',
   };
 }
 

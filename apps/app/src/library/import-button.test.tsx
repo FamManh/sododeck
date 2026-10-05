@@ -34,7 +34,9 @@ const deckFile = (name: string) =>
         ...emptySododeckFile(),
         name,
         nodes: [{ id: 'a', type: 'service', title: 'A' }],
-        flows: [{ id: 'f', title: 'Checkout', steps: [] }],
+        // A flow with a step, so the deck opens with no problems (062 counts an empty flow).
+        edges: [{ id: 'e', from: 'a', to: 'a' }],
+        flows: [{ id: 'f', title: 'Checkout', steps: [{ id: 's', edge: 'e' }] }],
       }),
     ],
     `${name}.sododeck`,
@@ -87,29 +89,32 @@ describe('import', () => {
     },
   );
 
-  it('refuses invalid files and adds nothing', async () => {
+  it('refuses invalid files with the problems dialog and adds nothing (062 US1)', async () => {
     const db = await freshLibraryDb();
     const { user } = await renderLibrary({ db });
     await user.upload(input(), new File(['not json'], 'x.sododeck.json'));
-    expect(
-      await screen.findByText(
-        'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
-      ),
-    ).toBeInTheDocument();
-    await user.upload(input(), new File(['{"nodes":1}'], 'y.json'));
+    let dialog = await screen.findByRole('dialog', { name: 'Couldn\'t open "x.sododeck.json"' });
+    expect(within(dialog).getByText('1 problem. Nothing was added.')).toBeInTheDocument();
+    expect(within(dialog).getByText(/^The file is not valid JSON/)).toBeInTheDocument();
+    await user.keyboard('{Escape}');
     await waitFor(() => {
-      expect(
-        screen.getAllByText(
-          'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
-        ),
-      ).toHaveLength(2);
+      expect(screen.queryByRole('dialog')).toBeNull();
     });
+
+    await user.upload(input(), new File(['{"nodes":1}'], 'y.json'));
+    dialog = await screen.findByRole('dialog', { name: 'Couldn\'t open "y.json"' });
+    expect(within(dialog).getByText('/nodes')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
     await user.upload(
       input(),
       new File([JSON.stringify({ ...emptySododeckFile(), version: 99 })], 'z.sododeck.json'),
     );
+    dialog = await screen.findByRole('dialog', { name: 'Couldn\'t open "z.sododeck.json"' });
     expect(
-      await screen.findByText('That file was made with a newer version of Sododeck.'),
+      within(dialog).getByText(
+        'The file is written for format version 99; this app reads version 1.',
+      ),
     ).toBeInTheDocument();
     expect(await liveDecks(db)).toEqual([]);
   });
@@ -169,15 +174,19 @@ describe('import', () => {
       }
     });
 
-    it('opens a file with a damaged picture and says once how many are missing', async () => {
+    it('opens a file with a damaged picture, says so once and lists it on Show (062 US2)', async () => {
       const db = await freshLibraryDb();
       const { user } = await renderLibrary({ db });
       await user.upload(input(), pictureFile(MISSING_DATA));
-      expect(
-        await screen.findByText('Imported "Pictures". 1 picture is missing from the file.'),
-      ).toBeInTheDocument();
+      expect(await screen.findByText('Imported "Pictures" with 1 problem')).toBeInTheDocument();
       const [deck] = await liveDecks(db);
       expect(await listBlobIds(db, deck?.id ?? '')).toEqual([]);
+      await user.click(screen.getByRole('button', { name: 'Show' }));
+      const dialog = await screen.findByRole('dialog', {
+        name: '"Pictures" opened with problems',
+      });
+      expect(within(dialog).getByText(/^Picture "dot.png" is damaged: /)).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Open deck' })).toHaveFocus();
     });
   });
 
@@ -200,17 +209,14 @@ describe('import', () => {
       expect(await screen.findByText('Imported "Real deck"')).toBeInTheDocument();
     });
 
-    it('shows the invalid-file message for text that is neither', async () => {
+    it('refuses text that is neither as not JSON', async () => {
       const db = await freshLibraryDb();
       await renderLibrary({ db });
       fireEvent.change(input(), {
         target: { files: [new File(['just some words'], 'notes.txt')] },
       });
-      expect(
-        await screen.findByText(
-          'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
-        ),
-      ).toBeInTheDocument();
+      const dialog = await screen.findByRole('dialog', { name: 'Couldn\'t open "notes.txt"' });
+      expect(within(dialog).getByText(/^The file is not valid JSON/)).toBeInTheDocument();
       expect(await liveDecks(db)).toEqual([]);
     });
   });

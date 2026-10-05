@@ -18,7 +18,7 @@ function run(request: LibraryRequest): LibraryResult {
     case 'create':
       return { op: 'create', ...create(request.name) };
     case 'import':
-      return { op: 'import', ...importFile(request.text) };
+      return { op: 'import', ...importFile(request.text, request.name) };
     case 'importMermaid':
       return { op: 'importMermaid', ...importMermaid(request.text) };
     case 'export':
@@ -41,7 +41,11 @@ self.onmessage = (event: MessageEvent<{ id: number; request: LibraryRequest }>) 
       ok: false,
       error:
         error instanceof LibraryOpError
-          ? { code: error.code, message: error.message }
+          ? {
+              code: error.code,
+              message: error.message,
+              ...(error.report === undefined ? {} : { report: error.report }),
+            }
           : { code: 'failed', message: String(error) },
     };
   }
