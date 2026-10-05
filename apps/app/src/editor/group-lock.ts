@@ -5,6 +5,9 @@
 import { descendantImageIds, descendantNodeIds, isLocked } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
+/** What the group lock reads: cards and (055) images; a deck without images has none. */
+type LockDeck = Pick<SododeckFile, 'nodes' | 'groups'> & Partial<Pick<SododeckFile, 'images'>>;
+
 export type GroupLockState = 'locked' | 'unlocked' | 'empty';
 
 /**
@@ -12,32 +15,32 @@ export type GroupLockState = 'locked' | 'unlocked' | 'empty';
  * cards (nested groups included) and every one is locked. A card added later therefore makes it
  * read `unlocked` again, and an empty group has no lock to show.
  */
-export function groupLockState(
-  deck: Pick<SododeckFile, 'nodes' | 'groups'>,
-  groupId: Id,
-): GroupLockState {
+export function groupLockState(deck: LockDeck, groupId: Id): GroupLockState {
   const members = new Set(descendantNodeIds(deck, groupId));
-  if (members.size === 0) return 'empty';
-  return deck.nodes.every((node) => !members.has(node.id) || isLocked(node))
-    ? 'locked'
-    : 'unlocked';
+  const pictures = new Set(descendantImageIds(deck, groupId));
+  if (members.size === 0 && pictures.size === 0) return 'empty';
+  const cardsLocked = deck.nodes.every((node) => !members.has(node.id) || isLocked(node));
+  const picturesLocked = (deck.images ?? []).every(
+    (image) => !pictures.has(image.id) || isLocked(image),
+  );
+  return cardsLocked && picturesLocked ? 'locked' : 'unlocked';
 }
 
 /**
  * Every locked group of the deck in one pass (a card counts for its group and all its ancestors),
  * for the canvas, which asks about every frame on each change. Same rule as `groupLockState`.
  */
-export function lockedGroupIds(deck: Pick<SododeckFile, 'nodes' | 'groups'>): ReadonlySet<Id> {
+export function lockedGroupIds(deck: LockDeck): ReadonlySet<Id> {
   const parentOf = new Map<Id, Id | undefined>(deck.groups.map((g) => [g.id, g.parent]));
   const total = new Map<Id, number>();
   const locked = new Map<Id, number>();
-  for (const node of deck.nodes) {
+  for (const member of [...deck.nodes, ...(deck.images ?? [])]) {
     // The seen set stops a hand-written cyclic `parent` chain.
     const seen = new Set<Id>();
-    for (let id = node.group; id !== undefined && !seen.has(id); id = parentOf.get(id)) {
+    for (let id = member.group; id !== undefined && !seen.has(id); id = parentOf.get(id)) {
       seen.add(id);
       total.set(id, (total.get(id) ?? 0) + 1);
-      if (isLocked(node)) locked.set(id, (locked.get(id) ?? 0) + 1);
+      if (isLocked(member)) locked.set(id, (locked.get(id) ?? 0) + 1);
     }
   }
   return new Set(
@@ -48,7 +51,7 @@ export function lockedGroupIds(deck: Pick<SododeckFile, 'nodes' | 'groups'>): Re
 }
 
 /** Whether group `id` is locked: refuses move, resize and delete (054). */
-export function isGroupLocked(deck: Pick<SododeckFile, 'nodes' | 'groups'>, id: Id): boolean {
+export function isGroupLocked(deck: LockDeck, id: Id): boolean {
   return groupLockState(deck, id) === 'locked';
 }
 

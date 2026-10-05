@@ -99,7 +99,7 @@ export function withoutLocked(
     stickies: new Set(deck.stickies.filter(isLocked).map((o) => o.id)),
     images: new Set((deck.images ?? []).filter(isLocked).map((o) => o.id)),
     // A group is locked when all its cards are (054); a deck without `groups` has none.
-    groups: lockedGroupIds({ nodes: deck.nodes, groups: deck.groups ?? [] }),
+    groups: lockedGroupIds({ nodes: deck.nodes, groups: deck.groups ?? [], images: deck.images }),
   };
   const kept = targets.filter(
     (target) =>
