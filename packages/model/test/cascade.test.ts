@@ -6,54 +6,11 @@ import {
   createEditor,
   fromJSON,
   previewRemoval,
-  STICKY_DEFAULT_OFFSET,
   toJSON,
   type RemovalResult,
 } from '../src';
 import { cascadeDeck as deck } from './cascade-deck';
 import { expectValid, seqIds } from './helpers';
-
-const positionedStickyDeck: SododeckFile = {
-  ...emptySododeckFile(),
-  nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 100, y: 200 } }],
-  stickies: [
-    {
-      id: 'st-offset',
-      text: 'Pinned with offset',
-      anchor: 'a',
-      position: { x: 10, y: -8 },
-      collapsed: true,
-      showInFlows: true,
-    },
-    { id: 'st-default', text: 'Pinned with default', anchor: 'a' },
-  ],
-};
-
-const gridStickyDeck: SododeckFile = {
-  ...emptySododeckFile(),
-  nodes: [
-    { id: 'a', type: 'client', title: 'A' },
-    { id: 'b', type: 'service', title: 'B' },
-  ],
-  stickies: [
-    { id: 'st-grid-offset', text: 'Grid offset', anchor: 'b', position: { x: 12, y: -4 } },
-    { id: 'st-grid-default', text: 'Grid default', anchor: 'b' },
-  ],
-};
-
-const multiNodeStickyDeck: SododeckFile = {
-  ...emptySododeckFile(),
-  nodes: [
-    { id: 'a', type: 'service', title: 'A', position: { x: 10, y: 20 } },
-    { id: 'b', type: 'database', title: 'B', position: { x: 200, y: 300 } },
-  ],
-  edges: [{ id: 'ab', from: 'a', to: 'b' }],
-  stickies: [
-    { id: 'st-a', text: 'On A', anchor: 'a', position: { x: 5, y: -5 } },
-    { id: 'st-b', text: 'On B', anchor: 'b', position: { x: 10, y: 12 } },
-    { id: 'st-edge', text: 'On edge', anchor: 'ab' },
-  ],
-};
 
 function setup(input: SododeckFile = deck) {
   const doc = fromJSON(input);
@@ -81,7 +38,7 @@ function removeAndUndo(
 }
 
 describe('delete cascade (US3, FR-011–018)', () => {
-  it('node: removes its edges, keeps steps and stickies broken, cleans views and children', () => {
+  it('node: removes its edges, keeps steps broken and notes in place, cleans views and children', () => {
     removeAndUndo(
       (editor) => editor.remove('nodes', 'n'),
       (out, result) => {
@@ -94,13 +51,8 @@ describe('delete cascade (US3, FR-011–018)', () => {
           positions: { a: { x: 2, y: 2 } },
         });
         expect(out.nodes[1]).not.toHaveProperty('parent');
-        expect(out.stickies).toEqual([
-          { id: 'st-n', text: 'On n', position: { x: 220, y: -10 } },
-          { id: 'st-e', text: 'On e1', anchor: 'e1' },
-          { id: 'st-fl', text: 'On flow', anchor: 'fl' },
-          { id: 'st-s1', text: 'On step', anchor: 's1' },
-          { id: 'st-free', text: 'Free', position: { x: 5, y: 5 } },
-        ]);
+        // Notes are never pinned (ADR 0041): deleting a card leaves them where they are.
+        expect(out.stickies).toEqual(deck.stickies);
 
         expect(result).toEqual({
           removed: [
@@ -111,9 +63,7 @@ describe('delete cascade (US3, FR-011–018)', () => {
           updated: [
             { scope: 'nodes', id: 'child' },
             { scope: 'views', id: 'v' },
-            { scope: 'stickies', id: 'st-n' },
           ],
-          freed: ['st-n'],
           broken: [
             {
               kind: 'missing-reference',
@@ -122,97 +72,10 @@ describe('delete cascade (US3, FR-011–018)', () => {
               target: 'e1',
               targetType: 'edge',
             },
-            {
-              kind: 'missing-reference',
-              object: { scope: 'stickies', id: 'st-e' },
-              field: 'anchor',
-              target: 'e1',
-              targetType: 'object',
-            },
           ],
         });
       },
     );
-  });
-
-  it('node: frees pinned notes at the same canvas point for a positioned node', () => {
-    removeAndUndo(
-      (editor) => editor.remove('nodes', 'a'),
-      (out, result) => {
-        expect(out.stickies).toEqual([
-          {
-            id: 'st-offset',
-            text: 'Pinned with offset',
-            position: { x: 110, y: 192 },
-            collapsed: true,
-            showInFlows: true,
-          },
-          {
-            id: 'st-default',
-            text: 'Pinned with default',
-            position: { x: 100 + STICKY_DEFAULT_OFFSET.x, y: 200 + STICKY_DEFAULT_OFFSET.y },
-          },
-        ]);
-        expect(result).toEqual({
-          removed: [{ scope: 'nodes', id: 'a' }],
-          updated: [
-            { scope: 'stickies', id: 'st-offset' },
-            { scope: 'stickies', id: 'st-default' },
-          ],
-          freed: ['st-offset', 'st-default'],
-          broken: [],
-        });
-      },
-      positionedStickyDeck,
-    );
-  });
-
-  it('node: frees pinned notes at the same canvas point for a grid-placed node', () => {
-    removeAndUndo(
-      (editor) => editor.remove('nodes', 'b'),
-      (out, result) => {
-        expect(out.stickies).toEqual([
-          { id: 'st-grid-offset', text: 'Grid offset', position: { x: 232, y: -4 } },
-          {
-            id: 'st-grid-default',
-            text: 'Grid default',
-            position: { x: 220 + STICKY_DEFAULT_OFFSET.x, y: STICKY_DEFAULT_OFFSET.y },
-          },
-        ]);
-        expect(result).toEqual({
-          removed: [{ scope: 'nodes', id: 'b' }],
-          updated: [
-            { scope: 'stickies', id: 'st-grid-offset' },
-            { scope: 'stickies', id: 'st-grid-default' },
-          ],
-          freed: ['st-grid-offset', 'st-grid-default'],
-          broken: [],
-        });
-      },
-      gridStickyDeck,
-    );
-  });
-
-  it('batch node delete: frees the notes of every removed node, but keeps edge anchors broken', () => {
-    const { doc, editor } = setup(multiNodeStickyDeck);
-    const before = toJSON(doc);
-    const results = editor.batch(() => [editor.remove('nodes', 'a'), editor.remove('nodes', 'b')]);
-    const out = toJSON(doc);
-    expect(out.stickies).toEqual([
-      { id: 'st-a', text: 'On A', position: { x: 15, y: 15 } },
-      { id: 'st-b', text: 'On B', position: { x: 210, y: 312 } },
-      { id: 'st-edge', text: 'On edge', anchor: 'ab' },
-    ]);
-    expect(results.map((result) => result.freed)).toEqual([['st-a'], ['st-b']]);
-    expect(results.flatMap((result) => result.broken)).toContainEqual({
-      kind: 'missing-reference',
-      object: { scope: 'stickies', id: 'st-edge' },
-      field: 'anchor',
-      target: 'ab',
-      targetType: 'object',
-    });
-    expect(editor.undo()).toBe(true);
-    expect(toJSON(doc)).toEqual(before);
   });
 
   it('edge: keeps its steps and reports them', () => {
@@ -223,10 +86,8 @@ describe('delete cascade (US3, FR-011–018)', () => {
         expect(out.flows).toEqual(deck.flows);
         expect(result.removed).toEqual([{ scope: 'edges', id: 'e1' }]);
         expect(result.updated).toEqual([]);
-        expect(result.freed).toEqual([]);
         expect(result.broken.map((p) => [p.object.child?.id ?? p.object.id, p.field])).toEqual([
           ['s1', 'edge'],
-          ['st-e', 'anchor'],
         ]);
       },
     );
@@ -250,7 +111,6 @@ describe('delete cascade (US3, FR-011–018)', () => {
             { scope: 'nodes', id: 'n' },
             { scope: 'groups', id: 'nested' },
           ],
-          freed: [],
           broken: [],
         });
       },
@@ -279,14 +139,13 @@ describe('delete cascade (US3, FR-011–018)', () => {
             { scope: 'views', id: 'v' },
             { scope: 'flows', id: 'fl' },
           ],
-          freed: [],
           broken: [],
         });
       },
     );
   });
 
-  it('flow: deletes its steps, keeps stickies anchored to it or its steps', () => {
+  it('flow: deletes its steps, leaves notes alone', () => {
     removeAndUndo(
       (editor) => editor.remove('flows', 'fl'),
       (out, result) => {
@@ -297,11 +156,7 @@ describe('delete cascade (US3, FR-011–018)', () => {
           { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's1' } },
           { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's2' } },
         ]);
-        expect(result.freed).toEqual([]);
-        expect(result.broken.map((p) => [p.object.id, p.target])).toEqual([
-          ['st-fl', 'fl'],
-          ['st-s1', 's1'],
-        ]);
+        expect(result.broken).toEqual([]);
       },
     );
   });
@@ -325,7 +180,6 @@ describe('delete cascade (US3, FR-011–018)', () => {
             { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's1' } },
             { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's2' } },
           ],
-          freed: [],
           broken: [],
         });
       },
@@ -340,7 +194,6 @@ describe('delete cascade (US3, FR-011–018)', () => {
         expect(result).toEqual({
           removed: [{ scope: 'stickies', id: 'st-n' }],
           updated: [],
-          freed: [],
           broken: [],
         });
       },
@@ -357,7 +210,7 @@ describe('delete cascade (US3, FR-011–018)', () => {
     );
   });
 
-  it('step: removes one step, keeps stickies anchored to it', () => {
+  it('step: removes one step', () => {
     removeAndUndo(
       (editor) => editor.removeStep('fl', 's1'),
       (out, result) => {
@@ -365,16 +218,7 @@ describe('delete cascade (US3, FR-011–018)', () => {
         expect(result).toEqual({
           removed: [{ scope: 'flows', id: 'fl', child: { kind: 'step', id: 's1' } }],
           updated: [],
-          freed: [],
-          broken: [
-            {
-              kind: 'missing-reference',
-              object: { scope: 'stickies', id: 'st-s1' },
-              field: 'anchor',
-              target: 's1',
-              targetType: 'object',
-            },
-          ],
+          broken: [],
         });
       },
     );
@@ -546,7 +390,7 @@ describe('stickies as connector ends (053)', () => {
     stickies: [
       { id: 'n1', text: 'First', position: { x: 0, y: 0 } },
       { id: 'n2', text: 'Second', position: { x: 0, y: 300 } },
-      { id: 'pinned', text: 'Pinned to a', anchor: 'a', position: { x: 10, y: 10 } },
+      { id: 'near', text: 'Near a', position: { x: 110, y: 110 } },
     ],
   };
 
@@ -554,7 +398,7 @@ describe('stickies as connector ends (053)', () => {
     removeAndUndo(
       (editor) => editor.remove('stickies', 'n1'),
       (out, result) => {
-        expect(out.stickies.map((s) => s.id)).toEqual(['n2', 'pinned']);
+        expect(out.stickies.map((s) => s.id)).toEqual(['n2', 'near']);
         expect(out.edges.map((e) => e.id)).toEqual(['a-b']);
         expect(result.removed).toEqual([
           { scope: 'stickies', id: 'n1' },
@@ -576,17 +420,12 @@ describe('stickies as connector ends (053)', () => {
     ]);
   });
 
-  it('deleting a node still frees the stickies pinned to it, and keeps sticky connectors', () => {
+  it('deleting a node keeps the notes in place and the connectors between notes', () => {
     removeAndUndo(
       (editor) => editor.remove('nodes', 'a'),
-      (out, result) => {
+      (out) => {
         expect(out.edges.map((e) => e.id)).toEqual(['b-n1', 'n1-n2']);
-        expect(out.stickies.find((s) => s.id === 'pinned')).toEqual({
-          id: 'pinned',
-          text: 'Pinned to a',
-          position: { x: 110, y: 110 },
-        });
-        expect(result.freed).toEqual(['pinned']);
+        expect(out.stickies).toEqual(stickyEndDeck.stickies);
       },
       stickyEndDeck,
     );
@@ -596,7 +435,7 @@ describe('stickies as connector ends (053)', () => {
     removeAndUndo(
       (editor) => editor.remove('edges', 'n1-n2'),
       (out) => {
-        expect(out.stickies.map((s) => s.id)).toEqual(['n1', 'n2', 'pinned']);
+        expect(out.stickies.map((s) => s.id)).toEqual(['n1', 'n2', 'near']);
       },
       stickyEndDeck,
     );

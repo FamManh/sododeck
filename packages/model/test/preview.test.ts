@@ -85,9 +85,9 @@ describe('previewRemoval', () => {
 
   it('reports what the delete leaves broken', () => {
     const result = previewRemoval(cascadeDeck, [{ scope: 'nodes', id: 'n' }]);
-    expect(result.freed).toEqual(['st-n']);
-    const brokenObjects = result.broken.map((p) => p.object);
-    expect(brokenObjects).not.toContainEqual({ scope: 'stickies', id: 'st-n' });
+    expect(result.broken.map((p) => p.object)).toEqual([
+      { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's1' } },
+    ]);
   });
 
   it('lists a removed rule and the nodes and steps it is detached from (008)', () => {
@@ -99,13 +99,11 @@ describe('previewRemoval', () => {
         { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's1' } },
         { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's2' } },
       ],
-      freed: [],
       broken: [],
     });
     expect(previewRemoval(cascadeDeck, [{ scope: 'rules', id: 'nope' }])).toEqual({
       removed: [],
       updated: [],
-      freed: [],
       broken: [],
     });
   });
@@ -124,7 +122,6 @@ describe('previewRemoval', () => {
     expect(previewRemoval(cascadeDeck, [{ scope: 'nodes', id: 'nope' }])).toEqual({
       removed: [],
       updated: [],
-      freed: [],
       broken: [],
     });
   });
@@ -134,16 +131,15 @@ describe('mergeRemovals', () => {
   it('keeps the first occurrence of each ref and problem, in order', () => {
     const problem = {
       kind: 'missing-reference' as const,
-      object: { scope: 'stickies' as const, id: 's' },
-      field: 'anchor',
+      object: { scope: 'flows' as const, id: 'f', child: { kind: 'step' as const, id: 's9' } },
+      field: 'edge',
       target: 'x',
-      targetType: 'object' as const,
+      targetType: 'edge' as const,
     };
     const merged = mergeRemovals([
       {
         removed: [{ scope: 'nodes', id: 'a' }],
         updated: [{ scope: 'views', id: 'v' }],
-        freed: ['st-a'],
         broken: [problem],
       },
       {
@@ -153,7 +149,6 @@ describe('mergeRemovals', () => {
           { scope: 'flows', id: 'f', child: { kind: 'step', id: 's2' } },
         ],
         updated: [{ scope: 'views', id: 'v' }],
-        freed: ['st-a', 'st-b'],
         broken: [{ ...problem }],
       },
     ] as RemovalResult[]);
@@ -164,7 +159,6 @@ describe('mergeRemovals', () => {
         { scope: 'flows', id: 'f', child: { kind: 'step', id: 's2' } },
       ],
       updated: [{ scope: 'views', id: 'v' }],
-      freed: ['st-a', 'st-b'],
       broken: [problem],
     });
   });

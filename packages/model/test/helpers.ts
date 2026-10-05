@@ -117,21 +117,11 @@ export function largeDeck(
     });
   }
   for (let i = 0; i < (size.stickies ?? 0); i++) {
-    const nodeId = `n${String(i % size.nodes)}`;
-    file.stickies.push(
-      i % 2 === 0
-        ? {
-            id: `sticky${String(i)}`,
-            text: `Bench note ${String(i)} for service ${String(i % size.nodes)}`,
-            position: { x: (i % 20) * 120, y: Math.floor(i / 20) * 96 },
-          }
-        : {
-            id: `sticky${String(i)}`,
-            text: `Pinned note ${String(i)} for service ${String(i % size.nodes)}`,
-            anchor: nodeId,
-            position: { x: 24 + (i % 3) * 8, y: -96 + (i % 5) * 12 },
-          },
-    );
+    file.stickies.push({
+      id: `sticky${String(i)}`,
+      text: `Bench note ${String(i)} for service ${String(i % size.nodes)}`,
+      position: { x: (i % 20) * 120, y: Math.floor(i / 20) * 96 },
+    });
   }
   return file;
 }

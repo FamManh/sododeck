@@ -169,7 +169,7 @@ export function assertValid(issues: EditIssue[]): void {
 }
 
 /** `'nodes|groups|stickies|images'`: a connector end (050, 053, 055). */
-export type RefTarget = Collection | 'nodes|groups|stickies|images' | 'rule' | 'any';
+export type RefTarget = Collection | 'nodes|groups|stickies|images' | 'rule';
 
 export interface Ref {
   /** Field holding the reference, e.g. `from` or `includes.2`. */
@@ -178,12 +178,10 @@ export interface Ref {
   target: RefTarget;
 }
 
-function exists(doc: DeckDoc, ref: Ref, anyIds: () => ReadonlySet<Id>): boolean {
+function exists(doc: DeckDoc, ref: Ref): boolean {
   switch (ref.target) {
     case 'rule':
       return rulesMap(doc).has(ref.id);
-    case 'any':
-      return anyIds().has(ref.id);
     case 'nodes|groups|stickies|images':
       return (
         collectionMap(doc, 'nodes').has(ref.id) ||
@@ -200,16 +198,12 @@ const targetName = (target: RefTarget) =>
   target === 'nodes|groups|stickies|images' ? 'nodes, groups, stickies or images' : target;
 
 /** Throws `DeckEditError('missing-reference')` naming every reference that does not resolve. */
-export function assertRefsExist(
-  doc: DeckDoc,
-  refs: readonly Ref[],
-  anyIds: () => ReadonlySet<Id>,
-): void {
+export function assertRefsExist(doc: DeckDoc, refs: readonly Ref[]): void {
   const issues = refs
-    .filter((ref) => !exists(doc, ref, anyIds))
+    .filter((ref) => !exists(doc, ref))
     .map((ref) => ({
       path: ref.path,
-      message: `"${ref.id}" does not exist${ref.target === 'any' ? '' : ` (${targetName(ref.target)})`}.`,
+      message: `"${ref.id}" does not exist (${targetName(ref.target)}).`,
     }));
   if (issues.length > 0) throw new DeckEditError('missing-reference', issues);
 }

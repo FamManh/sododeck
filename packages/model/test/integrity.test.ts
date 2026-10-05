@@ -184,48 +184,11 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
     ]);
   });
 
-  it('sticky → missing anchor, and an anchor matching two objects', () => {
+  it('does not check the legacy sticky anchor (ADR 0041: dropped on load)', () => {
     expect(
       problems({
         nodes: [node('x')],
-        edges: [{ id: 'x', from: 'x', to: 'x' }],
-        stickies: [
-          { id: 's1', text: '', anchor: 'gone' },
-          { id: 's2', text: '', anchor: 'x' },
-        ],
-      }),
-    ).toEqual([
-      {
-        kind: 'missing-reference',
-        object: { scope: 'stickies', id: 's1' },
-        field: 'anchor',
-        target: 'gone',
-        targetType: 'object',
-      },
-      {
-        kind: 'ambiguous-anchor',
-        object: { scope: 'stickies', id: 's2' },
-        field: 'anchor',
-        target: 'x',
-        targetType: 'object',
-      },
-    ]);
-  });
-
-  it('accepts sticky anchors on steps, rules, flows, views and features', () => {
-    expect(
-      problems({
-        nodes: [node('a')],
-        edges: [{ id: 'e', from: 'a', to: 'a' }],
-        views: [{ id: 'v', type: 'system', title: 'V' }],
-        features: [{ id: 'feat', title: 'F' }],
-        flows: [{ id: 'f', title: 'F', steps: [{ id: 's', edge: 'e' }] }],
-        rules: { R: rule },
-        stickies: ['s', 'R', 'f', 'v', 'feat', 'e'].map((anchor, i) => ({
-          id: `n${String(i)}`,
-          text: '',
-          anchor,
-        })),
+        stickies: [{ id: 's1', text: '', anchor: 'gone' }],
       }),
     ).toEqual([]);
   });
