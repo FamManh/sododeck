@@ -11,16 +11,16 @@ import { sniffType } from './sniff-type';
  */
 export interface IngestPorts {
   /** Natural pixel size, or `null` when the browser cannot decode the bytes. */
-  decode(bytes: Uint8Array, type: ImageType): Promise<PixelSize | null>;
+  decode: (bytes: Uint8Array, type: ImageType) => Promise<PixelSize | null>;
   /** Scales to `size` and re-encodes. `outputType` is set when the type must change (AVIF). */
-  encode(
+  encode: (
     bytes: Uint8Array,
     type: ImageType,
     size: PixelSize,
     outputType?: ImageType,
-  ): Promise<{ bytes: Uint8Array; type: string }>;
+  ) => Promise<{ bytes: Uint8Array; type: string }>;
   /** Lowercase hex SHA-256. */
-  digest(bytes: Uint8Array): Promise<string>;
+  digest: (bytes: Uint8Array) => Promise<string>;
 }
 
 export interface IngestInput {
