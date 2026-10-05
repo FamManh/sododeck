@@ -33,6 +33,7 @@ import {
   type JsonPanelPrefs,
   type JsonTab,
 } from './json-panel-prefs';
+import { selectionTargets, type Selection } from './selection-kinds';
 
 /**
  * UI-only state: selection, focus, panels, popovers, preferences. NEVER document data —
@@ -46,13 +47,8 @@ export interface EnumPopover {
   source: 'hover' | 'keyboard';
 }
 
-export interface Selection {
-  readonly nodes: readonly Id[];
-  readonly edges: readonly Id[];
-  readonly groups: readonly Id[];
-  readonly stickies: readonly Id[];
-  readonly images: readonly Id[];
-}
+export type { Selection } from './selection-kinds';
+export { selectionTargets } from './selection-kinds';
 
 /** A column of a table (042): `tableId:columnId` on the canvas rows. */
 export interface ColumnRef {
@@ -962,16 +958,6 @@ function writeNotesDisplay(display: NotesDisplay): void {
 }
 
 const without = <T extends string>(ids: readonly T[], id: T) => ids.filter((x) => x !== id);
-
-/** Components first, then connections: the order the confirmation and the delete both use. */
-export function selectionTargets(selection: Partial<Selection>): RemovalTarget[] {
-  return [
-    ...(selection.nodes ?? []).map((id): RemovalTarget => ({ scope: 'nodes', id })),
-    ...(selection.edges ?? []).map((id): RemovalTarget => ({ scope: 'edges', id })),
-    ...(selection.stickies ?? []).map((id): RemovalTarget => ({ scope: 'stickies', id })),
-    ...(selection.images ?? []).map((id): RemovalTarget => ({ scope: 'images', id })),
-  ];
-}
 
 const NO_GUIDES: readonly Guide[] = [];
 

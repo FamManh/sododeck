@@ -4,6 +4,7 @@ import { Copy, Ellipsis, Lock, Pin, Trash2 } from 'lucide-react';
 
 import { copyText, couldNotCopyText } from '../../lib/clipboard';
 import { useUiStore } from '../../state/ui-store';
+import { isSelectionEmpty } from '../../state/selection-kinds';
 import { selectionText, selectionView } from '../json-panel-view';
 import { pinAnnouncement, pinState } from '../views/pin-state';
 import { viewActions } from '../views/use-current-view';
@@ -136,17 +137,12 @@ export const COMMON_ACTIONS: readonly Action[] = [
       // The note and image toolbars end with Delete (053 US3, 055); other toolbars keep it in the menu.
       toolbar: ['sticky', 'image', 'images'],
     },
-    // Groups are never deleted this way (the Delete key refuses them too).
-    applies: (ctx) =>
-      ctx.selection.nodes.length +
-        ctx.selection.edges.length +
-        ctx.selection.stickies.length +
-        ctx.selection.images.length >
-      0,
+    // Every selected kind; a group in the selection is ungrouped. A group alone keeps its own
+    // "Delete group" item (group-actions.ts), so `group` is not in `where`.
+    applies: (ctx) => !isSelectionEmpty(ctx.selection),
     run: (ctx) => {
       // The Delete key's path: the same confirmation and Undo toast (FR-038).
-      const { nodes, edges, stickies, images } = ctx.selection;
-      useUiStore.getState().requestDelete({ nodes, edges, stickies, images });
+      useUiStore.getState().requestDelete(ctx.selection);
     },
   },
   {

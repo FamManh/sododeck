@@ -89,11 +89,12 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
   if (edges.length > 1 && nodes.length + groups.length + stickies.length + images.length === 0) {
     return <ConnectorsInspector edges={edges} />;
   }
-  const total = edges.length + stickies.length + images.length;
+  const total = edges.length + groups.length + stickies.length + images.length;
   const heading = total === 1 ? '1 item selected' : `${String(total)} items selected`;
   const count = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
   const subtitle = [
     edges.length > 0 ? count(edges.length, 'connection') : null,
+    groups.length > 0 ? count(groups.length, 'group') : null,
     stickies.length > 0 ? count(stickies.length, 'note') : null,
     images.length > 0 ? count(images.length, 'image') : null,
   ]
@@ -110,12 +111,8 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
           size="icon"
           aria-label={`Delete ${heading.replace(' selected', '')}`}
           onClick={() => {
-            useUiStore.getState().requestDelete({
-              nodes: [],
-              edges: edges.map((e) => e.id),
-              stickies: stickies.map((entry) => entry.id),
-              images: images.map((entry) => entry.id),
-            });
+            // Every kind shown here, as the Delete key does (a group is ungrouped).
+            useUiStore.getState().requestDelete(selection);
           }}
         >
           <Trash2 />

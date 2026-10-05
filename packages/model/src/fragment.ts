@@ -25,18 +25,22 @@ import {
   type Image,
   type Node,
   type SododeckFile,
+  type Sticky,
 } from '@sododeck/schema';
 
 import { metaOf, type AssetMeta } from './assets';
 import { isDbTable } from './card-types';
-import { frameOf, NODE_GRID, viewNodePosition, type Point } from './geometry';
+import { frameOf, NODE_GRID, stickyPosition, viewNodePosition, type Point } from './geometry';
 import { canonicalize, canonicalizeEntry } from './key-order';
 import { checkDuplicateIds } from './load-checks';
 import { validateObject } from './validate';
 
 export interface Fragment {
   sododeckFragment: 1;
-  /** Only nodes, edges and groups; every other collection is empty. */
+  /**
+   * Only nodes, edges, groups and notes (`stickies`, as free notes); every other collection is
+   * empty.
+   */
   deck: SododeckFile;
   /**
    * Relationships from a copied table to a table outside the copy, ids as in the source deck
@@ -66,6 +70,8 @@ export interface FragmentSelection {
   groups: readonly Id[];
   /** Images to copy (055); absent means none. */
   images?: readonly Id[];
+  /** Notes to copy; absent means none. Copied at their own point; a legacy `anchor` is dropped. */
+  stickies?: readonly Id[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -156,6 +162,15 @@ export function toFragment(
       position: { x: at.x, y: at.y },
     });
   });
+  const stickyIds = new Set(selection.stickies ?? []);
+  // Notes are always free (ADR 0041); a legacy `anchor` is dropped so the copy lands where it is.
+  const stickies: Sticky[] = file.stickies
+    .filter((sticky) => stickyIds.has(sticky.id))
+    .map((sticky) => {
+      const at = stickyPosition(sticky);
+      const { anchor: _anchor, position: _position, ...rest } = sticky;
+      return { ...rest, position: { x: at.x, y: at.y } };
+    });
   const images: Image[] = (file.images ?? [])
     .filter((image) => imageIds.has(image.id))
     .map(({ group, ...image }) => ({
@@ -168,8 +183,10 @@ export function toFragment(
       return stored === undefined ? [] : [[id, metaOf(stored)] as const];
     }),
   );
-  // An end is a node, a group (050) or an image (055): keep an edge when both ends are in.
-  const inside = (id: Id) => nodeIds.has(id) || groupIds.has(id) || imageIds.has(id);
+  // An end is a node, a group (050), a note (053) or an image (055): keep an edge when both ends
+  // are in.
+  const inside = (id: Id) =>
+    nodeIds.has(id) || groupIds.has(id) || imageIds.has(id) || stickyIds.has(id);
   const edges: Edge[] = file.edges.filter((e) => inside(e.from) && inside(e.to));
 
   const tables = new Set(file.nodes.filter(isDbTable).map((n) => n.id));
@@ -182,7 +199,14 @@ export function toFragment(
 
   return {
     sododeckFragment: 1,
-    deck: canonicalize({ ...emptySododeckFile(), name: 'Fragment', nodes, groups, edges }),
+    deck: canonicalize({
+      ...emptySododeckFile(),
+      name: 'Fragment',
+      nodes,
+      groups,
+      edges,
+      stickies,
+    }),
     ...(images.length === 0
       ? {}
       : {
@@ -278,7 +302,7 @@ export function parseFragment(text: string): Fragment | null {
   return { sododeckFragment: 1, deck: parsed.data, ...extras, ...pictures };
 }
 
-/** Top-left corner of the fragment's nodes and frames (computed, never stored). */
+/** Top-left corner of the fragment's nodes, frames, images and notes (computed, never stored). */
 export function fragmentOrigin(fragment: Fragment): Point {
   let x = Infinity;
   let y = Infinity;
@@ -290,5 +314,6 @@ export function fragmentOrigin(fragment: Fragment): Point {
   for (const node of fragment.deck.nodes) take(node.position);
   for (const group of fragment.deck.groups) take(frameOf(group)?.position);
   for (const image of fragment.images ?? []) take(image.position);
+  for (const sticky of fragment.deck.stickies) take(sticky.position);
   return Number.isFinite(x) ? { x, y } : { x: 0, y: 0 };
 }

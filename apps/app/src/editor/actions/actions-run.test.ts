@@ -74,6 +74,23 @@ describe('running actions (019 R8)', () => {
     expect(ui().pendingDelete?.targets).toEqual([{ scope: 'stickies', id: 's' }]);
   });
 
+  it('deletes every selected kind, groups included (ungrouped, not emptied)', () => {
+    const ctx = actionContext({
+      kind: 'mixed',
+      ids: sel({ nodes: ['p'], edges: ['e'], groups: ['g'], stickies: ['s'] }),
+    });
+    expect(actionsFor(ACTIONS, ctx, 'menu').flatMap((s) => s.actions.map((a) => a.id))).toContain(
+      'delete',
+    );
+    runAction(ACTIONS, 'delete', ctx);
+    expect(ui().pendingDelete?.targets).toEqual([
+      { scope: 'nodes', id: 'p' },
+      { scope: 'edges', id: 'e' },
+      { scope: 'stickies', id: 's' },
+      { scope: 'groups', id: 'g' },
+    ]);
+  });
+
   it('pins and unpins in the current view', () => {
     const ctx = actionContext(TARGETS.components);
     runAction(ACTIONS, 'view.pin', ctx);

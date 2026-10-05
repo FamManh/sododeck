@@ -35,10 +35,11 @@ function subject(deck: SododeckFile, targets: readonly RemovalTarget[]): string 
   if (targets.length === 1 && only) {
     const name = knowledgeName(deck, only);
     if (name !== undefined) return `‘${name}’`;
-    if (only.scope === 'nodes') return title(only.id);
+    if (only.scope === 'nodes' || only.scope === 'groups') return title(only.id);
     const edge = deck.edges.find((e) => e.id === only.id);
     if (only.scope === 'edges' && edge) return `${title(edge.from)} → ${title(edge.to)}`;
   }
+  if (targets.every((t) => t.scope === 'groups')) return plural(targets.length, 'group');
   if (targets.every((t) => t.scope === 'stickies')) return plural(targets.length, 'note');
   if (targets.every((t) => t.scope === 'images')) return plural(targets.length, 'image');
   if (targets.every((t) => t.scope === 'nodes')) return plural(targets.length, 'component');
@@ -165,6 +166,12 @@ export function removalToast(
   if (targets.length > 0 && targets.every((t) => t.scope === 'stickies')) {
     return `${targets.length === 1 ? 'Note deleted' : `${String(targets.length)} notes deleted`} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
   }
+  if (targets.length > 0 && targets.every((t) => t.scope === 'groups')) {
+    // Deleting a group ungroups it (its cards stay), so say that instead of "Deleted".
+    const connectors = cascadedEdges(targets, result);
+    const also = connectors > 0 ? ` · also deleted ${plural(connectors, 'connection')}` : '';
+    return `Ungrouped ${subject(deck, targets)}${also} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  }
   if (targets.length > 0 && targets.every((t) => t.scope === 'images')) {
     const connectors = cascadedEdges(targets, result);
     const label =
@@ -196,7 +203,7 @@ export function withNewProblems(message: string, before: number, after: number):
     : `${message.slice(0, hint)}${note}${message.slice(hint)}`;
 }
 
-/** Components first, then connections: the order the confirmation and the delete both use. */
+/** Every selected kind, in delete order (`state/selection-kinds.ts`). */
 export function removalTargets(selection: Selection): RemovalTarget[] {
   return selectionTargets(selection);
 }
