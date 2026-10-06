@@ -44,6 +44,7 @@ import {
 import { relationshipLabel, relationshipName } from './relationships/relationship-label';
 import { tableContextOf, type TableContext } from './table-keys';
 import { autoSides, cardCentre, decodeWaypoints } from './routing/connector-geometry';
+import { textRotationOf } from './shapes/text-rotation';
 import { resolveSides, type Box } from './routing/route-path';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
@@ -115,6 +116,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   layout: CardLayout;
   /** Drawn as a shape (031): its geometry; the node type is then `shape`. */
   geometry?: Geometry;
+  /** A turned text (ADR 0043): degrees clockwise, paint-only; absent when not turned. */
+  rotation?: number;
   /** Locked (043): not draggable or resizable, a lock badge in the header. */
   locked?: boolean;
   /** A database card (049): how many tables it owns and the deck's dialect chip. */
@@ -632,9 +635,11 @@ function toFlowNode(
   const size = { width: layout.width, height: layout.height };
   const geometry = geometryOf(node) ?? undefined;
   const locked = node.locked === true;
+  const rotation = textRotationOf(node);
   if (
     cached?.data.geometry === geometry &&
     cached?.selected === selected &&
+    (cached.data.rotation ?? 0) === rotation &&
     (cached.data.locked === true) === locked &&
     // A table's rows (041) follow its deck too (keys, enums, display): same object while unchanged.
     cached.data.layout.table === layout.table &&
@@ -706,6 +711,7 @@ function toFlowNode(
       ...(look === undefined ? {} : { look }),
       ...(geometry === undefined ? {} : { geometry }),
       ...(locked ? { locked } : {}),
+      ...(rotation === 0 ? {} : { rotation }),
       ...(database === undefined ? {} : { database }),
       ...(touchChip === undefined ? {} : { touchChip }),
       ...(touch === undefined ? {} : { touch }),

@@ -18,6 +18,7 @@ import { typeName } from '../type-label';
 import { shownShapeTitle } from '../placeholder-title';
 import { useComponentNodeState } from '../use-component-node-state';
 import { outlinePoint, SHAPE_TITLE_LINE, shapePath, titleBox } from './shape-geometry';
+import { RotateHandle, TURN_VAR } from './rotate-handle';
 import { Ring } from './shape-ring';
 
 /**
@@ -57,6 +58,7 @@ export const ShapeNode = memo(function ShapeNode({
   // A text in title edit is only its words: a thin focus outline replaces the selection ring,
   // the handles and the resize controls (founder feedback, 2026-10-06).
   const editingText = isText && titleEdit !== null;
+  const rotation = data.rotation ?? 0;
   // Shapes with no closed outline (actor, text) take their rings around the box.
   const ringBase = useMemo(
     () =>
@@ -170,6 +172,7 @@ export const ShapeNode = memo(function ShapeNode({
         height: h,
         ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
         ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+        ...(rotation === 0 ? {} : { [TURN_VAR]: `${String(rotation)}deg` }),
       }}
       onDoubleClickCapture={(event) => {
         // A handle double-click resets the size (017 T030), not the title edit underneath it.
@@ -192,7 +195,7 @@ export const ShapeNode = memo(function ShapeNode({
     >
       <svg
         aria-hidden
-        className="sd-shape-art pointer-events-none absolute inset-0 overflow-visible"
+        className="sd-shape-art sd-shape-turn pointer-events-none absolute inset-0 overflow-visible"
         width={w}
         height={h}
         viewBox={`0 0 ${String(w)} ${String(h)}`}
@@ -238,7 +241,7 @@ export const ShapeNode = memo(function ShapeNode({
       {/* Landscape (frame 123): the geometry only, no title. */}
       {(!isLandscape || titleEdit !== null) && (
         <div
-          className="pointer-events-none absolute flex items-center justify-center"
+          className="sd-shape-turn pointer-events-none absolute flex items-center justify-center"
           style={titleStyle}
         >
           {editingText ? (
@@ -300,6 +303,9 @@ export const ShapeNode = memo(function ShapeNode({
       )}
 
       {resizable && !editingText && <ResizeControls id={id} level={data.level} />}
+      {isText && resizable && !editingText && (
+        <RotateHandle id={id} rotation={rotation} tabIndex={tabIndex} />
+      )}
       {data.locked === true && (
         // A shape has no header: the lock sits on its top-right corner (043 R11).
         <LockBadge

@@ -145,6 +145,21 @@ describe('toFlowNodes', () => {
     expect(a2).toMatchObject({ width: 300, height: 120 });
   });
 
+  it('passes a text rotation to its shape, and ignores one stored on another type (ADR 0043)', () => {
+    const turned: SododeckFile = {
+      ...deck,
+      nodes: [
+        ...deck.nodes,
+        { id: 'txt', type: 'text', title: 'Turned', position: { x: 0, y: 400 }, rotation: -20 },
+        { id: 'dia', type: 'diamond', title: 'D', position: { x: 300, y: 400 }, rotation: 45 },
+      ],
+    };
+    const nodes = toFlowNodes(turned, topLevelGraph(turned), view());
+    expect(nodes.find((n) => n.id === 'txt')?.data.rotation).toBe(-20);
+    expect(nodes.find((n) => n.id === 'dia')?.data).not.toHaveProperty('rotation');
+    expect(nodes.find((n) => n.id === 'a')?.data).not.toHaveProperty('rotation');
+  });
+
   describe('toStickyNodes', () => {
     it('maps notes with position, selection and data', () => {
       const stickyNodes = toStickyNodes(deck, {

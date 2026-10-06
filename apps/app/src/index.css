@@ -154,6 +154,12 @@
   transition: transform var(--sd-dur-hover) var(--sd-ease);
 }
 
+/* A turned text (ADR 0043): the `rotate` property, so it composes with the drag tilt on
+   `.sd-shape-art`'s `transform`. Paint-only: the box, handles and connectors stay put. */
+.sd-shape-turn {
+  rotate: var(--sd-turn, 0deg);
+}
+
 .sd-shape-outline {
   fill: var(--card-fill, var(--color-surface));
   stroke: var(--card-stroke, var(--color-border-strong));
@@ -350,7 +356,8 @@
 [data-tool-hand] .react-flow__edge-path,
 [data-tool-hand] .react-flow__edge-interaction,
 [data-tool-hand] .sd-route-handle,
-[data-tool-hand] .sd-resize-handle {
+[data-tool-hand] .sd-resize-handle,
+[data-tool-hand] .sd-rotate-handle {
   /* React Flow sets pointer-events inline on each node, and on these parts in its CSS. Named
      classes only: a universal descendant selector slows every style recalc. */
   pointer-events: none !important;

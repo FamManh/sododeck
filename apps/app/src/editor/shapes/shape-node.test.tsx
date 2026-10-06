@@ -1,5 +1,5 @@
-import { SHAPE_TYPE_IDS, shapeGeometryOf } from '@sododeck/model';
-import { act, screen, within } from '@testing-library/react';
+import { SHAPE_TYPE_IDS, shapeGeometryOf, toJSON } from '@sododeck/model';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import type { NodeProps } from '@xyflow/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -244,5 +244,68 @@ describe('ShapeNode (031)', () => {
       p.getAttribute('stroke-width'),
     );
     expect(widths).toEqual(['12', '8']);
+  });
+
+  describe('turned text (founder feedback, 2026-10-06)', () => {
+    const textDeck = deckOf({ nodes: [{ id: 's', type: 'text', title: 'Hello', rotation: 30 }] });
+    const selectText = () => {
+      act(() => {
+        useUiStore.getState().select({ nodes: ['s'] });
+      });
+    };
+    const slider = () => screen.getByRole('slider', { name: 'Rotate text' });
+
+    it('turns the words by the stored rotation, paint-only on the art and the title', () => {
+      renderWithEditor(
+        <ShapeNode {...props({ type: 'text', title: 'Hello', rotation: 30 })} />,
+        textDeck,
+      );
+      expect(node().style.getPropertyValue('--sd-turn')).toBe('30deg');
+      expect(screen.getByTestId('shape-title').closest('.sd-shape-turn')).not.toBeNull();
+    });
+
+    it('has a rotate handle on the selected text: arrows turn it by 15° as one undo step', () => {
+      const { doc, editor } = renderWithEditor(
+        <ShapeNode {...props({ type: 'text', title: 'Hello', rotation: 30 }, true)} />,
+        textDeck,
+      );
+      selectText();
+      expect(slider()).toHaveAttribute('aria-valuenow', '30');
+      fireEvent.keyDown(slider(), { key: 'ArrowRight' });
+      expect(toJSON(doc).nodes[0]?.rotation).toBe(45);
+      fireEvent.keyDown(slider(), { key: 'ArrowLeft', shiftKey: true });
+      expect(toJSON(doc).nodes[0]?.rotation).toBe(29);
+      fireEvent.keyDown(slider(), { key: 'Home' });
+      expect(toJSON(doc).nodes[0]).not.toHaveProperty('rotation');
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).nodes[0]?.rotation).toBe(29);
+    });
+
+    it('offers no rotate handle on other shapes, while editing the words, or when locked', () => {
+      const { unmount } = renderWithEditor(<ShapeNode {...props({}, true)} />, deck);
+      act(() => {
+        useUiStore.getState().select({ nodes: ['s'] });
+      });
+      expect(screen.queryByRole('slider', { name: 'Rotate text' })).toBeNull();
+      unmount();
+      const second = renderWithEditor(
+        <ShapeNode {...props({ type: 'text', title: 'Hello' }, true)} />,
+        textDeck,
+      );
+      selectText();
+      act(() => {
+        useUiStore.getState().startTitleEdit({ target: 'node', id: 's', isNew: false });
+      });
+      expect(screen.queryByRole('slider', { name: 'Rotate text' })).toBeNull();
+      second.unmount();
+      renderWithEditor(
+        <ShapeNode {...props({ type: 'text', title: 'Hello', locked: true }, true)} />,
+        textDeck,
+      );
+      selectText();
+      expect(screen.queryByRole('slider', { name: 'Rotate text' })).toBeNull();
+    });
   });
 });
