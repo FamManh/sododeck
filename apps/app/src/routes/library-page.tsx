@@ -12,7 +12,6 @@ import { Wordmark } from '../editor/wordmark';
 import { ConfirmLibraryDelete } from '../library/confirm-library-delete';
 import { DeckGrid } from '../library/deck-grid';
 import { ImportButton } from '../library/import-button';
-import { ImportMermaidButton } from '../library/import-mermaid-button';
 import { ImportMermaidDialog, type MermaidDialogRequest } from '../library/import-mermaid-dialog';
 import {
   ImportProblemsDialog,
@@ -165,12 +164,6 @@ function Library() {
           />
         </div>
         <ThemeToggle />
-        <ImportMermaidButton
-          commands={commands}
-          onOpen={() => {
-            openMermaid('', false);
-          }}
-        />
         <ImportButton
           commands={commands}
           folderId={currentFolder}

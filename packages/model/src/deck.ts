@@ -20,6 +20,7 @@
                                                tableDisplay (Y.Map, always present, written
                                                only with entries, 041)
  *                                               relationshipDisplay (Y.Map, the same, 042)
+ *                                               canvasBackground (Y.Map, the same, ADR 0044)
  *                                               groupingMode (plain, only when 'schema', 048)
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component; a table's columns, indexes
  *                                               and checks → Y.Map<id, Y.Map> (only when stored,
@@ -217,6 +218,8 @@ function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Ma
     meta.set('tableDisplay', toY(file.tableDisplay ?? {}));
     // Relationship display (042): the same, so a first write on two tabs shares one map.
     meta.set('relationshipDisplay', toY(file.relationshipDisplay ?? {}));
+    // Canvas background (ADR 0044): the same.
+    meta.set('canvasBackground', toY(file.canvasBackground ?? {}));
 
     for (const name of COLLECTIONS) {
       const list = collectionMap(doc, name);

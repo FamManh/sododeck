@@ -26,6 +26,7 @@ import {
   swatchesArray,
   TABLE_LISTS,
   relationshipDisplayMap,
+  canvasBackgroundMap,
   tableDisplayMap,
   tagColorsMap,
   type Collection,
@@ -260,6 +261,9 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   // `relationshipDisplay` (042): the same.
   const relationshipDisplay = relationshipDisplayMap(doc);
   if (relationshipDisplay.size > 0) out.relationshipDisplay = fromY(relationshipDisplay);
+  // `canvasBackground` (ADR 0044): the same.
+  const canvasBackground = canvasBackgroundMap(doc);
+  if (canvasBackground.size > 0) out.canvasBackground = fromY(canvasBackground);
   return out;
 }
 

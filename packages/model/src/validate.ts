@@ -53,6 +53,7 @@ const ELEMENT_SCHEMAS = {
       blockSqlExport: true,
       tableDisplay: true,
       relationshipDisplay: true,
+      canvasBackground: true,
     })
     .strict(),
   field: shape.fields.unwrap().element,

@@ -1,10 +1,20 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { ToastProvider } from '@sododeck/ui/components/toast';
+import { TooltipProvider } from '@sododeck/ui/components/tooltip';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Suspense, useState } from 'react';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type * as LayoutClientModule from '../layout/layout-client';
-import { liveDecks } from '../storage/library-db';
+import { liveDecks, type LibraryDb } from '../storage/library-db';
+import { LibraryDbProvider } from '../storage/library-db-context';
+import { getLibraryDb, setLibraryDbForTests } from '../storage/library-db-instance';
+import { DeckStub } from '../test/deck-stub';
 import { freshLibraryDb } from '../test/library-fixtures';
 import { renderLibrary } from '../test/render-library';
+import { ImportMermaidDialog, type MermaidDialogRequest } from './import-mermaid-dialog';
+import { useLibraryCommands } from './use-library-commands';
 
 vi.mock('../storage/library-client', (importOriginal) =>
   import('../test/mock-library-client').then((m) => m.mockLibraryClient(importOriginal)),
@@ -27,6 +37,7 @@ vi.mock('../layout/layout-client', async (importOriginal) => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  setLibraryDbForTests(undefined);
 });
 
 const FLOWCHART = `flowchart LR
@@ -37,13 +48,74 @@ const FLOWCHART = `flowchart LR
   style W fill:#fff
   what is this ???`;
 
+/**
+ * The library no longer has an Import Mermaid button (a `.mmd` file through Import or a drop
+ * opens the dialog); this stand-in opener keeps the dialog's own behaviour under test.
+ */
+function Opener() {
+  const commands = useLibraryCommands();
+  const [request, setRequest] = useState<MermaidDialogRequest | null>(null);
+  return (
+    <>
+      <button
+        type="button"
+        disabled={!commands}
+        onClick={(event) => {
+          setRequest({ key: 1, text: '', autoRun: false, opener: event.currentTarget });
+        }}
+      >
+        Open Mermaid
+      </button>
+      <ImportMermaidDialog
+        commands={commands}
+        folderId={null}
+        request={request}
+        onClose={() => {
+          setRequest(null);
+        }}
+      />
+    </>
+  );
+}
+
+function OpenerPage() {
+  return (
+    <ToastProvider>
+      <Suspense fallback={null}>
+        <LibraryDbProvider>
+          <Opener />
+        </LibraryDbProvider>
+      </Suspense>
+    </ToastProvider>
+  );
+}
+
 async function openDialog() {
-  const db = await freshLibraryDb();
-  const view = await renderLibrary({ db });
-  const trigger = await screen.findByRole('button', { name: 'Import Mermaid' });
-  await view.user.click(trigger);
+  const db: LibraryDb = await freshLibraryDb();
+  setLibraryDbForTests(db);
+  const router = createMemoryRouter(
+    [
+      { path: '/', Component: OpenerPage },
+      { path: '/deck/:deckId', Component: DeckStub },
+    ],
+    { initialEntries: ['/'] },
+  );
+  await act(async () => {
+    render(
+      <TooltipProvider>
+        <RouterProvider router={router} />
+      </TooltipProvider>,
+    );
+    await getLibraryDb();
+  });
+  const user = userEvent.setup();
+  const trigger = await screen.findByRole('button', { name: 'Open Mermaid' });
+  await waitFor(() => {
+    expect(trigger).toBeEnabled();
+  });
+  await user.click(trigger);
   const dialog = await screen.findByRole('dialog', { name: 'Import Mermaid' });
-  return { ...view, db, trigger, dialog };
+  return { user, db, trigger, dialog };
 }
 
 describe('Import Mermaid dialog', () => {
@@ -115,7 +187,6 @@ describe('Import Mermaid dialog', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
     await new Promise((r) => setTimeout(r, 50));
-    console.log('ACTIVE', document.activeElement?.outerHTML.slice(0, 120), trigger.isConnected);
     await waitFor(() => {
       expect(trigger).toHaveFocus();
     });
@@ -129,6 +200,12 @@ describe('Import Mermaid dialog', () => {
     // The in-process worker answers asynchronously: the pending state is visible first.
     expect(within(dialog).queryByRole('button', { name: 'Importing…' }) ?? box).toBeDisabled();
     await screen.findByText(/1 flow with 1 step/);
+  });
+
+  it('has no Import Mermaid button in the library header', async () => {
+    await renderLibrary();
+    await screen.findByRole('button', { name: 'Import deck file (.sododeck)' });
+    expect(screen.queryByRole('button', { name: 'Import Mermaid' })).not.toBeInTheDocument();
   });
 
   it('opens a dropped Mermaid file in the dialog and imports it', async () => {

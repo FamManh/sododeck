@@ -1851,3 +1851,34 @@ describe('dropping files on the canvas (055 US2)', () => {
     expect(toJSON(doc).images).toBeUndefined();
   });
 });
+
+describe('canvas background (ADR 0044)', () => {
+  const root = (container: HTMLElement) => container.querySelector<HTMLElement>('.react-flow');
+
+  it('draws dots on the theme colours by default', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    expect(container.querySelector('.react-flow__background pattern circle')).not.toBeNull();
+    expect(root(container)?.style.getPropertyValue('--color-canvas')).toBe('');
+  });
+
+  it('follows the stored pattern and colour, and back to the theme on reset', () => {
+    const { container, editor } = renderWithEditor(<Canvas />, {
+      ...deck,
+      canvasBackground: { pattern: 'grid', color: '#1f2a44' },
+    });
+    expect(container.querySelector('.react-flow__background pattern path')).not.toBeNull();
+    expect(root(container)?.style.getPropertyValue('--color-canvas')).toBe('#1f2a44');
+    expect(root(container)?.style.getPropertyValue('--color-dot')).not.toBe('');
+
+    act(() => {
+      editor().setCanvasBackground({ pattern: 'none' });
+    });
+    expect(container.querySelector('.react-flow__background')).toBeNull();
+
+    act(() => {
+      editor().setCanvasBackground({ pattern: null, color: null });
+    });
+    expect(container.querySelector('.react-flow__background pattern circle')).not.toBeNull();
+    expect(root(container)?.style.getPropertyValue('--color-canvas')).toBe('');
+  });
+});

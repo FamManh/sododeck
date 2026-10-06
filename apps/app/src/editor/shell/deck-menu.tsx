@@ -8,9 +8,7 @@ import {
 } from '@sododeck/ui/components/dropdown-menu';
 import { useToast } from '@sododeck/ui/components/toast';
 import {
-  Braces,
   ClipboardList,
-  Database,
   Download,
   FileUp,
   Keyboard,
@@ -38,10 +36,10 @@ import { shortcutLabel } from './shortcuts';
 
 /**
  * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, the last
- * schema import report (044), export, deck settings (the drawer on the deck) and the JSON
- * overlay, and the DBML / SQL drawer (054). Import adds the file to the
- * library as a new deck, as the library's own Import does; the open deck is not replaced. Import
- * SQL or DBML and Import Mermaid (into this deck) live in the tools island's ⋯ More menu.
+ * schema import report (044), export and deck settings (the drawer on the deck). Import adds the
+ * file to the library as a new deck, as the library's own Import does; the open deck is not
+ * replaced. Import SQL or DBML and Import Mermaid (into this deck), Show JSON and Show DBML / SQL
+ * live in the tools island's ⋯ More menu (founder feedback 2026-10-06).
  */
 export function DeckMenu() {
   const navigate = useNavigate();
@@ -50,8 +48,6 @@ export function DeckMenu() {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const menuTrigger = useRef<HTMLButtonElement>(null);
-  const jsonShown = useUiStore((s) => s.jsonShown);
-  const codeOpen = useUiStore((s) => s.jsonPanel.codeDrawer.open);
   const { toast } = useToast();
   const input = useRef<HTMLInputElement>(null);
   const [problems, setProblems] = useState<ImportProblemsRequest | null>(null);
@@ -181,23 +177,6 @@ export function DeckMenu() {
           >
             <Settings2 />
             Deck settings
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            shortcut={shortcutLabel('json')}
-            onSelect={() => {
-              useUiStore.getState().toggleJsonShown();
-            }}
-          >
-            <Braces />
-            {jsonShown ? 'Hide JSON' : 'Show JSON'}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              useUiStore.getState().toggleCodeDrawer();
-            }}
-          >
-            <Database />
-            {codeOpen ? 'Hide DBML / SQL' : 'Show DBML / SQL'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {/* Set once and forgotten, so they live here rather than in the tools (§g-60). */}

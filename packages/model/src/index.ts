@@ -58,9 +58,11 @@ export type { ArrangeMove, StackTargets } from './ops/stacking';
 export type { ImageText, NewImage } from './ops/images';
 export { isSchemaGroupId, schemaGroupId, splitStoredGroups } from './schema-groups';
 export {
+  canvasBackgroundOf,
   relationshipDisplayOf,
   tableDisplayOf,
   type DeckTableDetail,
+  type ResolvedCanvasBackground,
   type ResolvedRelationshipDisplay,
   type ResolvedTableDisplay,
 } from './table-display';

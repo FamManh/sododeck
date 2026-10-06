@@ -103,6 +103,8 @@ describe('Inspector', () => {
   it('edits the deck name when nothing is selected', async () => {
     const { doc, user } = setup();
     expect(screen.getByRole('heading', { name: 'Shop' })).toBeInTheDocument();
+    // Deck settings open on Database (founder feedback 2026-10-06).
+    await user.click(screen.getByRole('tab', { name: 'General' }));
     const name = screen.getByRole('textbox', { name: 'Name' });
     await user.clear(name);
     await user.type(name, 'Webshop{Enter}');
@@ -187,6 +189,7 @@ describe('Inspector', () => {
   it('shows where the deck is stored and exports it when nothing is selected', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     const { user } = setup();
+    await user.click(screen.getByRole('tab', { name: 'General' }));
     expect(screen.getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
     // The component tests run without a stored deck: the demo wording.
     expect(screen.getByText('Demo deck · not stored')).toBeInTheDocument();

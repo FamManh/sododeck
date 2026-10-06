@@ -71,7 +71,12 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((item) => item.textContent),
-    ).toEqual(['Import Mermaid…', 'Import SQL or DBML…']);
+    ).toEqual([
+      'Import Mermaid…',
+      'Import SQL or DBML…',
+      expect.stringMatching(/^Show JSON/),
+      'Show DBML / SQL',
+    ]);
     await user.click(within(menu).getByRole('menuitem', { name: 'Import Mermaid…' }));
     expect(useUiStore.getState().mermaidDialog).toEqual({
       open: true,
@@ -81,5 +86,23 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
     await user.click(button('More'));
     await user.click(screen.getByRole('menuitem', { name: 'Import SQL or DBML…' }));
     expect(useUiStore.getState().importDialog).toEqual({ open: true, returnFocus: button('More') });
+  });
+
+  it('shows and hides the JSON overlay and the DBML / SQL drawer from the More menu', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<ToolsIsland />);
+    await user.click(button('More'));
+    await user.click(screen.getByRole('menuitem', { name: /Show JSON/ }));
+    expect(useUiStore.getState().jsonShown).toBe(true);
+    await user.click(button('More'));
+    await user.click(screen.getByRole('menuitem', { name: /Hide JSON/ }));
+    expect(useUiStore.getState().jsonShown).toBe(false);
+
+    await user.click(button('More'));
+    await user.click(screen.getByRole('menuitem', { name: 'Show DBML / SQL' }));
+    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(true);
+    await user.click(button('More'));
+    await user.click(screen.getByRole('menuitem', { name: 'Hide DBML / SQL' }));
+    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(false);
   });
 });
