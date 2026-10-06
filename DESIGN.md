@@ -125,6 +125,7 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 - **Surface 3** (`{colors.surface-3}` — #ecece8 · dark #2b2b29): Hover on Surface 2, toggle-off track, empty progress segments.
 - **Canvas** (`{colors.canvas}` — #fafaf8 · dark #121211): Diagram canvas and rule-editor body.
 - **Canvas Dot** (`{colors.dot}` — #d9d9d3 · dark #2a2a27): 1px dot grid at 22px pitch.
+- **Deck canvas background** (ADR 0044): a deck may store a pattern (dots, default; 1px grid lines at the same 22px pitch; none) and a free hex colour. With a colour, Canvas and Canvas Dot are overridden on the canvas only: the dot / line colour is the background moved 16 % toward black (light colours) or white (dark ones), about the contrast of the theme's own dots. Without one, both follow the theme. Images use the stored colour as their background and never draw the pattern.
 - **Group Fill** (`{colors.group}` — rgba(255,255,255,.7) · dark rgba(255,255,255,.025)): Background inside group boundaries.
 - **Code** (`{colors.code}` — #f7f7f4 · dark #1c1c1b): JSON panel, condition blocks, markdown preview.
 

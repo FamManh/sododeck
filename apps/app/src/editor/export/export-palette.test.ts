@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import type { CardColor } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { exportLook, LIGHT_PALETTE } from './export-palette';
+import { exportLook, exportPaletteFor, LIGHT_PALETTE } from './export-palette';
 
 // By package name, never a relative path across packages. (Vitest stubs CSS, even with `?raw`.)
 const tokensCss = readFileSync(new URL(import.meta.resolve('@sododeck/ui/tokens.css')), 'utf8');
@@ -101,5 +101,18 @@ describe('exportLook chips (029)', () => {
 
   it('has no look without a colour', () => {
     expect(exportLook(undefined)).toBeUndefined();
+  });
+});
+
+describe('exportPaletteFor (ADR 0044)', () => {
+  it('keeps the light palette for a deck that follows the theme', () => {
+    expect(exportPaletteFor({})).toBe(LIGHT_PALETTE);
+    expect(exportPaletteFor({ canvasBackground: { pattern: 'grid' } })).toBe(LIGHT_PALETTE);
+  });
+
+  it('uses the stored canvas colour as the image background', () => {
+    const palette = exportPaletteFor({ canvasBackground: { color: '#f4efe6' } });
+    expect(palette.canvas).toBe('#f4efe6');
+    expect(palette.ink).toBe(LIGHT_PALETTE.ink);
   });
 });

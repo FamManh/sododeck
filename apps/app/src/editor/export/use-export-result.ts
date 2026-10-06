@@ -9,7 +9,7 @@ import type { SchemaExportRequest } from '../../db/export/types';
 import type { ExportAction, ExportDialogState, ExportResult } from './export-dialog-state';
 import { exportFileName, formatBytes } from './export-file-name';
 import { ensureFontsLoaded } from './export-fonts';
-import { LIGHT_PALETTE } from './export-palette';
+import { exportPaletteFor } from './export-palette';
 import { jsonExport } from './json-export';
 import { largestScale, pngSize } from './png-size';
 import { renderSvg } from './render-svg';
@@ -160,7 +160,7 @@ export function useExportResult(
       const svg = renderSvg(scene, {
         ...(pictures === undefined ? {} : { pictures }),
         transparent,
-        palette: LIGHT_PALETTE,
+        palette: exportPaletteFor(deck),
         fonts: EMBEDDED_FONT_CSS,
         measure: canvasMeasurer() ?? fixedWidthMeasurer(),
         title: deck.name ?? 'Untitled deck',

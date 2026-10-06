@@ -1,5 +1,6 @@
 import { readableText } from '@sododeck/ui/lib/contrast';
-import type { CardColor, ColorRef, StickyColor, Style } from '@sododeck/schema';
+import { canvasBackgroundOf } from '@sododeck/model';
+import type { CardColor, ColorRef, SododeckFile, StickyColor, Style } from '@sododeck/schema';
 
 import { lineColour } from '../style/line-colour';
 
@@ -73,6 +74,16 @@ export const LIGHT_PALETTE = {
 };
 
 export type ExportPalette = typeof LIGHT_PALETTE;
+
+/**
+ * The palette an image of `deck` is drawn with: the light palette, with the canvas colour the
+ * deck stores (ADR 0044) as the background and every canvas-coloured knockout. The pattern is
+ * not drawn: images have never carried the canvas dots.
+ */
+export function exportPaletteFor(deck: Pick<SododeckFile, 'canvasBackground'>): ExportPalette {
+  const { color } = canvasBackgroundOf(deck);
+  return color === undefined ? LIGHT_PALETTE : { ...LIGHT_PALETTE, canvas: color };
+}
 
 function isCardColour(value: ColorRef): value is CardColor {
   return value in LIGHT_PALETTE.cardColours;
