@@ -381,7 +381,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     };
   }, [marqueeRunning]);
   // React Flow's marquee catches cards only; connectors it catches are added here.
-  useMarqueeEdges(marqueeRunning, touchSelect);
+  useMarqueeEdges(marqueeRunning);
 
   // The shown or recorded flow's marks (006): badges, candidates, preview, invalid, start ring.
   const flow = findFlow(deck, session?.flowId ?? activeFlow?.flowId ?? null);

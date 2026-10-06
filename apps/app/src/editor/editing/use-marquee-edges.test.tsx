@@ -65,21 +65,21 @@ describe('renderedEdgeShapes', () => {
 function setup() {
   const env = editorWrapper(deck);
   const { result, rerender } = renderHook(
-    ({ active, touch }: { active: boolean; touch: boolean }) => {
-      useMarqueeEdges(active, touch);
+    ({ active }: { active: boolean }) => {
+      useMarqueeEdges(active);
       return useStoreApi();
     },
-    { wrapper: env.wrapper, initialProps: { active: false, touch: false } },
+    { wrapper: env.wrapper, initialProps: { active: false } },
   );
   const store = result.current;
   act(() => {
     store.setState({ domNode: pane(drawn) as HTMLDivElement, transform: [0, 0, 1] });
   });
-  const start = (touch = false) => {
+  const start = () => {
     act(() => {
       ui().setCanvasGesture('marquee');
     });
-    rerender({ active: true, touch });
+    rerender({ active: true });
   };
   const drag = (x: number, y: number, width: number, height: number) => {
     act(() => {
@@ -91,34 +91,34 @@ function setup() {
       ui().setCanvasGesture(null);
       store.setState({ userSelectionRect: null });
     });
-    rerender({ active: false, touch: false });
+    rerender({ active: false });
   };
   return { store, start, drag, end };
 }
 
 describe('useMarqueeEdges (connectors in the marquee)', () => {
-  it('selects connectors wholly inside the marquee, alongside the cards, and counts them', () => {
+  it('selects every connector the marquee touches, alongside the cards, and counts them', () => {
     const { start, drag, end } = setup();
     act(() => {
-      ui().select({ nodes: ['a'] });
+      ui().select({ nodes: ['a'], groups: ['g'] });
     });
     start();
-    // Across e1 only: from just left of its start to past its end, not over the cards.
-    drag(160, 10, 150, 30);
+    // A small box over the middle of e1: a connector never has to fit inside the marquee.
+    drag(200, 15, 20, 20);
     expect(ui().selection.edges).toEqual(['e1']);
     expect(ui().selection.nodes).toEqual(['a']);
-    expect(ui().marqueeCount).toBe(2);
-    // Shrunk so e1 sticks out: no longer caught.
-    drag(160, 10, 100, 30);
+    expect(ui().marqueeCount).toBe(3);
+    // Moved off every line: nothing caught.
+    drag(400, 300, 20, 20);
     expect(ui().selection.edges).toEqual([]);
-    expect(ui().marqueeCount).toBe(1);
+    expect(ui().marqueeCount).toBe(2);
     end();
     expect(ui().selection.nodes).toEqual(['a']);
   });
 
-  it('with ⌥ (touch), selects every connector the marquee cuts', () => {
+  it('selects every connector the marquee cuts', () => {
     const { start, drag } = setup();
-    start(true);
+    start();
     drag(60, 60, 200, 60);
     expect(ui().selection.edges).toEqual(['e2', 'e3']);
     expect(ui().marqueeCount).toBe(2);
@@ -129,7 +129,7 @@ describe('useMarqueeEdges (connectors in the marquee)', () => {
     act(() => {
       ui().select({ edges: ['e3'] });
     });
-    start(true);
+    start();
     // Cuts e1 and the sticky leader line just above it.
     drag(200, 15, 20, 20);
     expect(ui().selection.edges).toEqual(['e3', 'e1']);
@@ -140,7 +140,7 @@ describe('useMarqueeEdges (connectors in the marquee)', () => {
     act(() => {
       store.setState({ transform: [100, 100, 2] });
     });
-    start(true);
+    start();
     // Pane (400..440, 140..170) is flow (150..170, 20..35): it cuts e1.
     drag(400, 140, 40, 30);
     expect(ui().selection.edges).toEqual(['e1']);
@@ -148,7 +148,7 @@ describe('useMarqueeEdges (connectors in the marquee)', () => {
 
   it('does nothing once the marquee is cancelled', () => {
     const { start, drag } = setup();
-    start(true);
+    start();
     act(() => {
       ui().setCanvasGesture(null);
     });

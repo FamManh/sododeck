@@ -1,8 +1,9 @@
 /**
  * Connectors in the marquee. React Flow's marquee selects nodes only; while one runs this hook
  * follows its rectangle (`userSelectionRect` in React Flow's store, committed on every pointer
- * move and auto-pan) and adds the connectors it catches to the selection: cut by the rectangle
- * in touch mode (⌥), wholly inside it otherwise, like cards (016 R13).
+ * move and auto-pan) and adds every connector the rectangle touches to the selection. Unlike
+ * cards (wholly inside, or touched with ⌥, 016 R13), a connector only has to be touched: lines
+ * run across the canvas between cards, so one rarely fits inside a marquee.
  *
  * The paths are read from the rendered `.react-flow__edge-path` elements' `d`, in flow
  * coordinates. That is the exact line the user sees (routes, bends, anchors, fans, relationship
@@ -13,10 +14,11 @@
  * (`getPointAtLength` would force one per connector per move).
  */
 import { useStoreApi } from '@xyflow/react';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
+import { selectionSize } from '../../state/selection-kinds';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import {
   edgeShapeOf,
@@ -57,13 +59,9 @@ export function renderedEdgeShapes(
   return shapes;
 }
 
-export function useMarqueeEdges(active: boolean, touch: boolean): void {
+export function useMarqueeEdges(active: boolean): void {
   const editor = useEditor();
   const store = useStoreApi();
-  const touchRef = useRef(touch);
-  useEffect(() => {
-    touchRef.current = touch;
-  });
 
   useEffect(() => {
     if (!active || isFlowMode(useUiStore.getState())) return;
@@ -85,15 +83,15 @@ export function useMarqueeEdges(active: boolean, touch: boolean): void {
         shapesAt = transform;
       }
       const rect = screenRectToFlow(userSelectionRect, transform);
-      const hit = edgesInRect(shapes, rect, touchRef.current ? 'partial' : 'full');
+      const hit = edgesInRect(shapes, rect, 'partial');
       const key = hit.join(' ');
       if (key === lastHit) return;
       lastHit = key;
       const ui = useUiStore.getState();
       const edges = marqueeEdgeSelection(before, hit);
-      ui.select({ ...ui.selection, edges });
-      const { nodes, stickies, images } = ui.selection;
-      ui.setMarqueeCount(nodes.length + stickies.length + images.length + edges.length);
+      const next = { ...ui.selection, edges };
+      ui.select(next);
+      ui.setMarqueeCount(selectionSize(next));
     };
 
     update();
