@@ -24,7 +24,7 @@ export type Command = (typeof COMMANDS)[number];
 /** Set by the build (esbuild `define`); `dev` when the sources run directly (tests). */
 declare const __SKILL_VERSION__: string | undefined;
 const SKILL_VERSION = typeof __SKILL_VERSION__ === 'string' ? __SKILL_VERSION__ : 'dev';
-export const APP_LABEL = `sododeck-deck-skill ${SKILL_VERSION}`;
+export const APP_LABEL = `sododeck-diagram-skill ${SKILL_VERSION}`;
 
 export interface Io {
   out: (text: string) => void;

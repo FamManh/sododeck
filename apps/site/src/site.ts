@@ -3,6 +3,8 @@ export const APP_URL: string = import.meta.env.PUBLIC_APP_URL ?? 'https://app.so
 
 /** Where "Get the AI skill" leads: the skill's docs page (027). */
 export const SKILL_URL = '/docs/ai-skill';
+/** The AI skill's public repository: install instructions, examples and releases (ADR 0042). */
+export const SKILL_REPO_URL = 'https://github.com/FamManh/sododeck-diagram-skill';
 
 export const NAV = [
   { href: '/#explore', label: 'Features' },

@@ -1,7 +1,7 @@
 /**
  * Builds the AI deck skill (027 research R1, R2, R7, R8):
  *
- *   pnpm --filter @sododeck/skill build            → dist/sododeck-deck/ and dist/sododeck-deck.zip
+ *   pnpm --filter @sododeck/skill build            → dist/sododeck-diagram/
  *   tsx scripts/build.ts --out <dir>                → the same into another folder (the drift test)
  *
  * Markdown sources get their facts filled in, the schema and examples are copied, and the scripts
@@ -17,10 +17,9 @@ import { build } from 'esbuild';
 import { COMMANDS } from '../src/cli/main';
 import { fill, placeholders } from '../src/generate';
 import { versionStamp } from '../src/version';
-import { zip } from './zip';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const SKILL = 'sododeck-deck';
+const SKILL = 'sododeck-diagram';
 
 /** Node modules the bundle must never import: the scripts work offline (FR-005). */
 export const NETWORK_MODULES = ['http', 'https', 'net', 'tls', 'dgram', 'http2', 'undici'];
@@ -48,7 +47,7 @@ async function write(path: string, data: string | Uint8Array): Promise<void> {
   await writeFile(path, data);
 }
 
-export async function buildSkill(outRoot: string): Promise<{ folder: string; archive: string }> {
+export async function buildSkill(outRoot: string): Promise<{ folder: string }> {
   const folder = join(outRoot, SKILL);
   await rm(folder, { recursive: true, force: true });
 
@@ -84,7 +83,7 @@ export async function buildSkill(outRoot: string): Promise<{ folder: string; arc
     metafile: true,
     logLevel: 'silent',
     banner: {
-      js: `// Sododeck deck skill ${stamp.skill}. Generated; do not edit.\n${QUIET_LOCAL_STORAGE}`,
+      js: `// Sododeck diagram skill ${stamp.skill}. Generated; do not edit.\n${QUIET_LOCAL_STORAGE}`,
     },
   });
   const imported = Object.values(result.metafile.inputs).flatMap((input) =>
@@ -101,24 +100,13 @@ export async function buildSkill(outRoot: string): Promise<{ folder: string; arc
     );
   }
 
-  const files = await listFiles(folder);
-  const archive = join(outRoot, `${SKILL}.zip`);
-  const entries = await Promise.all(
-    files.map(async (path) => ({
-      path: `${SKILL}/${relative(folder, path).split('\\').join('/')}`,
-      data: await readFile(path),
-    })),
-  );
-  await write(archive, zip(entries));
-  return { folder, archive };
+  return { folder };
 }
 
 // The main module re-exports `runCli` for the entry files; esbuild keeps exports of the entry.
 const outArg = process.argv.indexOf('--out');
 if (import.meta.url === `file://${process.argv[1] ?? ''}`) {
   const out = outArg >= 0 ? (process.argv[outArg + 1] ?? join(root, 'dist')) : join(root, 'dist');
-  const { folder, archive } = await buildSkill(out);
-  process.stdout.write(
-    `Built ${relative(process.cwd(), folder)} and ${relative(process.cwd(), archive)}\n`,
-  );
+  const { folder } = await buildSkill(out);
+  process.stdout.write(`Built ${relative(process.cwd(), folder)}\n`);
 }

@@ -1,9 +1,9 @@
 # Decision rules
 
-Read this when the user describes a decision, policy, pricing, routing or approval logic. A rule is
-a small decision table; attach it to the step or card where the decision is made. Don't draw a
-decision as a diamond card when it is really a policy: a rule keeps the logic readable and
-testable in the app.
+Read this when the user describes a decision, policy, pricing, routing or approval logic, or when
+code you trace has a status mapping, an eligibility check or any `if` ladder a reader needs. A
+rule is a small decision table; attach it to the step or card where the decision is made. Don't
+draw a decision as a diamond card: a rule keeps the logic readable and testable in the app.
 
 ## Shape
 
@@ -32,8 +32,12 @@ Rules live in the root `rules` object, keyed by rule id:
 - `hitPolicy`: `first` (the first matching row wins, the usual choice), `unique` (exactly one row
   may match), `collect` (all matching rows apply).
 - Each row has one `when` cell per input and one `then` cell per output, in column order.
-- Every rule should end with a catch-all row (`any` in every `when` cell), or lint warns
-  `rule-without-catch-all`.
+- A `first` rule should end with a catch-all row (`any` in every `when` cell, with what happens
+  "otherwise"), or lint warns `rule-without-catch-all`. A `collect` table that lists facts (one
+  row per trigger window, per notification type) may keep that warning; say so under "Warnings
+  kept".
+- In codebase mode, cite the line that implements the table in its `description`, and use the
+  code's own values in the cells (`PENDING`, `> 50`), so a reader can check it.
 
 ## Cell grammar (`when` cells)
 
@@ -44,7 +48,8 @@ Rules live in the root `rules` object, keyed by rule id:
 | `gold, silver`                                 | any value in the list                                              |
 | `Yes`                                          | that value exactly (case-insensitive; numbers compared as numbers) |
 
-A cell lint cannot read is reported as `invalid-rule-cells`.
+A cell lint cannot read is reported as `invalid-rule-cells`. Qualitative inputs ("all items
+approved", "some", "none") are plain values: write `all`, `some`, `none` and match them exactly.
 
 ## Attaching
 

@@ -8,7 +8,8 @@ cannot be loaded · `2` wrong arguments or a file that cannot be read (message o
 
 ## Contents
 
-1. validate · 2. lint · 3. summary · 4. diff · 5. deliver · 6. outline · 7. Reading a problem · 8. Problem codes
+1. validate · 2. lint · 3. summary · 4. diff · 5. deliver · 6. outline · 7. Reading a problem ·
+2. Problem codes
 
 ## 1. validate
 
@@ -19,10 +20,9 @@ file format (schema) and identity rules (unique ids). Default output is JSON.
 
 `lint.mjs <deck> [--detail faithful|balanced|simplified] [--mode new|update|codebase|text]
 [--format json|text]`: everything validate checks, plus the app's deck problems (broken flows,
-missing rules, broken references, …) and the authoring checks (taste and modelling warnings).
-`--mode update` skips the mixed-positions warning; `--mode codebase` asks for a source link on
-every card and connector. `--detail balanced|simplified` adds the cards-per-level budget; without
-it (or with `faithful`) there is none.
+missing rules, broken references, …) and the authoring checks (taste, modelling and layout
+warnings: a card without a position, a connector over a card, a frame over another group's card,
+overlapping frames). `--mode codebase` also asks for a source link on every card and connector.
 
 ## 3. summary
 

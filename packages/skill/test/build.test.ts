@@ -16,10 +16,9 @@ const schemaText = readFileSync(
 );
 
 let folder = '';
-let archive = '';
 
 beforeAll(async () => {
-  ({ folder, archive } = await buildSkill(mkdtempSync(join(tmpdir(), 'sododeck-skill-build-'))));
+  ({ folder } = await buildSkill(mkdtempSync(join(tmpdir(), 'sododeck-skill-build-'))));
 });
 
 const read = (path: string) => readFileSync(join(folder, path), 'utf8');
@@ -68,7 +67,7 @@ describe('built skill (027 FR-004, research R9)', () => {
   it('keeps SKILL.md short, with a name and description, and every reference it names exists', () => {
     const skill = read('SKILL.md');
     expect(skill.split('\n').length).toBeLessThan(500);
-    expect(skill).toMatch(/^---\nname: sododeck-deck\ndescription: >-\n/);
+    expect(skill).toMatch(/^---\nname: sododeck-diagram\ndescription: >-\n/);
     const named = new Set([...skill.matchAll(/references\/([a-z-]+\.md)/g)].map((m) => m[1]));
     for (const name of [...skill.matchAll(/`([a-z-]+\.md)`/g)].map((m) => m[1])) named.add(name);
     named.delete('SKILL.md');
@@ -89,7 +88,7 @@ describe('built skill (027 FR-004, research R9)', () => {
     expect(ok.err).toBe('');
     expect(JSON.parse(ok.out)).toMatchObject({
       report: 'sododeck-problems',
-      app: expect.stringMatching(/^sododeck-deck-skill 1\.0\.0\+[0-9a-f]{12}$/) as string,
+      app: expect.stringMatching(/^sododeck-diagram-skill 1\.0\.0\+[0-9a-f]{12}$/) as string,
     });
 
     const deck = JSON.parse(read('examples/checkout.sododeck')) as {
@@ -104,8 +103,9 @@ describe('built skill (027 FR-004, research R9)', () => {
     expect(bad.out).toMatch(/^ERROR /m);
   });
 
-  it('builds a byte-identical archive every time', async () => {
+  it('builds a byte-identical bundle every time', async () => {
     const again = await buildSkill(mkdtempSync(join(tmpdir(), 'sododeck-skill-build-')));
-    expect(readFileSync(again.archive).equals(readFileSync(archive))).toBe(true);
+    const bundle = (dir: string) => readFileSync(join(dir, 'scripts', 'sododeck.mjs'));
+    expect(bundle(again.folder).equals(bundle(folder))).toBe(true);
   });
 });

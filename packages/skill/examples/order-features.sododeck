@@ -8,17 +8,29 @@
       "id": "web",
       "type": "client",
       "title": "Web Shop",
-      "tech": "React"
+      "tech": "React",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "id": "support",
       "type": "client",
-      "title": "Support Console"
+      "title": "Support Console",
+      "position": {
+        "x": 0,
+        "y": 250
+      }
     },
     {
       "id": "gateway",
       "type": "gateway",
-      "title": "API Gateway"
+      "title": "API Gateway",
+      "position": {
+        "x": 300,
+        "y": 125
+      }
     },
     {
       "id": "orders",
@@ -26,48 +38,69 @@
       "title": "Order Service",
       "group": "core",
       "tech": "Node.js",
-      "description": "Creates orders, asks Pricing for the total, charges and refunds through the payment provider, and publishes order events."
+      "description": "Creates orders, asks Pricing for the total, charges and refunds through the payment provider, and publishes order events.",
+      "position": {
+        "x": 650,
+        "y": 125
+      }
     },
     {
       "id": "pricing",
       "type": "component",
       "title": "Pricing",
       "group": "core",
-      "description": "Prices an order: list price, then discounts, then tax, in that order."
+      "description": "Prices an order: list price, then discounts, then tax, in that order.",
+      "position": {
+        "x": 650,
+        "y": -125
+      }
     },
     {
       "id": "orders-db",
       "type": "database",
       "title": "Orders DB",
       "group": "data",
-      "tech": "Postgres"
-    },
-    {
-      "id": "events",
-      "type": "queue",
-      "title": "Order Events",
-      "group": "data",
-      "tech": "Kafka"
+      "tech": "Postgres",
+      "position": {
+        "x": 650,
+        "y": 375
+      }
     },
     {
       "id": "warehouse",
       "type": "service",
-      "title": "Warehouse Service"
+      "title": "Warehouse Service",
+      "position": {
+        "x": 1000,
+        "y": 375
+      }
     },
     {
       "id": "notify",
       "type": "service",
-      "title": "Notification Service"
+      "title": "Notification Service",
+      "position": {
+        "x": 1350,
+        "y": 125
+      }
     },
     {
       "id": "payments",
       "type": "external",
-      "title": "Payment Provider"
+      "title": "Payment Provider",
+      "position": {
+        "x": 1000,
+        "y": -125
+      }
     },
     {
       "id": "email",
       "type": "external",
-      "title": "Email Provider"
+      "title": "Email Provider",
+      "position": {
+        "x": 1700,
+        "y": 125
+      }
     }
   ],
   "groups": [
@@ -77,7 +110,7 @@
     },
     {
       "id": "data",
-      "title": "Data and events"
+      "title": "Data"
     }
   ],
   "edges": [
@@ -121,7 +154,11 @@
       "from": "orders",
       "to": "orders-db",
       "protocol": "sql",
-      "label": "save order"
+      "label": "save order",
+      "style": {
+        "dash": "dashed",
+        "width": 1.5
+      }
     },
     {
       "id": "orders-payments",
@@ -138,32 +175,25 @@
       "label": "payment result"
     },
     {
-      "id": "orders-events",
+      "id": "orders-notify",
       "from": "orders",
-      "to": "events",
-      "protocol": "event",
-      "label": "OrderPaid · Refunded"
-    },
-    {
-      "id": "events-warehouse",
-      "from": "events",
-      "to": "warehouse",
-      "protocol": "event",
-      "label": "OrderPaid"
-    },
-    {
-      "id": "warehouse-events",
-      "from": "warehouse",
-      "to": "events",
-      "protocol": "event",
-      "label": "OrderShipped"
-    },
-    {
-      "id": "events-notify",
-      "from": "events",
       "to": "notify",
       "protocol": "event",
-      "label": "order events"
+      "label": "OrderPaid · Refunded · Kafka"
+    },
+    {
+      "id": "orders-warehouse",
+      "from": "orders",
+      "to": "warehouse",
+      "protocol": "event",
+      "label": "OrderPaid · Kafka"
+    },
+    {
+      "id": "warehouse-notify",
+      "from": "warehouse",
+      "to": "notify",
+      "protocol": "event",
+      "label": "OrderShipped · Kafka"
     },
     {
       "id": "notify-email",
@@ -254,13 +284,8 @@
         },
         {
           "id": "c-publish",
-          "edge": "orders-events",
+          "edge": "orders-notify",
           "title": "Publish OrderPaid"
-        },
-        {
-          "id": "c-notify",
-          "edge": "events-notify",
-          "title": "Pick up OrderPaid"
         },
         {
           "id": "c-email",
@@ -279,7 +304,9 @@
           "id": "r-request",
           "edge": "support-gateway",
           "title": "Request refund",
-          "rules": ["refund-approval"],
+          "rules": [
+            "refund-approval"
+          ],
           "ruleInputs": {
             "refund-approval": {
               "amount": "120",
@@ -304,13 +331,8 @@
         },
         {
           "id": "r-publish",
-          "edge": "orders-events",
+          "edge": "orders-notify",
           "title": "Publish Refunded"
-        },
-        {
-          "id": "r-notify",
-          "edge": "events-notify",
-          "title": "Pick up Refunded"
         },
         {
           "id": "r-email",
@@ -327,23 +349,13 @@
       "steps": [
         {
           "id": "s-paid",
-          "edge": "orders-events",
+          "edge": "orders-warehouse",
           "title": "Publish OrderPaid"
         },
         {
-          "id": "s-pick",
-          "edge": "events-warehouse",
-          "title": "Warehouse picks it up"
-        },
-        {
           "id": "s-shipped",
-          "edge": "warehouse-events",
+          "edge": "warehouse-notify",
           "title": "Publish OrderShipped"
-        },
-        {
-          "id": "s-notify",
-          "edge": "events-notify",
-          "title": "Pick up OrderShipped"
         },
         {
           "id": "s-email",
@@ -377,18 +389,33 @@
       "rows": [
         {
           "id": "small",
-          "when": ["<= 50", "<= 30"],
-          "then": ["Automatic"]
+          "when": [
+            "<= 50",
+            "<= 30"
+          ],
+          "then": [
+            "Automatic"
+          ]
         },
         {
           "id": "recent",
-          "when": ["<= 500", "<= 30"],
-          "then": ["Support lead"]
+          "when": [
+            "<= 500",
+            "<= 30"
+          ],
+          "then": [
+            "Support lead"
+          ]
         },
         {
           "id": "other",
-          "when": ["any", "any"],
-          "then": ["Finance"]
+          "when": [
+            "any",
+            "any"
+          ],
+          "then": [
+            "Finance"
+          ]
         }
       ]
     }
