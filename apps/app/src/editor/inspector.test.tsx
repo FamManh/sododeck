@@ -124,6 +124,30 @@ describe('Inspector', () => {
     });
   });
 
+  it('deletes every kind of a mixed selection from its trash, groups included', async () => {
+    renderWithEditor(<Harness />, {
+      ...deck,
+      nodes: deck.nodes.map((n) => ({ ...n, group: 'g' })),
+      edges: [...deck.edges, { id: 'e2', from: 'db', to: 'svc' }],
+      groups: [{ id: 'g', title: 'Core' }],
+      stickies: [{ id: 'n', text: 'Note', position: { x: 0, y: 0 } }],
+    });
+    act(() => {
+      useUiStore.getState().select({ edges: ['e1', 'e2'], groups: ['g'], stickies: ['n'] });
+    });
+    expect(screen.getByRole('heading', { name: '4 items selected' })).toBeInTheDocument();
+    expect(screen.getByText('2 connections · 1 group · 1 note')).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Delete 4 items' }));
+    expect(useUiStore.getState().pendingDelete).toEqual({
+      targets: [
+        { scope: 'edges', id: 'e1' },
+        { scope: 'edges', id: 'e2' },
+        { scope: 'stickies', id: 'n' },
+        { scope: 'groups', id: 'g' },
+      ],
+    });
+  });
+
   it.each([
     ['component', { nodes: ['svc'] }, 'Order Service'],
     ['connection', { edges: ['e1'] }, 'Order Service → Orders DB'],

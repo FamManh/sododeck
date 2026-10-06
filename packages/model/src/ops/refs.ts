@@ -42,8 +42,6 @@ export function refsOf(c: Collection, field: string, value: unknown): Ref[] {
       return isRecord(value)
         ? Object.keys(value).map((id) => ({ path: `${field}.${id}`, id, target: 'nodes' as const }))
         : [];
-    case 'stickies.anchor':
-      return one('any');
     default:
       return [];
   }

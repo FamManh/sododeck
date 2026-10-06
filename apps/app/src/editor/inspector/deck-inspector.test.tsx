@@ -1,5 +1,5 @@
 import { toJSON } from '@sododeck/model';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -127,15 +127,17 @@ describe('DeckInspector › Database (041 US4)', () => {
     ],
   };
 
+  /** Renders deck settings on the Database tab. */
   function setupWith(file: typeof inspectorDeck) {
     const { wrapper, doc, editor } = editorWrapper(file);
     render(<Harness />, { wrapper });
+    fireEvent.click(screen.getByRole('tab', { name: 'Database' }));
     return { doc, editor, user: userEvent.setup() };
   }
 
   it('shows four switches, all on, under "Show on tables"', () => {
     setupWith(tableDeck);
-    expect(screen.getByText('Database')).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel', { name: 'Database' })).toBeInTheDocument();
     const list = screen.getByRole('list', { name: 'Show on tables' });
     const names = within(list)
       .getAllByRole('switch')
@@ -209,8 +211,56 @@ describe('DeckInspector › Database (041 US4)', () => {
     expect(toJSON(doc)).not.toHaveProperty('groupingMode');
   });
 
-  it('is absent with no table and the Database pack off', () => {
-    setupWith({ ...inspectorDeck, packs: ['architecture'] });
+  it('is absent with no table and the Database pack off: no tab bar, General alone', () => {
+    const { wrapper } = editorWrapper({ ...inspectorDeck, packs: ['architecture'] });
+    render(<Harness />, { wrapper });
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Database' })).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
+  });
+});
+
+describe('DeckInspector › tabs', () => {
+  const tableDeck = {
+    ...inspectorDeck,
+    nodes: [
+      ...inspectorDeck.nodes,
+      { id: 'orders', type: 'db-table', title: 'orders', columns: [] },
+    ],
+  };
+
+  it('opens on General and switches to Database and back', async () => {
+    const { wrapper } = editorWrapper(tableDeck);
+    render(<Harness />, { wrapper });
+    const user = userEvent.setup();
+    const tabs = screen.getByRole('tablist', { name: 'Deck settings sections' });
+    expect(
+      within(tabs)
+        .getAllByRole('tab')
+        .map((t) => t.textContent),
+    ).toEqual(['General', 'Database']);
+    expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
+    const general = screen.getByRole('tabpanel', { name: 'General' });
+    expect(within(general).getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+    expect(within(general).getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    const database = screen.getByRole('tabpanel', { name: 'Database' });
+    expect(within(database).getByRole('list', { name: 'Show on tables' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
+    expect(useUiStore.getState().announcement.text).toBe('Database tab');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'General' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+  });
+
+  it('shows the Database tab with the Database pack on and no table yet', () => {
+    const { wrapper } = editorWrapper({ ...inspectorDeck, packs: ['architecture', 'database'] });
+    render(<Harness />, { wrapper });
+    expect(screen.getByRole('tab', { name: 'Database' })).toBeInTheDocument();
   });
 });

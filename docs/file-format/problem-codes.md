@@ -36,7 +36,7 @@ Rules of the format that the JSON Schema cannot express. The file is refused.
 | Code | Severity | Title | Fix |
 | --- | --- | --- | --- |
 | `rule-row-cells` | error | Rule row cell count | Give every row one "when" cell per input column and one "then" cell per output column. |
-| `sticky-placement` | error | Sticky without a place | Give the sticky an "anchor" (an object id), a "position", or both. |
+| `sticky-placement` | error | Sticky without a place | Give the sticky a "position" (x and y on the canvas). |
 | `map-key-id` | error | Key is not an id | Rename the key to 1–64 letters, digits, -, _, . or :. |
 | `group-frame-pair` | error | Half a group frame | Give the group both "position" and "size", or remove both. |
 | `view-frame-group` | error | Frame for a missing group | Use the id of a group in this file as the key, or remove the entry. |

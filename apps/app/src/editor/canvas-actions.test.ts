@@ -1,6 +1,7 @@
-import { createEditor, fromJSON, toJSON } from '@sododeck/model';
+import { assetId, createEditor, fromJSON, toJSON } from '@sododeck/model';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { PNG_1X1 } from '../images/test-pictures';
 import { useUiStore } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
 import {
@@ -10,6 +11,7 @@ import {
   connectComponents,
   nextTableName,
   reconnectColumnEnd,
+  selectAllComponents,
 } from './canvas-actions';
 
 const deck = deckOf({
@@ -306,5 +308,41 @@ describe('tables created inside a database card (049 US1)', () => {
     const doc = fromJSON(dbDeck);
     const editor = createEditor(doc);
     expect(node(doc, addTable(editor, { x: 0, y: 0 }))?.parent).toBeUndefined();
+  });
+});
+
+describe('selectAllComponents (⌘A)', () => {
+  it('selects every item the view draws: cards, groups, notes and images', () => {
+    const asset = assetId(PNG_1X1);
+    const doc = fromJSON(
+      deckOf({
+        nodes: [
+          { id: 'a', type: 'service', title: 'A', group: 'g', position: { x: 0, y: 0 } },
+          { id: 'b', type: 'service', title: 'B', position: { x: 300, y: 0 } },
+        ],
+        groups: [{ id: 'g', title: 'G' }],
+        stickies: [{ id: 's', text: 'Note', position: { x: 0, y: 300 } }],
+        images: [{ id: 'i', asset, position: { x: 0, y: 600 }, size: { width: 40, height: 40 } }],
+        assets: {
+          [asset]: {
+            type: 'image/png',
+            bytes: PNG_1X1.length,
+            width: 1,
+            height: 1,
+            name: 'a.png',
+            data: '',
+          },
+        },
+      }),
+    );
+    selectAllComponents(createEditor(doc));
+    expect(useUiStore.getState().selection).toEqual({
+      nodes: ['a', 'b'],
+      edges: [],
+      groups: ['g'],
+      stickies: ['s'],
+      images: ['i'],
+    });
+    expect(useUiStore.getState().announcement.text).toBe('5 selected');
   });
 });

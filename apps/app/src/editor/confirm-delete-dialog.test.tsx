@@ -31,7 +31,7 @@ const deck = deckOf({
     },
   ],
   stickies: [
-    { id: 'note-1', text: 'Pinned note', anchor: 'svc', position: { x: 24, y: -96 } },
+    { id: 'note-1', text: 'Near the service', position: { x: 24, y: -96 } },
     { id: 'note-2', text: 'Loose note', position: { x: 160, y: 200 } },
   ],
 });
@@ -50,6 +50,61 @@ function setup(nodes: string[] = ['svc'], edges: string[] = [], stickies: string
   return { ...view, user: userEvent.setup() };
 }
 
+const groupDeck = deckOf({
+  nodes: [
+    { id: 'in1', type: 'service', title: 'In 1', group: 'g', position: { x: 0, y: 0 } },
+    { id: 'in2', type: 'service', title: 'In 2', group: 'g', position: { x: 300, y: 0 } },
+    { id: 'out', type: 'service', title: 'Out', position: { x: 0, y: 400 } },
+  ],
+  groups: [{ id: 'g', title: 'Core' }],
+  edges: [{ id: 'e', from: 'in1', to: 'in2' }],
+});
+
+describe('ConfirmDeleteDialog: groups', () => {
+  function deleteNow(selection: { nodes?: string[]; groups?: string[] }) {
+    const view = renderWithEditor(<Harness />, groupDeck);
+    act(() => {
+      useUiStore.getState().select(selection);
+      useUiStore.getState().requestDelete(useUiStore.getState().selection);
+    });
+    return view;
+  }
+
+  it('ungroups a selected group at once: the frame goes, its cards stay', () => {
+    const { doc } = deleteNow({ groups: ['g'] });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    const file = toJSON(doc);
+    expect(file.groups).toEqual([]);
+    expect(file.nodes.map((n) => n.id)).toEqual(['in1', 'in2', 'out']);
+    expect(file.nodes.every((n) => n.group === undefined)).toBe(true);
+    expect(file.edges.map((e) => e.id)).toEqual(['e']);
+    expect(useUiStore.getState().announcement.text).toMatch(/^Ungrouped Core/);
+  });
+
+  it('removes a group and its selected cards in one undo step', () => {
+    const { doc, editor } = deleteNow({ nodes: ['in1', 'in2', 'out'], groups: ['g'] });
+    expect(toJSON(doc).groups).toEqual([]);
+    expect(toJSON(doc).nodes).toEqual([]);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(groupDeck);
+  });
+
+  it('skips a locked group', () => {
+    const locked = deckOf({
+      ...groupDeck,
+      nodes: groupDeck.nodes.map((n) => (n.group === 'g' ? { ...n, locked: true } : n)),
+    });
+    const view = renderWithEditor(<Harness />, locked);
+    act(() => {
+      useUiStore.getState().requestDelete({ groups: ['g'] });
+    });
+    expect(toJSON(view.doc).groups.map((g) => g.id)).toEqual(['g']);
+    expect(useUiStore.getState().announcement.text).toMatch(/Skipped 1 locked/);
+  });
+});
+
 describe('ConfirmDeleteDialog', () => {
   it('deletes cards, notes and connectors at once, without a dialog', () => {
     const { doc } = setup(['svc'], [], ['note-2']);
@@ -65,8 +120,8 @@ describe('ConfirmDeleteDialog', () => {
     expect(toJSON(doc).edges).toEqual([]);
     expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-1')).toMatchObject({
       id: 'note-1',
-      text: 'Pinned note',
-      position: { x: 25, y: -94 },
+      text: 'Near the service',
+      position: { x: 24, y: -96 },
     });
     expect(useUiStore.getState().selection).toEqual({
       nodes: [],
@@ -75,9 +130,7 @@ describe('ConfirmDeleteDialog', () => {
       stickies: [],
       images: [],
     });
-    expect(
-      screen.getByText(/Deleted Order Service and 2 connections · 1 note unpinned/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Deleted Order Service and 2 connections · /)).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toMatch(/^Deleted Order Service/);
 
     act(() => {
@@ -91,7 +144,7 @@ describe('ConfirmDeleteDialog', () => {
     const { doc, editor } = setup();
     // The Checkout flow loses both of its connections.
     expect(
-      screen.getByText(/1 note unpinned · \d+ new problems? · (⌘Z|Ctrl\+Z) to undo$/),
+      screen.getByText(/2 connections · \d+ new problems? · (⌘Z|Ctrl\+Z) to undo$/),
     ).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toMatch(/\d+ new problems?/);
     act(() => {

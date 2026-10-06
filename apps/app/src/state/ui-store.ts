@@ -33,6 +33,7 @@ import {
   type JsonPanelPrefs,
   type JsonTab,
 } from './json-panel-prefs';
+import { selectionTargets, type Selection } from './selection-kinds';
 
 /**
  * UI-only state: selection, focus, panels, popovers, preferences. NEVER document data —
@@ -46,13 +47,8 @@ export interface EnumPopover {
   source: 'hover' | 'keyboard';
 }
 
-export interface Selection {
-  readonly nodes: readonly Id[];
-  readonly edges: readonly Id[];
-  readonly groups: readonly Id[];
-  readonly stickies: readonly Id[];
-  readonly images: readonly Id[];
-}
+export type { Selection } from './selection-kinds';
+export { selectionTargets } from './selection-kinds';
 
 /** A column of a table (042): `tableId:columnId` on the canvas rows. */
 export interface ColumnRef {
@@ -513,6 +509,8 @@ export interface UiState {
   exportDialog: { open: boolean; returnFocus: HTMLElement | null; seed?: ExportSeed };
   /** The Import SQL or DBML dialog (044). */
   importDialog: { open: boolean; returnFocus: HTMLElement | null };
+  /** The editor's Import Mermaid dialog: into this deck or a new one. */
+  mermaidDialog: { open: boolean; returnFocus: HTMLElement | null };
   /**
    * The last import report (044 FR-023, research R14) and the deck it belongs to: UI-only, never
    * in the deck; dropped when another deck opens. `open` shows it when that deck opens (a new
@@ -692,6 +690,8 @@ export interface UiState {
   closeExport: () => void;
   openImport: (returnFocus?: HTMLElement | null) => void;
   closeImport: () => void;
+  openMermaidImport: (returnFocus?: HTMLElement | null) => void;
+  closeMermaidImport: () => void;
   setImportReport: (
     report: (ImportReport & { deckId: string | null; open?: boolean }) | null,
   ) => void;
@@ -959,16 +959,6 @@ function writeNotesDisplay(display: NotesDisplay): void {
 
 const without = <T extends string>(ids: readonly T[], id: T) => ids.filter((x) => x !== id);
 
-/** Components first, then connections: the order the confirmation and the delete both use. */
-export function selectionTargets(selection: Partial<Selection>): RemovalTarget[] {
-  return [
-    ...(selection.nodes ?? []).map((id): RemovalTarget => ({ scope: 'nodes', id })),
-    ...(selection.edges ?? []).map((id): RemovalTarget => ({ scope: 'edges', id })),
-    ...(selection.stickies ?? []).map((id): RemovalTarget => ({ scope: 'stickies', id })),
-    ...(selection.images ?? []).map((id): RemovalTarget => ({ scope: 'images', id })),
-  ];
-}
-
 const NO_GUIDES: readonly Guide[] = [];
 
 export const useUiStore = create<UiState>()((set, get) => {
@@ -1035,6 +1025,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     palette: { open: false, returnFocus: null },
     exportDialog: { open: false, returnFocus: null },
     importDialog: { open: false, returnFocus: null },
+    mermaidDialog: { open: false, returnFocus: null },
     importReport: null,
     focusedId: null,
     focusedEdgeId: null,
@@ -1372,6 +1363,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     closeImport: () => {
       set({ importDialog: { open: false, returnFocus: null } });
+    },
+    openMermaidImport: (returnFocus = null) => {
+      set({ mermaidDialog: { open: true, returnFocus } });
+    },
+    closeMermaidImport: () => {
+      set({ mermaidDialog: { open: false, returnFocus: null } });
     },
     setImportReport: (report) => {
       set({ importReport: report });
@@ -1976,6 +1973,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         palette: { open: false, returnFocus: null },
         exportDialog: { open: false, returnFocus: null },
         importDialog: { open: false, returnFocus: null },
+        mermaidDialog: { open: false, returnFocus: null },
         importReport: keptReport,
         ...(showReport ? { flyout: 'import-report' as const } : {}),
         titleEdit: null,

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { createEditor, fromJSON, getObject, observeDeck, toJSON, type EditorOptions } from '../src';
-import { STICKY_DEFAULT_OFFSET, stickyCanvasPosition } from '../src/geometry';
 import { seqIds } from './helpers';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -136,72 +135,36 @@ describe('sticky draft (research R3, R5)', () => {
   });
 });
 
-describe('pin, unpin and move (research R3)', () => {
-  it('pinSticky keeps the canvas point of a free note', () => {
-    const { doc, editor } = setup();
-    const id = editor.add('stickies', { text: 'Hi', position: { x: 50, y: 80 } });
-    editor.pinSticky(id, 'n0');
-    const sticky = mustSticky(doc, id);
-    expect(sticky.anchor).toBe('n0');
-    expect(stickyCanvasPosition(toJSON(doc), sticky)).toEqual({
-      status: 'pinned',
-      point: { x: 50, y: 80 },
-      pinnedTo: 'n0',
-    });
-  });
-
-  it('pinSticky to a grid-placed node keeps the canvas point', () => {
-    const { doc, editor } = setup();
-    const id = editor.add('stickies', { text: 'Hi', position: { x: 300, y: 5 } });
-    editor.pinSticky(id, 'n1');
-    const sticky = mustSticky(doc, id);
-    expect(stickyCanvasPosition(toJSON(doc), sticky).point).toEqual({ x: 300, y: 5 });
-  });
-
-  it('pinSticky throws missing-reference for an unknown node', () => {
-    const { editor } = setup();
-    const id = editor.add('stickies', { text: 'Hi', position: { x: 0, y: 0 } });
-    expect(() => {
-      editor.pinSticky(id, 'nope');
-    }).toThrow();
-  });
-
-  it('unpinSticky keeps the canvas point', () => {
-    const { doc, editor } = setup();
-    const id = editor.add('stickies', { text: 'Hi', anchor: 'n0' });
-    const before = stickyCanvasPosition(toJSON(doc), mustSticky(doc, id)).point;
-    editor.unpinSticky(id);
-    const sticky = mustSticky(doc, id);
-    expect(sticky.anchor).toBeUndefined();
-    expect(stickyCanvasPosition(toJSON(doc), sticky)).toEqual({ status: 'free', point: before });
-  });
-
-  it('moveSticky writes an absolute point when free', () => {
+describe('move (ADR 0041: every note is free)', () => {
+  it('moveSticky writes an absolute point', () => {
     const { doc, editor } = setup();
     const id = editor.add('stickies', { text: 'Hi', position: { x: 0, y: 0 } });
     editor.moveSticky(id, { x: 40, y: 60 });
     expect(getObject(doc, 'stickies', id)?.position).toEqual({ x: 40, y: 60 });
   });
 
-  it('moveSticky writes an offset when pinned', () => {
-    const { doc, editor } = setup();
-    const id = editor.add('stickies', { text: 'Hi', anchor: 'n0' });
-    editor.moveSticky(id, { x: 140, y: 130 });
-    const sticky = mustSticky(doc, id);
-    expect(sticky.position).toEqual({ x: 40, y: 30 });
-    expect(stickyCanvasPosition(toJSON(doc), sticky).point).toEqual({ x: 140, y: 130 });
-  });
-
-  it('is one undo step and observed as a remote change from another tab', () => {
+  it('is one undo step, reported as a local change', () => {
     const { doc, editor } = setup();
     const events: string[] = [];
     observeDeck(doc, (change) => events.push(change.origin));
     const id = editor.add('stickies', { text: 'Hi', position: { x: 0, y: 0 } });
     events.length = 0;
-    editor.pinSticky(id, 'n0');
+    editor.moveSticky(id, { x: 40, y: 60 });
+    expect(events).toEqual(['local']);
     expect(editor.undo()).toBe(true);
-    expect(getObject(doc, 'stickies', id)?.anchor).toBeUndefined();
-    expect(events[0]).toBe('local');
+    expect(getObject(doc, 'stickies', id)?.position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('never writes the legacy anchor, on add or update', () => {
+    const { doc, editor } = setup();
+    expect(() => editor.add('stickies', { text: 'Hi', anchor: 'n0' })).toThrow(
+      expect.objectContaining({ code: 'invalid' }),
+    );
+    const id = editor.add('stickies', { text: 'Hi', position: { x: 0, y: 0 } });
+    expect(() => {
+      editor.update('stickies', id, { anchor: 'n0' });
+    }).toThrow(expect.objectContaining({ code: 'invalid' }));
+    expect(mustSticky(doc, id).anchor).toBeUndefined();
   });
 });
 
@@ -213,21 +176,6 @@ describe('display flags', () => {
     expect(getObject(doc, 'stickies', id)?.collapsed).toBe(true);
     editor.update('stickies', id, { collapsed: null });
     expect(getObject(doc, 'stickies', id)?.collapsed).toBeUndefined();
-  });
-});
-
-describe('STICKY_DEFAULT_OFFSET', () => {
-  it('is used for a pinned note without a stored position', () => {
-    const emptyFile: SododeckFile = {
-      ...emptySododeckFile(),
-      nodes: [{ id: 'n0', type: 'service', title: 'N', position: { x: 10, y: 10 } }],
-    };
-    const placement = stickyCanvasPosition(emptyFile, { id: 's', text: 'x', anchor: 'n0' });
-    expect(placement).toEqual({
-      status: 'pinned',
-      point: { x: 10 + STICKY_DEFAULT_OFFSET.x, y: 10 + STICKY_DEFAULT_OFFSET.y },
-      pinnedTo: 'n0',
-    });
   });
 });
 

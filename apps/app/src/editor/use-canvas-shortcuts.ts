@@ -6,13 +6,7 @@
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
  *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
-import {
-  endpointOf,
-  endpointTitle,
-  isDbTable,
-  isLocked,
-  stickyCanvasPosition,
-} from '@sododeck/model';
+import { endpointOf, endpointTitle, isDbTable, isLocked, stickyPosition } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
@@ -21,6 +15,7 @@ import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
+import { isSelectionEmpty } from '../state/selection-kinds';
 import { alignSelection } from './actions/align-actions';
 import { deleteColumn, moveRow, startNewRow, startRowEdit } from './actions/table-actions';
 import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
@@ -459,7 +454,7 @@ export function useCanvasKeyDown() {
         event.preventDefault();
         const sticky = deck.stickies.find((entry) => entry.id === selectedSticky);
         if (sticky === undefined) return;
-        const point = stickyCanvasPosition(deck, sticky).point;
+        const point = stickyPosition(sticky);
         const step = event.shiftKey ? 32 : 8;
         const delta =
           direction === 'up'
@@ -988,14 +983,9 @@ export function useEditorShortcuts({
       }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
-        const { nodes, edges, groups, stickies, images } = ui.selection;
-        if (
-          nodes.length === 0 &&
-          edges.length === 0 &&
-          stickies.length === 0 &&
-          images.length === 0
-        ) {
-          if (groups.length === 0 && ui.drill.length > 0) {
+        // Every selected kind is deleted (`selectionTargets`); a group is ungrouped.
+        if (isSelectionEmpty(ui.selection)) {
+          if (ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
             ui.announce(
@@ -1005,16 +995,11 @@ export function useEditorShortcuts({
                 viewCrumbTitle(readViewState(editor.doc).view),
               )}`,
             );
-            return;
-          }
-          if (groups.length > 0) {
-            event.preventDefault();
-            ui.announce("Groups can't be deleted from the canvas yet");
           }
           return;
         }
         event.preventDefault();
-        ui.requestDelete({ nodes, edges, stickies, images });
+        ui.requestDelete(ui.selection);
         return;
       }
       // Esc ends Focus mode first and keeps the selection (048 US6); the next one clears it.

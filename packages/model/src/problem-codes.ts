@@ -176,7 +176,7 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
   ),
   'sticky-placement': rule(
     'Sticky without a place',
-    'Give the sticky an "anchor" (an object id), a "position", or both.',
+    'Give the sticky a "position" (x and y on the canvas).',
   ),
   'map-key-id': rule('Key is not an id', 'Rename the key to 1–64 letters, digits, -, _, . or :.'),
   'group-frame-pair': rule(

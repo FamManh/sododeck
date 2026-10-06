@@ -441,13 +441,14 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
     });
   });
 
+  // A legacy `anchor` still places a note (ADR 0041: the model turns it into a position on load).
   file.stickies.forEach((sticky, index) => {
     if (sticky.anchor === undefined && sticky.position === undefined) {
       report(
         issues,
         'sticky-placement',
         ['stickies', index],
-        `Sticky "${sticky.id}" needs an anchor, a position, or both.`,
+        `Sticky "${sticky.id}" needs a position.`,
         sticky.id,
       );
     }

@@ -872,24 +872,33 @@ describe('canvas handlers', () => {
     expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 72, y: 96 });
   });
 
-  it('takes the marquee selection from React Flow, ignoring group boundaries', () => {
+  it('takes the marquee selection from React Flow, groups and every other kind included', () => {
     const { h } = handlers();
     act(() => {
       h().onSelectionStart();
       h().onNodesChange([
         { type: 'select', id: 'a', selected: true },
         { type: 'select', id: 'group:g', selected: true },
+        { type: 'select', id: 'collapsed:k', selected: true },
+        { type: 'select', id: 'sticky:st1', selected: true },
+        { type: 'select', id: 'image:i1', selected: true },
         { type: 'select', id: 'c', selected: true },
       ]);
+      // React Flow's "connected to a caught card" connectors are not taken: the marquee's own
+      // hit test picks connectors (use-marquee-edges.test.tsx).
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
+    });
+    // The count chip counts every item the marquee holds, groups included.
+    expect(ui().marqueeCount).toBe(6);
+    act(() => {
       h().onSelectionEnd();
     });
     expect(ui().selection).toEqual({
       nodes: ['a', 'c'],
-      edges: ['e1'],
-      groups: [],
-      stickies: [],
-      images: [],
+      edges: [],
+      groups: ['g', 'k'],
+      stickies: ['st1'],
+      images: ['i1'],
     });
     // Outside a marquee, React Flow's own selection changes are ignored.
     act(() => {
@@ -1055,11 +1064,11 @@ describe('canvas handlers', () => {
       expect(toJSON(doc).views[0]?.pinned).toEqual(['a']);
     });
 
-    it('keeps a pinned note where it is dropped in a view that moved its component', () => {
+    it('keeps a note where it is dropped in a view that moved a component (ADR 0041)', () => {
       const { h, doc } = handlers(
         deckOf({
           nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
-          stickies: [{ id: 'st', text: 'Note', anchor: 'a', position: { x: 10, y: -20 } }],
+          stickies: [{ id: 'st', text: 'Note', position: { x: 10, y: -20 } }],
           views: [
             { id: 'base', type: 'system', title: 'Base' },
             { id: 'moved', type: 'custom', title: 'Moved', positions: { a: { x: 500, y: 0 } } },
@@ -1070,8 +1079,8 @@ describe('canvas handlers', () => {
         ui().switchView('moved');
         h().onNodesChange([{ type: 'position', id: 'sticky:st', position: { x: 530, y: -40 } }]);
       });
-      // Offset from where A is drawn in this view (500, 0).
-      expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 30, y: -40 });
+      // Notes are free: the same canvas point in every view.
+      expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 530, y: -40 });
     });
   });
 

@@ -17,14 +17,13 @@
  * - A `db-table` whose name is taken in its schema (case-insensitive) is renamed `name_copy`,
  *   `name_copy_2`… (`copyName`). Other cards keep their titles.
  */
-import type { DbEnum, DbIndexPart, Edge, Group, Id, Image, Node } from '@sododeck/schema';
+import type { DbEnum, DbIndexPart, Edge, Group, Id, Image, Node, Sticky } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { isDbTable } from '../card-types';
 import { toY } from '../convert';
 import type { Fragment } from '../fragment';
 import type { Point } from '../geometry';
-import { anchorableIds } from '../ids';
 import { appendAll, collectionMap, rulesMap } from '../layout';
 import { sortStack } from '../stack-order';
 import { readEnums, readObject } from '../read';
@@ -52,6 +51,8 @@ export interface PastedIds {
   groups: Id[];
   /** The new images (055), in the order they stack. */
   images: Id[];
+  /** The new notes, free notes in fragment order. */
+  stickies: Id[];
   /**
    * External relationships of the fragment not pasted because the target deck lacks their target
    * table or its columns (043 FR-019). 0 when none were dropped.
@@ -208,19 +209,18 @@ export function pasteFragment(
   const { deck } = fragment;
   const { offset, parent } = options;
   if (parent !== undefined) {
-    assertRefsExist(ctx.doc, [{ path: 'parent', id: parent, target: 'groups' }], () =>
-      anchorableIds(ctx.doc),
-    );
+    assertRefsExist(ctx.doc, [{ path: 'parent', id: parent, target: 'groups' }]);
   }
   const view = options.viewId === undefined ? undefined : resolveView(ctx, options.viewId);
   const fragmentImages = fragment.images ?? [];
-  if (deck.nodes.length + deck.groups.length + fragmentImages.length === 0) {
-    return { nodes: [], edges: [], groups: [], images: [], droppedRelationships: 0 };
+  if (deck.nodes.length + deck.groups.length + fragmentImages.length + deck.stickies.length === 0) {
+    return { nodes: [], edges: [], groups: [], images: [], stickies: [], droppedRelationships: 0 };
   }
 
   const nodeIds = new Map(deck.nodes.map((n) => [n.id, ctx.allocate('node')]));
   const imageIds = new Map(fragmentImages.map((i) => [i.id, ctx.allocate('img')]));
   const groupIds = new Map(deck.groups.map((g) => [g.id, ctx.allocate('group')]));
+  const stickyIds = new Map(deck.stickies.map((s) => [s.id, ctx.allocate('sticky')]));
   const knownRules = new Set(rulesMap(ctx.doc).keys());
   const partIds = partIdMap(ctx, deck.nodes);
   const toPart = (id: Id) => partIds.get(id) ?? id;
@@ -289,10 +289,21 @@ export function pasteFragment(
       z: rankOf('image', id),
     };
   });
+  // Notes are always free (ADR 0041): a legacy `anchor` in a hand-made fragment is dropped.
+  const stickies: Sticky[] = deck.stickies.map((sticky) => {
+    const { id, anchor: _anchor, position, ...rest } = sticky;
+    return {
+      ...rest,
+      id: stickyIds.get(id) ?? id,
+      position: shift(position ?? { x: 0, y: 0 }, offset),
+    };
+  });
+  const remap = (id: Id) =>
+    nodeIds.get(id) ?? groupIds.get(id) ?? imageIds.get(id) ?? stickyIds.get(id);
   const edges: Edge[] = deck.edges.flatMap((edge) => {
-    // An end is a node, a group (050) or an image (055); remap each through its map.
-    const from = nodeIds.get(edge.from) ?? groupIds.get(edge.from) ?? imageIds.get(edge.from);
-    const to = nodeIds.get(edge.to) ?? groupIds.get(edge.to) ?? imageIds.get(edge.to);
+    // An end is a node, a group (050), a note (053) or an image (055); remap each through its map.
+    const from = remap(edge.from);
+    const to = remap(edge.to);
     if (from === undefined || to === undefined) return [];
     const { fromColumns, toColumns } = edge;
     return [
@@ -332,6 +343,7 @@ export function pasteFragment(
     ...groups.flatMap((g) => validateObject('groups', g)),
     ...nodes.flatMap((n) => validateObject('nodes', n)),
     ...images.flatMap((i) => validateObject('images', i)),
+    ...stickies.flatMap((n) => validateObject('stickies', n)),
     ...edges.flatMap((e) => validateObject('edges', e)),
   ]);
 
@@ -344,8 +356,10 @@ export function pasteFragment(
   if (viewTarget !== undefined) materializeFrames(ctx, viewTarget);
 
   ctx.transact(() => {
-    const created = (kind: 'groups' | 'nodes' | 'edges', items: readonly { id: Id }[]) =>
-      items.map((item) => [item.id, createObject(kind, { ...item }, '')] as const);
+    const created = (
+      kind: 'groups' | 'nodes' | 'edges' | 'stickies',
+      items: readonly { id: Id }[],
+    ) => items.map((item) => [item.id, createObject(kind, { ...item }, '')] as const);
     // Pictures the target does not know yet get their facts from the fragment; the bytes stay in
     // the app's store (same deck) or are missing (another deck, TODO(M5)).
     for (const [assetId, meta] of Object.entries(fragment.assets ?? {})) {
@@ -357,6 +371,7 @@ export function pasteFragment(
       collectionMap(ctx.doc, 'images'),
       images.map((item) => [item.id, createObject('images', { ...item }, '')] as const),
     );
+    appendAll(collectionMap(ctx.doc, 'stickies'), created('stickies', stickies));
     appendAll(collectionMap(ctx.doc, 'edges'), created('edges', edges));
     if (enums.created.length > 0) {
       appendAll(
@@ -385,6 +400,7 @@ export function pasteFragment(
     edges: edges.map((e) => e.id),
     groups: groups.map((g) => g.id),
     images: images.map((i) => i.id),
+    stickies: stickies.map((n) => n.id),
     droppedRelationships,
   };
 }

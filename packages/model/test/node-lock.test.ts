@@ -128,7 +128,7 @@ describe('lock on stickies and connectors (053, R9)', () => {
     expect(editor.canUndo()).toBe(false);
   });
 
-  it('a locked sticky refuses move, resize, pin, unpin and delete; unlock allows them', () => {
+  it('a locked sticky refuses move, resize and delete; unlock allows them', () => {
     const { doc, editor } = setup();
     editor.setLocked(['note'], true, 'stickies');
     const locked = toJSON(doc);
@@ -140,11 +140,6 @@ describe('lock on stickies and connectors (053, R9)', () => {
     expect(
       codeOf(() => {
         editor.setStickySize('note', { width: 300, height: 300 });
-      }),
-    ).toBe('locked');
-    expect(
-      codeOf(() => {
-        editor.pinSticky('note', 'svc');
       }),
     ).toBe('locked');
     expect(codeOf(() => editor.remove('stickies', 'note'))).toBe('locked');

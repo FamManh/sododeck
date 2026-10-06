@@ -74,8 +74,8 @@ Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the rig
 ## Rules that matter most
 
 - **Ids are permanent.** Pick a short lower-case slug once (`orders`, `orders-db`, `e-pay`) and
-  never change it, even when the title changes. Views, notes and links the user adds later attach
-  by id; a new id silently detaches them.
+  never change it, even when the title changes. Views, connectors and links the user adds later
+  attach by id; a new id silently detaches them.
 - **Only declared structure.** Add a connector only for a call the user described or the code
   shows. If something is likely but unstated, leave it out and list it under "Assumed" in the
   handover, so the user decides. When the request cannot be drawn without a piece it does not name

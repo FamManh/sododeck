@@ -16,7 +16,7 @@ describe('generated ids (US5, FR-009/010)', () => {
     const col = editor.addRuleColumn(rule, 'inputs', 'In');
     const row = editor.addRuleRow(rule);
     const flow = editor.add('flows', { title: 'F' });
-    const sticky = editor.add('stickies', { text: '', anchor: node });
+    const sticky = editor.add('stickies', { text: '', position: { x: 0, y: 0 } });
     const ids = { node, group, rule, col, row, flow, sticky };
     for (const [prefix, id] of Object.entries(ids)) {
       expect(id).toMatch(ID_PATTERN);

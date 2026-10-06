@@ -322,20 +322,19 @@ function ruleEntries(deck: SododeckFile): SearchEntry[] {
 }
 
 function stickyEntries(deck: SododeckFile): SearchEntry[] {
-  return deck.stickies.map((sticky) => {
-    const placement = sticky.anchor === undefined ? null : titleOfEnd(deck, sticky.anchor);
-    return entryOf(stickyCache, sticky, {
+  return deck.stickies.map((sticky) =>
+    entryOf(stickyCache, sticky, {
       kind: 'sticky',
       id: sticky.id,
       title: stickyLabel(sticky.text) ?? 'Empty note',
-      context: placement === null ? 'Note' : `Note · pinned to ${placement}`,
+      context: 'Note',
       fields: [
         field('title', stickyLabel(sticky.text) ?? 'Empty note'),
         field('text', sticky.text),
         ...(sticky.tags ?? []).map((tag) => field('tag', tag)),
       ],
-    });
-  });
+    }),
+  );
 }
 
 function imageEntries(deck: SododeckFile): SearchEntry[] {

@@ -171,10 +171,13 @@ views.
 
 - Explanations belong in `description` (cards, flows, rules) and step `notes`: they show in the
   inspector and never cover the diagram. Gaps, caveats and "documented vs implemented" go there.
-- `stickies`: a handful of short warnings that must be visible on the canvas,
-  `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "anchor": "orders-db" }` (colours
-  `amber blue green clay grey`). Keep each to one short sentence; the app slots a note under its
-  card on import, and a long note makes that card's slot tall.
+- `stickies`: a note sits on the canvas at its own `position`, so it needs one:
+  `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "position": { "x": 924, "y": -16 } }`
+  (colours `amber blue green clay grey`). A new deck leaves positions out (section 7), so there put
+  caveats and open questions in the card's `description` and leave `stickies` empty. In update
+  mode, add a note next to a card that has a position (for example 24 px right of it and 96 px
+  above). To tie a note to a card, add a connector between them: a connector may end on a note.
+  Never write `anchor`: notes are no longer pinned, and the key is only read from older files.
 - `tags`: short labels shared across the deck (`"tags": ["pci"]`), for filtering views.
 - `links`: documentation, dashboards, source files. In codebase mode every card and connector
   carries its source link (see `from-codebase.md`).

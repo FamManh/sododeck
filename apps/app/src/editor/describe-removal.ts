@@ -35,10 +35,11 @@ function subject(deck: SododeckFile, targets: readonly RemovalTarget[]): string 
   if (targets.length === 1 && only) {
     const name = knowledgeName(deck, only);
     if (name !== undefined) return `‘${name}’`;
-    if (only.scope === 'nodes') return title(only.id);
+    if (only.scope === 'nodes' || only.scope === 'groups') return title(only.id);
     const edge = deck.edges.find((e) => e.id === only.id);
     if (only.scope === 'edges' && edge) return `${title(edge.from)} → ${title(edge.to)}`;
   }
+  if (targets.every((t) => t.scope === 'groups')) return plural(targets.length, 'group');
   if (targets.every((t) => t.scope === 'stickies')) return plural(targets.length, 'note');
   if (targets.every((t) => t.scope === 'images')) return plural(targets.length, 'image');
   if (targets.every((t) => t.scope === 'nodes')) return plural(targets.length, 'component');
@@ -52,14 +53,13 @@ function cascadedEdges(targets: readonly RemovalTarget[], result: RemovalResult)
   return result.removed.filter((r) => r.scope === 'edges' && !asked.has(r.id)).length;
 }
 
-function brokenCounts(result: RemovalResult): { steps: number; notes: number } {
+/** Flow steps a delete leaves broken (a note never points at anything, ADR 0041). */
+function brokenSteps(result: RemovalResult): number {
   const steps = new Set<string>();
-  const notes = new Set<string>();
   for (const { object } of result.broken) {
     if (object.child?.kind === 'step') steps.add(`${object.id}/${object.child.id}`);
-    else if (object.scope === 'stickies') notes.add(object.id);
   }
-  return { steps: steps.size, notes: notes.size };
+  return steps.size;
 }
 
 /**
@@ -91,11 +91,6 @@ function keptTablesSentence(count: number): string | null {
   return count === 1
     ? '1 table is kept and becomes unowned.'
     : `${String(count)} tables are kept and become unowned.`;
-}
-
-function freedNoteSentence(count: number): string | null {
-  if (count === 0) return null;
-  return `${plural(count, 'pinned note')} will stay on the canvas, unpinned.`;
 }
 
 /** The single rule a removal is for, if it is one (008). */
@@ -130,7 +125,7 @@ export function describeRemoval(
     };
   }
   const edges = cascadedEdges(targets, result);
-  const { steps, notes } = brokenCounts(result);
+  const steps = brokenSteps(result);
   const sentences: string[] = [];
   const flowsMoved = result.updated.filter(
     (r) => r.scope === 'flows' && targets.some((t) => t.scope === 'features'),
@@ -143,15 +138,7 @@ export function describeRemoval(
   if (edges > 0) sentences.push(`Also removes ${plural(edges, 'connection')}.`);
   const kept = keptTablesSentence(keptTables(deck, targets, result).length);
   if (kept !== null) sentences.push(kept);
-  const freed = freedNoteSentence(result.freed.length);
-  if (freed !== null) sentences.push(freed);
-  const broken = [
-    ...(steps > 0 ? [plural(steps, 'flow step')] : []),
-    ...(notes > 0 ? [plural(notes, 'note')] : []),
-  ];
-  if (broken.length > 0) {
-    sentences.push(`${listPhrase(broken)} will be flagged broken.`);
-  }
+  if (steps > 0) sentences.push(`${plural(steps, 'flow step')} will be flagged broken.`);
   sentences.push('You can undo this.');
   const stickyOnly = targets.length > 0 && targets.every((t) => t.scope === 'stickies');
   const imageOnly = targets.length > 0 && targets.every((t) => t.scope === 'images');
@@ -179,6 +166,12 @@ export function removalToast(
   if (targets.length > 0 && targets.every((t) => t.scope === 'stickies')) {
     return `${targets.length === 1 ? 'Note deleted' : `${String(targets.length)} notes deleted`} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
   }
+  if (targets.length > 0 && targets.every((t) => t.scope === 'groups')) {
+    // Deleting a group ungroups it (its cards stay), so say that instead of "Deleted".
+    const connectors = cascadedEdges(targets, result);
+    const also = connectors > 0 ? ` · also deleted ${plural(connectors, 'connection')}` : '';
+    return `Ungrouped ${subject(deck, targets)}${also} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  }
   if (targets.length > 0 && targets.every((t) => t.scope === 'images')) {
     const connectors = cascadedEdges(targets, result);
     const label =
@@ -191,10 +184,9 @@ export function removalToast(
     edges > 0
       ? `${subject(deck, targets)} and ${plural(edges, 'connection')}`
       : subject(deck, targets);
-  const freed = result.freed.length > 0 ? ` · ${plural(result.freed.length, 'note')} unpinned` : '';
   const keptCount = keptTables(deck, targets, result).length;
   const kept = keptCount > 0 ? ` · ${plural(keptCount, 'table')} kept` : '';
-  return `Deleted ${what}${freed}${kept} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  return `Deleted ${what}${kept} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
 }
 
 /**
@@ -211,7 +203,7 @@ export function withNewProblems(message: string, before: number, after: number):
     : `${message.slice(0, hint)}${note}${message.slice(hint)}`;
 }
 
-/** Components first, then connections: the order the confirmation and the delete both use. */
+/** Every selected kind, in delete order (`state/selection-kinds.ts`). */
 export function removalTargets(selection: Selection): RemovalTarget[] {
   return selectionTargets(selection);
 }

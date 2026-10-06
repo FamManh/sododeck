@@ -128,10 +128,47 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
     expect(
       screen.getByRole('heading', { name: '3 components, 1 connection selected' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Changes apply to components only.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Line style applies to the connection; other fields to components only.'),
+    ).toBeInTheDocument();
     const before = toJSON(doc).edges;
     await user.type(screen.getByRole('combobox', { name: 'Owner' }), 'Core{Enter}');
     expect(toJSON(doc).edges).toEqual(before);
+  });
+
+  it('styles every selected connection from its Line section, one undo step per pick', async () => {
+    const { user, doc, editor } = setup(['op', 'py']);
+    const edgeStyles = () => toJSON(doc).edges.map((e) => [e.id, e.style]);
+    const line = screen.getByRole('region', { name: 'Line' });
+    await user.click(
+      within(within(line).getByRole('radiogroup', { name: 'Dash' })).getByRole('radio', {
+        name: 'Dashed',
+      }),
+    );
+    await user.click(
+      within(within(line).getByRole('radiogroup', { name: 'Colour' })).getByRole('radio', {
+        name: 'Blue',
+      }),
+    );
+    expect(edgeStyles()).toEqual([
+      ['op', { dash: 'dashed', color: 'blue' }],
+      ['py', { dash: 'dashed', color: 'blue' }],
+      ['dp', undefined],
+    ]);
+    expect(nodes(doc).every((n) => n.style === undefined)).toBe(true);
+    act(() => {
+      editor().undo();
+    });
+    expect(edgeStyles()).toEqual([
+      ['op', { dash: 'dashed' }],
+      ['py', { dash: 'dashed' }],
+      ['dp', undefined],
+    ]);
+  });
+
+  it('has no Line section without connections', () => {
+    setup();
+    expect(screen.queryByRole('region', { name: 'Line' })).not.toBeInTheDocument();
   });
 
   it('opens the delete confirmation for the components', async () => {

@@ -137,20 +137,6 @@ describe('undo grouping (US4, FR-024–029)', () => {
     expect(toJSON(doc)).toEqual(deck);
   });
 
-  it('restores freed sticky anchors and offsets with one undo after removeNode', () => {
-    const doc = fromJSON(cascadeDeck);
-    const editor = createEditor(doc, { newId: seqIds(), captureTimeout: 10_000 });
-    const before = toJSON(doc);
-    editor.remove('nodes', 'n');
-    expect(getObject(doc, 'stickies', 'st-n')).toEqual({
-      id: 'st-n',
-      text: 'On n',
-      position: { x: 220, y: -10 },
-    });
-    expect(editor.undo()).toBe(true);
-    expect(toJSON(doc)).toEqual(before);
-  });
-
   it('redoes, and clears redo on a new edit (AS4, FR-028)', () => {
     const { doc, editor } = setup();
     editor.update('nodes', 'a', { title: 'A1' });
