@@ -25,8 +25,10 @@ here runs in the app; the app never sends deck content anywhere (constitution IV
   `formatVersion`, `fingerprint`, `skillVersion`); an unknown placeholder fails the build.
 - `examples/*.sododeck`: hand-written decks; tests require zero lint entries, a position on every
   card and note (ADR 0042: skill decks are hand-laid) and playable flows.
-- `src/`: `authoring.ts` (incl. the layout checks: positions, connector over card, frames;
-  assumed card box `CARD_BOX` 184 × 96), `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
+- `src/excalidraw.ts`: the `outline` command (boards, labelled shapes incl. labels drawn over
+  shapes, arrows with bound or nearest ends) for from-diagrams mode.
+- `src/`: `authoring.ts` (incl. the layout checks: positions, connector over card, frames, hub
+  cards; assumed card box `CARD_BOX` 184 × 96), `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
   (plain-text output), `cli/main.ts` (commands, exit codes, `deliver`), `version.ts` (schema
   fingerprint), `generate.ts`.
 - `scripts/build.ts` (esbuild bundle → `scripts/sododeck.mjs`, entry files).

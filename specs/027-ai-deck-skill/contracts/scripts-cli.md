@@ -60,6 +60,18 @@ failure), 1 when either cannot be loaded, 2 on usage errors. Text form:
 3 added, 1 changed, 1 removed.
 ```
 
+## outline
+
+```
+outline <board.excalidraw> [--board "title"] [--min-text 13] [--format text|json]
+```
+
+Added after the auto-wo review (2026-10-05). Prints a `sododeck-sketch-outline` (JSON) or a text
+outline of a whiteboard file: boards (large one-line titles over at least 8 shapes), labelled shapes
+(bound labels, or free text whose centre lies inside the shape), arrows with their ends (bound, or
+the nearest labelled shape within 40 px, marked `guessed`) and free text at or above `--min-text`.
+Exit 0; 2 when the file cannot be read or is not JSON.
+
 ## deliver
 
 ```

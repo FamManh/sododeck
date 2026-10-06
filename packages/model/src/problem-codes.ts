@@ -83,6 +83,8 @@ export const AUTHORING_CODES = [
   'connector-crosses-card',
   'frame-covers-card',
   'frames-overlap',
+  'group-by-kind',
+  'hub-card',
 ] as const;
 
 export type AuthoringCode = (typeof AUTHORING_CODES)[number];
@@ -613,7 +615,7 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
   ),
   'card-without-position': authoring(
     'Card without a position',
-    'Place the card on the layout grid (see references/layout.md); the skill lays decks out by hand, the app does not.',
+    "Place the card on the layout grid (see references/layout.md); a hand-laid deck reads far better than the app's import layout.",
   ),
   'connector-crosses-card': authoring(
     'Connector runs over a card',
@@ -626,6 +628,17 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
   'frames-overlap': authoring(
     'Two group frames overlap',
     'Move one group so the frames have a gap; sibling groups never share space.',
+  ),
+  'group-by-kind': {
+    family: 'authoring',
+    severity: 'warning',
+    title: 'Group of one kind',
+    fix: 'Nothing to fix: no longer reported; hand-laid decks group cards by role (ADR 0042).',
+    retired: true,
+  },
+  'hub-card': authoring(
+    'Too many connectors',
+    'Keep only the connectors a flow walks or that tell the story; name the other readers and writers in the description.',
   ),
 };
 

@@ -8,8 +8,8 @@ cannot be loaded · `2` wrong arguments or a file that cannot be read (message o
 
 ## Contents
 
-1. validate · 2. lint · 3. summary · 4. diff · 5. deliver · 6. Reading a problem · 7. Problem
-   codes
+1. validate · 2. lint · 3. summary · 4. diff · 5. deliver · 6. outline · 7. Reading a problem ·
+2. Problem codes
 
 ## 1. validate
 
@@ -41,7 +41,16 @@ deck instead of reading the whole file.
 error, replaces the target with the draft in one step and deletes the draft (the report prints
 only when there are warnings). Otherwise both files stay as they are and the report prints.
 
-## 6. Reading a problem
+## 6. outline
+
+`outline.mjs <board.excalidraw> [--board "title"] [--min-text 13] [--format text|json]`: what a
+whiteboard file holds, without reading its JSON: the boards (large one-line titles over a
+diagram), every labelled shape (labels bound to a shape or written on top of it), every arrow as
+`from → to "label"` (`end guessed` when the arrow was not attached and the nearest shape within
+40 px was taken), and the free text by size. `--board` keeps one board (title match, any case).
+See `from-diagrams.md`.
+
+## 7. Reading a problem
 
 ```json
 {
@@ -60,7 +69,7 @@ problem points at the exact key, such as `/nodes/3/title`); `subject` is the id 
 `line` and `column` instead of `path`. The same report comes out of Sododeck's **Copy problems**,
 so a user can paste the app's problems to you and you fix them the same way.
 
-## 7. Problem codes
+## 8. Problem codes
 
 Errors make the app refuse a file or mark a deck problem; warnings are advice. Format and identity
 codes (`schema-*`, `invalid-json`, `duplicate-id`, …) come from validate.

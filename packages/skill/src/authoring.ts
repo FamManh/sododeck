@@ -14,10 +14,11 @@ export const DETAILS: readonly Detail[] = ['faithful', 'balanced', 'simplified']
 export const MODES: readonly Mode[] = ['new', 'update', 'codebase', 'text'];
 
 /**
- * Most cards one level (one drill-in screen) should hold, per detail dial. Hand-laid decks group
- * cards in frames, so a screen holds far more than an auto-laid one before it stops reading.
+ * Most cards one level (one drill-in screen) should hold, only when the user asked for a detail
+ * dial. No dial draws the system at the detail it really has. Hand-laid decks group cards in
+ * frames, so a screen holds far more than an auto-laid one before it stops reading (ADR 0042).
  */
-export const LEVEL_BUDGET: Readonly<Record<Detail, number>> = {
+export const LEVEL_BUDGET: Readonly<Partial<Record<Detail, number>>> = {
   faithful: 60,
   balanced: 30,
   simplified: 10,
@@ -39,6 +40,8 @@ export const LINE_MARGIN = 6;
 export const TITLE_BUDGET = 40;
 export const CONNECTOR_LABEL_BUDGET = 32;
 export const ID_MAX = 32;
+/** More connectors than this on one card makes it a hub that crosses the whole diagram. */
+export const HUB_MAX = 8;
 
 export interface AuthoringOptions {
   detail?: Detail;
@@ -424,8 +427,9 @@ function checkLabels(file: SododeckFile): ProblemEntry[] {
   return out;
 }
 
-function checkLevels(file: SododeckFile, detail: Detail): ProblemEntry[] {
-  const budget = LEVEL_BUDGET[detail];
+function checkLevels(file: SododeckFile, detail: Detail | undefined): ProblemEntry[] {
+  const budget = detail === undefined ? undefined : LEVEL_BUDGET[detail];
+  if (budget === undefined) return [];
   const levels = new Map<string, number[]>();
   file.nodes.forEach((node, index) => {
     const key = node.parent ?? '';
@@ -443,7 +447,7 @@ function checkLevels(file: SododeckFile, detail: Detail): ProblemEntry[] {
         'level-over-budget',
         `/nodes/${String(first)}`,
         parent === '' ? undefined : parent,
-        `${String(indexes.length)} cards on ${where}; the ${detail} detail level allows ${String(budget)}.`,
+        `${String(indexes.length)} cards on ${where}; the ${String(detail)} detail level allows ${String(budget)}.`,
       ),
     );
   }
@@ -479,6 +483,34 @@ function checkSources(file: SododeckFile): ProblemEntry[] {
   return out;
 }
 
+/**
+ * Hub cards: measured on a real 56-card deck, a card with many connectors crosses the whole
+ * diagram. (`group-by-kind` from the same measurement is retired: hand-laid decks group by role,
+ * ADR 0042.)
+ */
+function checkHubs(file: SododeckFile): ProblemEntry[] {
+  const out: ProblemEntry[] = [];
+  const degree = new Map<string, number>();
+  for (const edge of file.edges) {
+    degree.set(edge.from, (degree.get(edge.from) ?? 0) + 1);
+    degree.set(edge.to, (degree.get(edge.to) ?? 0) + 1);
+  }
+  file.nodes.forEach((node, index) => {
+    const count = degree.get(node.id) ?? 0;
+    if (count > HUB_MAX) {
+      out.push(
+        entry(
+          'hub-card',
+          `/nodes/${String(index)}`,
+          node.id,
+          `Card "${node.title}" has ${String(count)} connectors (more than ${String(HUB_MAX)}).`,
+        ),
+      );
+    }
+  });
+  return out;
+}
+
 /** Every authoring warning for `file` (unsorted; `lint` sorts the whole report). */
 export function authoringChecks(
   file: SododeckFile,
@@ -492,7 +524,8 @@ export function authoringChecks(
     ...checkOrphans(file),
     ...checkDuplicateTitles(file),
     ...checkLabels(file),
-    ...checkLevels(file, options.detail ?? 'balanced'),
+    ...checkLevels(file, options.detail),
+    ...checkHubs(file),
     ...(mode === 'codebase' ? checkSources(file) : []),
   ];
 }

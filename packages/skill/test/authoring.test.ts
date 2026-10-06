@@ -19,6 +19,8 @@ const card = (id: string, extra: Partial<Node> = {}): Node => {
 const at = (x: number, y: number) => ({ position: { x, y } });
 
 const codes = (entries: { code: string }[]) => entries.map((e) => e.code);
+const levelCodes = (entries: { code: string }[]) =>
+  codes(entries).filter((code) => code === 'level-over-budget');
 
 describe('authoring checks (027 research R5)', () => {
   it('reports nothing for a small connected deck', () => {
@@ -188,17 +190,34 @@ describe('authoring checks (027 research R5)', () => {
     expect(entries.map((e) => e.path)).toEqual(['/nodes/0/title', '/edges/0/label']);
   });
 
-  it('counts cards per level against the detail budget', () => {
+  it('counts cards per level only when a detail dial was asked for', () => {
     const nodes = Array.from({ length: 11 }, (_, i) => card(`n${String(i)}`, { group: 'g' }));
     const file = deck({ nodes, groups: [{ id: 'g', title: 'G' }] });
     expect(LEVEL_BUDGET.simplified).toBe(10);
-    expect(codes(authoringChecks(file))).toEqual([]);
+    const big = deck({
+      nodes: Array.from({ length: 40 }, (_, i) => card(`m${String(i)}`, { group: 'g' })),
+      groups: [{ id: 'g', title: 'G' }],
+    });
+    expect(levelCodes(authoringChecks(big))).toEqual([]);
+    expect(levelCodes(authoringChecks(big, { detail: 'faithful' }))).toEqual([]);
+    expect(levelCodes(authoringChecks(big, { detail: 'balanced' }))).toEqual(['level-over-budget']);
+    expect(levelCodes(authoringChecks(file))).toEqual([]);
     const over = authoringChecks(file, { detail: 'simplified' });
-    expect(codes(over)).toEqual(['level-over-budget']);
+    expect(levelCodes(over)).toEqual(['level-over-budget']);
     expect(over[0]?.message).toMatch(
       /11 cards on the top level; the simplified detail level allows 10/,
     );
     expect(over[0]?.path).toBe('/nodes/10');
+  });
+
+  it('flags a card with more than eight connectors', () => {
+    const leaves = Array.from({ length: 9 }, (_, i) => card(`l${String(i)}`));
+    const file = deck({
+      nodes: [card('hub'), ...leaves],
+      edges: leaves.map((leaf) => ({ id: `e-${leaf.id}`, from: 'hub', to: leaf.id })),
+    });
+    const hubs = authoringChecks(file).filter((e) => e.code === 'hub-card');
+    expect(hubs.map((e) => e.subject)).toEqual(['hub']);
   });
 
   it('asks for source links in codebase mode only', () => {

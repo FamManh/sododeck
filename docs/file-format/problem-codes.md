@@ -159,7 +159,9 @@ Reported only by the AI deck skill's `lint`, never by the app: advice for decks 
 | `label-too-long` | warning | Label over budget | Shorten the label; put details in the note or in fields. |
 | `level-over-budget` | warning | Too many cards on one level | Split the level: move related cards under a parent card one level down, or merge minor ones. |
 | `connector-without-source` | warning | No source link | Add a link to the file and lines the connector or card was built from, or remove it. |
-| `card-without-position` | warning | Card without a position | Place the card on the layout grid (see references/layout.md); the skill lays decks out by hand, the app does not. |
+| `card-without-position` | warning | Card without a position | Place the card on the layout grid (see references/layout.md); a hand-laid deck reads far better than the app's import layout. |
 | `connector-crosses-card` | warning | Connector runs over a card | Move the card off the line, move an end so the line between the two card centres misses it, or add a bend (`route.waypoints`). |
 | `frame-covers-card` | warning | Group frame covers a card of another group | Move the card out of the frame, or move the group's cards so their frame no longer reaches it. |
 | `frames-overlap` | warning | Two group frames overlap | Move one group so the frames have a gap; sibling groups never share space. |
+| `group-by-kind` (retired) | warning | Group of one kind | Nothing to fix: no longer reported; hand-laid decks group cards by role (ADR 0042). |
+| `hub-card` | warning | Too many connectors | Keep only the connectors a flow walks or that tell the story; name the other readers and writers in the description. |
