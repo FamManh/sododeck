@@ -183,6 +183,13 @@
   stroke-width: 2;
 }
 
+/* A text in title edit (founder feedback, 2026-10-06): its handles stay mounted, so connectors
+   keep their ends, but are not shown while the words are typed. `visibility`, not `display`: a
+   hidden handle keeps its measured bounds. */
+.sd-shape[data-editing] .react-flow__handle {
+  visibility: hidden;
+}
+
 .sd-shape-problem {
   fill: none;
   stroke: var(--color-clay-ink);

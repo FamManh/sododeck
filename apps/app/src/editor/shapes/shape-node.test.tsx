@@ -142,6 +142,25 @@ describe('ShapeNode (031)', () => {
     expect(within(node()).getByRole('textbox')).toHaveValue('Payment OK?');
   });
 
+  it('edits a text with a thin focus outline instead of the selection ring and handles', () => {
+    renderWithEditor(
+      <ShapeNode {...props({ type: 'text', title: 'Hello' }, true)} />,
+      deckOf({ nodes: [{ id: 's', type: 'text', title: 'Hello' }] }),
+    );
+    expect(screen.getByTestId('shape-selected-ring')).toBeInTheDocument();
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'node', id: 's', isNew: false });
+    });
+    const field = within(node()).getByRole('textbox');
+    expect(screen.queryByTestId('shape-selected-ring')).not.toBeInTheDocument();
+    // The visible focus cue: a 1px primary (token) outline around the field, the inline-edit look.
+    const frame = screen.getByTestId('text-edit-frame');
+    expect(frame).toContainElement(field);
+    expect(frame).toHaveClass('outline-primary');
+    // Handles stay mounted (connectors keep their ends) but are hidden by the editing flag.
+    expect(node()).toHaveAttribute('data-editing');
+  });
+
   describe('states (DESIGN.md Shape column), each with a cue that is not colour', () => {
     it('selected: a ring around the geometry and aria-selected', () => {
       renderWithEditor(<ShapeNode {...props({}, true)} />, deck);

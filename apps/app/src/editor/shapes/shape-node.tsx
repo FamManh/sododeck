@@ -54,6 +54,9 @@ export const ShapeNode = memo(function ShapeNode({
   const paths = useMemo(() => shapePath(geometry, box), [geometry, box]);
   const title = useMemo(() => titleBox(geometry, box), [geometry, box]);
   const isText = geometry === 'none';
+  // A text in title edit is only its words: a thin focus outline replaces the selection ring,
+  // the handles and the resize controls (founder feedback, 2026-10-06).
+  const editingText = isText && titleEdit !== null;
   // Shapes with no closed outline (actor, text) take their rings around the box.
   const ringBase = useMemo(
     () =>
@@ -160,6 +163,7 @@ export const ShapeNode = memo(function ShapeNode({
       {...(customText === undefined ? {} : { 'data-text': customText })}
       {...(hasProblem ? { 'data-problem': '' } : {})}
       {...(look?.stroke === undefined ? {} : { 'data-stroke': '' })}
+      {...(editingText ? { 'data-editing': '' } : {})}
       tabIndex={tabIndex}
       style={{
         width: w,
@@ -207,7 +211,7 @@ export const ShapeNode = memo(function ShapeNode({
         {paths.extra !== undefined && (
           <path data-testid="shape-extra" className="sd-shape-extra" d={paths.extra} />
         )}
-        {(selected || data.flowStart !== undefined) && (
+        {((selected && !editingText) || data.flowStart !== undefined) && (
           <Ring
             kind="selected"
             d={ringBase}
@@ -237,13 +241,26 @@ export const ShapeNode = memo(function ShapeNode({
           className="pointer-events-none absolute flex items-center justify-center"
           style={titleStyle}
         >
-          {titleEdit !== null ? (
+          {editingText ? (
+            // The inline-edit focus look (DESIGN.md `inline-edit`): a 1px primary outline.
+            <div
+              data-testid="text-edit-frame"
+              className="pointer-events-auto w-full rounded-[4px] outline-1 outline-offset-2 outline-primary outline-solid"
+            >
+              <CardTitleInput
+                edit={titleEdit}
+                title={data.title}
+                className={cn(titleClasses, 'w-full')}
+                style={{ maxHeight: layout.titleLines * SHAPE_TITLE_LINE }}
+                removeWhenEmpty
+              />
+            </div>
+          ) : titleEdit !== null ? (
             <CardTitleInput
               edit={titleEdit}
               title={data.title}
               className={cn(titleClasses, 'pointer-events-auto w-full')}
               style={{ maxHeight: layout.titleLines * SHAPE_TITLE_LINE }}
-              removeWhenEmpty={isText}
             />
           ) : layout.titleCut ? (
             <Tooltip>
@@ -282,7 +299,7 @@ export const ShapeNode = memo(function ShapeNode({
         </span>
       )}
 
-      {resizable && <ResizeControls id={id} level={data.level} />}
+      {resizable && !editingText && <ResizeControls id={id} level={data.level} />}
       {data.locked === true && (
         // A shape has no header: the lock sits on its top-right corner (043 R11).
         <LockBadge
