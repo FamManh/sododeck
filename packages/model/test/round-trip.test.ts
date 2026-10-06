@@ -846,6 +846,40 @@ describe('card size and connector route (017)', () => {
     expect(toJSON(fromJSON(withoutSize)).nodes[0]).not.toHaveProperty('size');
   });
 
+  it('round-trips a turned text, rotation right after size, and clears it with null', () => {
+    const file: SododeckFile = {
+      ...empty,
+      nodes: [
+        {
+          id: 't',
+          type: 'text',
+          title: 'Turned',
+          position: { x: 0, y: 0 },
+          size: { width: 160, height: 40 },
+          rotation: -32.5,
+          style: { fill: 'red' },
+        },
+      ],
+    };
+    expect(toJSON(fromJSON(file))).toEqual(file);
+    expect(reopen(file)).toEqual(file);
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    editor.add('nodes', { id: 't', type: 'text', title: 'T', position: { x: 1, y: 2 } });
+    editor.update('nodes', 't', { rotation: 90 });
+    editor.setCardSize('t', { width: 160, height: 40 });
+    expect(Object.keys(toJSON(doc).nodes[0] ?? {})).toEqual([
+      'id',
+      'type',
+      'title',
+      'position',
+      'size',
+      'rotation',
+    ]);
+    editor.update('nodes', 't', { rotation: null });
+    expect(toJSON(doc).nodes[0]).not.toHaveProperty('rotation');
+  });
+
   it('round-trips an edge route of sides only, offset only, all three, and a hand-written {}', () => {
     const base: Omit<SododeckFile, 'edges'> = {
       ...empty,
