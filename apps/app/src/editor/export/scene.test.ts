@@ -501,6 +501,39 @@ describe('buildScene: current view', () => {
   });
 });
 
+describe('buildScene: selection', () => {
+  const picked = (patch: Partial<NonNullable<SceneInput['ui']['selection']>>) => ({
+    selection: { nodes: [], groups: [], stickies: [], images: [], ...patch },
+  });
+
+  it('keeps the selected cards and notes and the connectors between them', () => {
+    const result = scene(grouped, 'selection', picked({ nodes: ['a', 'db'], stickies: ['free'] }));
+    expect(ids(result.cards)).toEqual(['a', 'db']);
+    expect(ids(result.edges)).toEqual(['a-db']);
+    expect(ids(result.stickies)).toEqual(['free']);
+    // Members of a group are drawn without its frame unless the group was selected.
+    expect(result.groups).toEqual([]);
+    const whole = scene(grouped);
+    expect(result.bounds.width).toBeLessThanOrEqual(whole.bounds.width);
+  });
+
+  it('brings a selected group with its frame and members', () => {
+    const result = scene(grouped, 'selection', picked({ groups: ['g'] }));
+    expect(ids(result.groups)).toEqual(['g']);
+    expect(ids(result.cards)).toEqual(['a', 'b']);
+    expect(ids(result.edges)).toEqual(['a-b']);
+    expect(result.stickies).toEqual([]);
+  });
+
+  it('draws a selection of notes alone, and nothing for an empty selection', () => {
+    expect(ids(scene(grouped, 'selection', picked({ stickies: ['on-db'] })).stickies)).toEqual([
+      'on-db',
+    ]);
+    expect(scene(grouped, 'selection', picked({})).bounds.width).toBe(0);
+    expect(scene(grouped, 'selection').bounds.width).toBe(0);
+  });
+});
+
 describe('buildScene: selected flow', () => {
   const withNotes: SododeckFile = {
     ...branchedDeck,

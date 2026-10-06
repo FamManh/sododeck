@@ -13,7 +13,7 @@ import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/
 import { useToast } from '@sododeck/ui/components/toast';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Download, FileText } from 'lucide-react';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useMemo, useReducer, useRef, useState } from 'react';
 
 import { copyText } from '../../lib/clipboard';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
@@ -37,6 +37,7 @@ import { exportReducer, initialExportState, type ExportResult } from './export-d
 import { IMAGE_AND_DATA_FORMATS, SCHEMA_FORMATS, sqlSubtitle } from './formats';
 import { OptionSwitch } from './option-switch';
 import { scaleAllowed } from './png-size';
+import { copyImage } from './copy-image';
 import { rasterize } from './rasterize';
 import { schemaProblems } from './schema-problems';
 import { SQL_BLOCKED_BANNER_ID, SchemaExportPanel } from './schema-export-panel';
@@ -58,12 +59,12 @@ import {
 const JSON_PREVIEW_LINES = 400;
 /** A picture's base64 is one line of millions of characters; the preview shows its start only. */
 const JSON_PREVIEW_WIDTH = 240;
-const FLOW_DELETED = 'The flow was deleted, so the whole deck is shown.';
+const NOTHING_SELECTED = 'Select something on the canvas to export it';
 const FAILED = "Couldn't create this export";
 
 /**
  * The Export dialog (012, ADR 0016): JSON of the whole deck, or a PNG / SVG picture of the
- * whole deck, the current view or the shown flow; and, when the deck has tables, its schema as
+ * whole deck, the current view or the selection; and, when the deck has tables, its schema as
  * SQL, DBML, Mermaid ER or a data dictionary (045). It only reads the deck; nothing is uploaded.
  */
 export function ExportDialog() {
@@ -75,6 +76,13 @@ export function ExportDialog() {
   const { markExported } = useSaveControls();
   const { toast } = useToast();
   const selectedNodes = useUiStore((s) => s.selection.nodes);
+  const selectedGroups = useUiStore((s) => s.selection.groups);
+  const selectedStickies = useUiStore((s) => s.selection.stickies);
+  const selectedImages = useUiStore((s) => s.selection.images);
+  // Connectors alone draw nothing (they need both ends), so they do not count.
+  const hasSelection =
+    selectedNodes.length + selectedGroups.length + selectedStickies.length + selectedImages.length >
+    0;
   const drill = useUiStore((s) => s.drill);
   const scopes: SchemaScopes = useMemo(
     () => availableSchemaScopes(deck, { selection: selectedNodes, drill }),
@@ -99,9 +107,34 @@ export function ExportDialog() {
   const activeFlowId = useUiStore((s) => s.activeFlow?.flowId ?? null);
   const labelsOn = useUiStore((s) => s.labelsOn);
   const ui = useMemo(
-    () => ({ currentViewId, revealed, drill, activeFlowId, labelsOn }),
-    [currentViewId, revealed, drill, activeFlowId, labelsOn],
+    () => ({
+      currentViewId,
+      revealed,
+      drill,
+      activeFlowId,
+      labelsOn,
+      selection: {
+        nodes: selectedNodes,
+        groups: selectedGroups,
+        stickies: selectedStickies,
+        images: selectedImages,
+      },
+    }),
+    [
+      currentViewId,
+      revealed,
+      drill,
+      activeFlowId,
+      labelsOn,
+      selectedNodes,
+      selectedGroups,
+      selectedStickies,
+      selectedImages,
+    ],
   );
+  // "Selected" with nothing selected (the selection was deleted meanwhile) draws the whole deck.
+  const imageScope: ImageScope =
+    state.imageScope === 'selection' && !hasSelection ? 'deck' : state.imageScope;
   const dialect = deckDialect(deck);
   // The chosen schema scope, or the first available one when it no longer is (FR-002).
   const schemaScope: SchemaScope =
@@ -138,7 +171,7 @@ export function ExportDialog() {
   // 052: the deck's switch refuses SQL while the scope has database errors; other formats export.
   const sqlBlocked =
     deck.blockSqlExport === true && schemaFormat === 'sql' && problems.errors.length > 0;
-  const request = exportRequest(state, schema);
+  const request = exportRequest({ ...state, imageScope }, schema);
   useExportResult(request, dispatch, deck, ui);
   const key = exportRequestKey(request, deck, ui);
   const ready: ExportResult | null =
@@ -149,14 +182,6 @@ export function ExportDialog() {
   const busy = status === 'preparing';
   const [rasterizing, setRasterizing] = useState(false);
   const checkedFormat = useRef<HTMLButtonElement>(null);
-
-  const flowGone =
-    state.imageScope === 'flow' && !deck.flows.some((flow) => flow.id === activeFlowId);
-  useEffect(() => {
-    if (!flowGone) return;
-    dispatch({ type: 'flowGone' });
-    announceLive(FLOW_DELETED);
-  }, [flowGone, announceLive]);
 
   const previewSrc = useMemo(
     () =>
@@ -200,8 +225,14 @@ export function ExportDialog() {
     }, 0);
   };
   const copy = async () => {
-    if (ready === null || ready.text === null) return;
-    tell((await copyText(ready.text)) ? 'Copied' : "Couldn't copy — use Download instead");
+    if (ready === null) return;
+    const { format } = state;
+    // Pictures go through the same path as the canvas menu's Copy as PNG / SVG.
+    const ok =
+      (format === 'png' || format === 'svg') && ready.svg !== null && ready.bounds !== null
+        ? await copyImage(format, Promise.resolve({ svg: ready.svg, bounds: ready.bounds }), scale)
+        : ready.text !== null && (await copyText(ready.text));
+    tell(ok ? 'Copied' : "Couldn't copy — use Download instead");
   };
   const download = async () => {
     if (ready === null) return;
@@ -239,7 +270,7 @@ export function ExportDialog() {
       : schemaScope === 'database'
         ? (scopes.database?.title ?? 'the database')
         : 'the deck';
-  const flowReason = state.flowAvailable ? null : 'Open a flow to export it';
+  const selectionReason = hasSelection ? null : NOTHING_SELECTED;
 
   return (
     <Dialog
@@ -325,7 +356,7 @@ export function ExportDialog() {
                   <SegmentedControl
                     aria-labelledby="export-scope-heading"
                     aria-describedby={isJson ? 'export-scope-note' : undefined}
-                    value={isJson ? 'deck' : state.imageScope}
+                    value={isJson ? 'deck' : imageScope}
                     disabled={isJson}
                     className="grid h-9 w-full grid-cols-3"
                     onValueChange={(value) => {
@@ -338,13 +369,13 @@ export function ExportDialog() {
                     <SegmentedControlItem value="view" className="w-full">
                       Current view
                     </SegmentedControlItem>
-                    <DisabledReason reason={isJson ? null : flowReason}>
+                    <DisabledReason reason={isJson ? null : selectionReason}>
                       <SegmentedControlItem
-                        value="flow"
+                        value="selection"
                         className="w-full"
-                        disabled={!state.flowAvailable}
+                        disabled={!hasSelection}
                       >
-                        Selected flow
+                        Selected
                       </SegmentedControlItem>
                     </DisabledReason>
                   </SegmentedControl>
@@ -352,9 +383,6 @@ export function ExportDialog() {
                     <p id="export-scope-note" className="text-caption text-ink-secondary">
                       JSON always contains the whole deck
                     </p>
-                  )}
-                  {!isJson && state.scopeNote === 'flow-deleted' && (
-                    <p className="text-caption text-ink-secondary">{FLOW_DELETED}</p>
                   )}
                 </section>
                 <div
@@ -482,18 +510,22 @@ export function ExportDialog() {
           {sizeHint !== null && (
             <span className="shrink-0 text-body-sm text-ink-secondary">{sizeHint}</span>
           )}
-          {state.format !== 'png' && (
-            <Button
-              variant="secondary"
-              disabled={ready === null || ready.text === null || sqlBlocked}
-              aria-describedby={sqlBlocked ? SQL_BLOCKED_BANNER_ID : undefined}
-              onClick={() => {
-                void copy();
-              }}
-            >
-              Copy
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            disabled={
+              ready === null ||
+              (ready.text === null && ready.svg === null) ||
+              rasterizing ||
+              pngBlocked ||
+              sqlBlocked
+            }
+            aria-describedby={sqlBlocked ? SQL_BLOCKED_BANNER_ID : undefined}
+            onClick={() => {
+              void copy();
+            }}
+          >
+            Copy
+          </Button>
           <Button
             variant="primary"
             disabled={ready === null || rasterizing || pngBlocked || sqlBlocked}

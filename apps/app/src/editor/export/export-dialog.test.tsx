@@ -9,11 +9,10 @@ import { edgeCaseDeck } from '../../db/fixtures/export-edge-cases';
 import { shopDeck } from '../../db/fixtures/shop';
 import { schemaExport } from '../../db/export/schema-export';
 import { DEFAULT_SQL_OPTIONS } from '../../db/export/types';
-import { copyText } from '../../lib/clipboard';
+import { copyItem, copyText } from '../../lib/clipboard';
 import type * as DownloadModule from '../../storage/download';
 import { openedFlow, useUiStore } from '../../state/ui-store';
 import { downloadBlob, downloadText } from '../../storage/download';
-import { flowDeck } from '../../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
 import { SaveContext } from '../save-context';
 import { ExportDialog } from './export-dialog';
@@ -28,7 +27,7 @@ vi.mock('../../storage/download', async (importOriginal) => ({
   downloadText: vi.fn(),
   downloadBlob: vi.fn(),
 }));
-vi.mock('../../lib/clipboard', () => ({ copyText: vi.fn() }));
+vi.mock('../../lib/clipboard', () => ({ copyText: vi.fn(), copyItem: vi.fn() }));
 vi.mock('./rasterize', () => ({ rasterize: vi.fn() }));
 vi.mock('./json-export', async (importOriginal) => {
   const actual = await importOriginal<typeof JsonExportModule>();
@@ -43,8 +42,6 @@ const deck = deckOf({
   ],
   edges: [{ id: 'api-db', from: 'api', to: 'db', label: 'SQL' }],
 });
-
-const namedFlowDeck: SododeckFile = { ...flowDeck, name: 'Logistics Delivery' };
 
 /** Mounts the dialog like `ShellChrome`: only while the store flag is set. */
 function Harness() {
@@ -271,7 +268,8 @@ describe('ExportDialog: images (US2)', () => {
     expect(within(dialog()).getByText(expectedPng(deck, 2))).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: '3×' }));
     expect(await within(dialog()).findByText(expectedPng(deck, 3))).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument();
+    // PNG has a Copy next to Download too.
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
     expect(
       screen.getByRole('img', { name: 'Preview of logistics-delivery.png' }),
     ).toBeInTheDocument();
@@ -365,47 +363,78 @@ describe('ExportDialog: images (US2)', () => {
   });
 });
 
-describe('ExportDialog: selected flow (US3)', () => {
-  it('opens on PNG of the shown flow, named after it', async () => {
-    setup(namedFlowDeck, { flow: 'place' });
-    expect(radio('PNG')).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Selected flow' })).toBeChecked();
-    await footerName('logistics-delivery-place-order.png');
+describe('ExportDialog: selected (feedback: export the canvas selection)', () => {
+  const picked = (patch: Partial<ReturnType<typeof useUiStore.getState>['selection']>) => ({
+    selection: { nodes: [], edges: [], groups: [], stickies: [], images: [], ...patch },
   });
 
-  it('keeps the flow scope while JSON is shown', async () => {
-    const { user } = setup(namedFlowDeck, { flow: 'place' });
-    await choose(user, 'JSON');
-    expect(screen.getByRole('radio', { name: 'Whole deck' })).toBeChecked();
-    expect(screen.getByRole('radiogroup', { name: 'Scope' })).toHaveAccessibleDescription(
-      'JSON always contains the whole deck',
-    );
-    await choose(user, 'PNG');
-    expect(screen.getByRole('radio', { name: 'Selected flow' })).toBeChecked();
-  });
-
-  it('disables "Selected flow" outside flow mode, with the reason', async () => {
-    const { user } = setup(namedFlowDeck);
-    await choose(user, 'PNG');
-    const item = screen.getByRole('radio', { name: 'Selected flow' });
-    expect(item).toBeDisabled();
-    expect(item.parentElement).toHaveAccessibleDescription('Open a flow to export it');
-  });
-
-  it('falls back to the whole deck when the flow is deleted while open', async () => {
-    const { editor } = setup(namedFlowDeck, { flow: 'place' });
-    await footerName('logistics-delivery-place-order.png');
-    act(() => {
-      editor().remove('flows', 'place');
+  /** The pixel size of the scene a selection draws at 2×. */
+  function selectedPng(file: SododeckFile, nodes: string[]) {
+    const scene = buildScene({
+      deck: file,
+      scope: 'selection',
+      ui: {
+        currentViewId: null,
+        revealed: new Set(),
+        drill: [],
+        activeFlowId: null,
+        selection: { nodes, groups: [], stickies: [], images: [] },
+      },
     });
-    expect(
-      await screen.findByText('The flow was deleted, so the whole deck is shown.'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Whole deck' })).toBeChecked();
-    expect(useUiStore.getState().announcement.text).toBe(
-      'The flow was deleted, so the whole deck is shown.',
+    const { width, height } = pngSize(scene.bounds, 2);
+    return `${String(width)} × ${String(height)} px`;
+  }
+
+  it('disables "Selected" when nothing is selected, with the reason', async () => {
+    const { user } = setup();
+    await choose(user, 'PNG');
+    const item = screen.getByRole('radio', { name: 'Selected' });
+    expect(item).toBeDisabled();
+    expect(item.parentElement).toHaveAccessibleDescription(
+      'Select something on the canvas to export it',
     );
-    await footerName('logistics-delivery.png');
+    expect(screen.queryByRole('radio', { name: 'Selected flow' })).not.toBeInTheDocument();
+  });
+
+  it('draws only the selected objects, named after the selection', async () => {
+    const { user } = setup(deck, { ui: picked({ nodes: ['api'] }) });
+    await choose(user, 'PNG');
+    const whole = expectedPng(deck, 2);
+    expect(await within(dialog()).findByText(whole)).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Selected' }));
+    const selected = selectedPng(deck, ['api']);
+    expect(selected).not.toBe(whole);
+    expect(await within(dialog()).findByText(selected)).toBeInTheDocument();
+    await footerName('logistics-delivery-selection.png');
+  });
+
+  it('copies the selection as a PNG through the clipboard item path', async () => {
+    vi.mocked(copyItem).mockResolvedValue(true);
+    vi.mocked(rasterize).mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
+    const { user } = setup(deck, { ui: picked({ nodes: ['api', 'db'] }) });
+    await choose(user, 'PNG');
+    await user.click(screen.getByRole('radio', { name: 'Selected' }));
+    await footerName('logistics-delivery-selection.png');
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => {
+      expect(Object.keys(vi.mocked(copyItem).mock.calls[0]?.[0] ?? {})).toEqual(['image/png']);
+    });
+    const png = await vi.mocked(copyItem).mock.calls[0]?.[0]['image/png'];
+    expect(png?.type).toBe('image/png');
+    expect(rasterize).toHaveBeenCalledWith(expect.stringContaining('<svg'), expect.any(Object), 2);
+    expect(await screen.findByText('Copied')).toBeInTheDocument();
+  });
+
+  it('copies the selection as SVG markup', async () => {
+    const { user } = setup(deck, { ui: picked({ nodes: ['api'] }) });
+    await choose(user, 'SVG');
+    await user.click(screen.getByRole('radio', { name: 'Selected' }));
+    await footerName('logistics-delivery-selection.svg');
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    await waitFor(() => {
+      expect(copyText).toHaveBeenCalledWith(expect.stringContaining('Orders API'));
+    });
+    expect(String(vi.mocked(copyText).mock.calls[0]?.[0])).not.toContain('Orders DB');
   });
 });
 
@@ -465,7 +494,7 @@ describe('ExportDialog: keyboard (US5)', () => {
     await user.tab();
     expect(screen.getByRole('radio', { name: 'Whole deck' })).toHaveFocus();
     await press('ArrowRight', screen.getByRole('radio', { name: 'Current view' }));
-    // "Selected flow" is disabled outside flow mode: the arrow skips it.
+    // "Selected" is disabled with nothing selected: the arrow skips it.
     await press('ArrowRight', screen.getByRole('radio', { name: 'Whole deck' }));
     expect(screen.getByRole('radio', { name: 'Whole deck' })).toBeChecked();
     await footerName('logistics-delivery.png');
@@ -473,6 +502,8 @@ describe('ExportDialog: keyboard (US5)', () => {
     expect(screen.getByRole('radio', { name: '2×' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('switch', { name: 'Transparent background' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Copy' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'Download' })).toHaveFocus();
     await user.keyboard('{Enter}');

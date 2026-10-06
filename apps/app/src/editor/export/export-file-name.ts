@@ -1,13 +1,14 @@
 import { slug } from '../../lib/slug';
 import type { ExportFormat } from './types';
 
+/** `<deck>[-<suffix>].<ext>`; the suffix names the scope ("selection"). */
 export function exportFileName(
   deckName: string | undefined,
-  flowName: string | null,
+  suffix: string | null,
   format: ExportFormat,
 ): string {
   const deck = slug(deckName) || 'untitled-deck';
-  const flow = flowName === null ? '' : slug(flowName);
+  const flow = suffix === null ? '' : slug(suffix);
   const extension = format === 'json' ? 'sododeck' : format;
   return `${deck}${flow ? `-${flow}` : ''}.${extension}`;
 }
