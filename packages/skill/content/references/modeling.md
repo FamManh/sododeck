@@ -11,8 +11,9 @@ Read this for any new deck and for update requests that add cards, connectors or
 5. Groups and levels
 6. Ids
 7. Positions, sizes and style
-8. Notes, features, tags and links
-9. A complete small example
+8. Features and views
+9. Notes, tags and links
+10. Complete examples
 
 ## 1. The file skeleton
 
@@ -36,8 +37,8 @@ Every deck has these root keys, even when empty, in this order:
 ```
 
 `nodes` are cards, `edges` are connectors, `stickies` are sticky notes. `rules` is an object keyed
-by rule id (see `rules.md`), everything else is a list. Leave `views` empty: the app creates its
-standard views. Unknown keys are refused, so don't invent fields.
+by rule id (see `rules.md`), everything else is a list. For more than one feature, add views as in §8; otherwise leave `views`
+empty and the app shows its standard views. Unknown keys are refused, so don't invent fields.
 
 ## 2. Cards
 
@@ -129,8 +130,47 @@ others not is fine only in update mode.
 indigo violet pink slate` or `#rrggbb`) is for at most one or two focal cards; colour carries
 meaning only when it is rare.
 
-## 8. Notes, features, tags and links
+## 8. Features and views
 
+A big system stays readable through features and views, not through fewer cards.
+
+- `features`: one per business capability, `[{ "id": "pricing", "title": "Pricing" }]`. Every
+  flow names its feature (`"feature": "pricing"`).
+- `views`: saved views the user switches between. The **first view is the base view** and shows
+  every card; write `{ "id": "overview", "type": "system", "title": "Overview" }` first. Then one
+  view per feature, in one of two shapes:
+
+```json
+{ "id": "view-pricing", "type": "feature", "title": "Pricing", "feature": "pricing" }
+```
+
+A **feature view** shows exactly the cards the feature's flows walk through (both ends of every
+step's connector). Prefer it: it stays right when flows change. Don't add `includes` to it: the
+view shows only cards that are in both, so a listed card off the flows stays hidden.
+
+```json
+{
+  "id": "view-pricing",
+  "type": "custom",
+  "title": "Pricing",
+  "includes": ["worker", "pricing-engine", "agreements-db", "candidates-db"]
+}
+```
+
+A **listed view** shows the cards you list. Use it when the feature's picture needs cards its
+flows don't walk through: a store a step writes (mentioned in its `notes`), a listener, a config
+table.
+
+Leave `positions` out of every view: on import the app lays each view out on its own, so it opens
+as a compact diagram of that feature. Cards shared by several features (a queue, a worker) appear
+in each view that needs them. A feature with no flows yet shows nothing in a feature view: give it
+a listed view. When the deck has no `views` at all, the app shows its standard Overview and Flows
+views.
+
+## 9. Notes, tags and links
+
+- Explanations belong in `description` (cards, flows, rules) and step `notes`: they show in the
+  inspector and never cover the diagram. Gaps, caveats and "documented vs implemented" go there.
 - `stickies`: a note sits on the canvas at its own `position`, so it needs one:
   `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "position": { "x": 924, "y": -16 } }`
   (colours `amber blue green clay grey`). A new deck leaves positions out (section 7), so there put
@@ -138,13 +178,13 @@ meaning only when it is rare.
   mode, add a note next to a card that has a position (for example 24 px right of it and 96 px
   above). To tie a note to a card, add a connector between them: a connector may end on a note.
   Never write `anchor`: notes are no longer pinned, and the key is only read from older files.
-- `features`: `[{ "id": "checkout", "title": "Checkout" }]` groups flows by product feature
-  (`"feature": "checkout"` on a flow).
 - `tags`: short labels shared across the deck (`"tags": ["pci"]`), for filtering views.
 - `links`: documentation, dashboards, source files. In codebase mode every card and connector
   carries its source link (see `from-codebase.md`).
 
-## 9. A complete small example
+## 10. Complete examples
 
-`examples/checkout.sododeck` is a full deck with seven cards and one flow; open it when you want to
-see every part together. `examples/platform.sododeck` shows groups and two levels.
+- `examples/checkout.sododeck`: seven cards and one flow, every part together.
+- `examples/order-features.sododeck`: three features sharing one set of services, an Overview
+  and one view per feature, a rule on a step. Copy its shape for any system with several features.
+- `examples/platform.sododeck`: groups and two levels.

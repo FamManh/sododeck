@@ -13,9 +13,13 @@ export type Mode = 'new' | 'update' | 'codebase' | 'text';
 export const DETAILS: readonly Detail[] = ['faithful', 'balanced', 'simplified'];
 export const MODES: readonly Mode[] = ['new', 'update', 'codebase', 'text'];
 
-/** Most cards one level (one drill-in screen) should hold, per detail dial. */
-export const LEVEL_BUDGET: Readonly<Record<Detail, number>> = {
-  faithful: 24,
+/**
+ * Most cards one level (one drill-in screen) should hold, only when the user asked for a smaller
+ * picture: `simplified` (an overview or a slide) or `balanced`. `faithful`, and no dial at all,
+ * draw the system at the detail it really has: a deck of a large system is meant to be big, and
+ * features and views (not fewer cards) keep it readable.
+ */
+export const LEVEL_BUDGET: Readonly<Partial<Record<Detail, number>>> = {
   balanced: 12,
   simplified: 7,
 };
@@ -24,6 +28,10 @@ export const LEVEL_BUDGET: Readonly<Record<Detail, number>> = {
 export const TITLE_BUDGET = 40;
 export const CONNECTOR_LABEL_BUDGET = 32;
 export const ID_MAX = 32;
+/** More connectors than this on one card makes it a hub that crosses the whole diagram. */
+export const HUB_MAX = 8;
+/** A group this big whose cards are all one type is a group by kind. */
+export const KIND_GROUP_MIN = 4;
 
 export interface AuthoringOptions {
   detail?: Detail;
@@ -210,8 +218,9 @@ function checkLabels(file: SododeckFile): ProblemEntry[] {
   return out;
 }
 
-function checkLevels(file: SododeckFile, detail: Detail): ProblemEntry[] {
-  const budget = LEVEL_BUDGET[detail];
+function checkLevels(file: SododeckFile, detail: Detail | undefined): ProblemEntry[] {
+  const budget = detail === undefined ? undefined : LEVEL_BUDGET[detail];
+  if (budget === undefined) return [];
   const levels = new Map<string, number[]>();
   file.nodes.forEach((node, index) => {
     const key = node.parent ?? '';
@@ -229,7 +238,7 @@ function checkLevels(file: SododeckFile, detail: Detail): ProblemEntry[] {
         'level-over-budget',
         `/nodes/${String(first)}`,
         parent === '' ? undefined : parent,
-        `${String(indexes.length)} cards on ${where}; the ${detail} detail level allows ${String(budget)}.`,
+        `${String(indexes.length)} cards on ${where}; the ${String(detail)} detail level allows ${String(budget)}.`,
       ),
     );
   }
@@ -265,6 +274,47 @@ function checkSources(file: SododeckFile): ProblemEntry[] {
   return out;
 }
 
+/**
+ * Layout checks, measured on a real 56-card deck: grouping by kind and hub cards are what make
+ * a large deck cross itself (771 crossings as drawn, 25 without both).
+ */
+function checkLayout(file: SododeckFile): ProblemEntry[] {
+  const out: ProblemEntry[] = [];
+  file.groups.forEach((group, index) => {
+    const members = file.nodes.filter((node) => node.group === group.id);
+    const types = new Set(members.map((node) => node.type));
+    if (members.length >= KIND_GROUP_MIN && types.size === 1) {
+      out.push(
+        entry(
+          'group-by-kind',
+          `/groups/${String(index)}`,
+          group.id,
+          `Group "${group.title}" holds ${String(members.length)} cards, all of type ${[...types].join('')}.`,
+        ),
+      );
+    }
+  });
+  const degree = new Map<string, number>();
+  for (const edge of file.edges) {
+    degree.set(edge.from, (degree.get(edge.from) ?? 0) + 1);
+    degree.set(edge.to, (degree.get(edge.to) ?? 0) + 1);
+  }
+  file.nodes.forEach((node, index) => {
+    const count = degree.get(node.id) ?? 0;
+    if (count > HUB_MAX) {
+      out.push(
+        entry(
+          'hub-card',
+          `/nodes/${String(index)}`,
+          node.id,
+          `Card "${node.title}" has ${String(count)} connectors (more than ${String(HUB_MAX)}).`,
+        ),
+      );
+    }
+  });
+  return out;
+}
+
 /** Every authoring warning for `file` (unsorted; `lint` sorts the whole report). */
 export function authoringChecks(
   file: SododeckFile,
@@ -277,7 +327,8 @@ export function authoringChecks(
     ...checkOrphans(file),
     ...checkDuplicateTitles(file),
     ...checkLabels(file),
-    ...checkLevels(file, options.detail ?? 'balanced'),
+    ...checkLevels(file, options.detail),
+    ...checkLayout(file),
     ...(mode === 'codebase' ? checkSources(file) : []),
   ];
 }

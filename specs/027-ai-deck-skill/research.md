@@ -159,3 +159,21 @@ From the skill-authoring guidance used for this feature:
   how it is packaged; it is tracked in tasks as a later phase and not implemented now. Phase 2's
   instructions (codebase, text formats, fidelity report) and its one lint rule are small and are
   built with phase 1.
+
+## R13. Revision after the first real deck (2026-10-05)
+
+The first deck the skill produced for a real system (Auto Work Order, 9 features, 13 entry points)
+was compared with the team's hand-drawn boards. Findings and decisions:
+
+- **No default card budget.** The default `balanced` (12 per level) pushed the agent to merge use
+  cases ("Manual Job Use Cases"), losing what the boards show. A large system makes a large deck;
+  `level-over-budget` now runs only when the user asks for `balanced` or `simplified`.
+- **Features and views carry readability.** The skill now asks for one feature per capability, an
+  Overview view first, then one feature view per feature listing its cards; the app lays each such
+  view out on import (`view.positions`, `groupFrames`).
+- **Explanations in descriptions and step notes, not stickies.** Long notes covered cards.
+- **From-diagrams mode** with an `outline` command for whiteboard files: boards are often megabytes
+  of JSON with labels drawn over shapes rather than bound to them.
+- **App placement measured cards wrongly** (160 × 72 fallback instead of the drawn size) and ignored
+  anchored notes: 35 overlaps on the real deck, 0 after measuring with `cardSize` and slotting
+  notes under their cards.

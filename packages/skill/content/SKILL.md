@@ -46,13 +46,14 @@ All scripts need Node 20 or newer, work offline and read only the files you name
 
 ## Modes
 
-| The user wants…                         | Mode             | Read                                                                                                                                               |
-| --------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a deck from a description (the default) | `new`            | `references/modeling.md`, plus `flows.md` when they mention a sequence, `rules.md` when they mention a decision or policy                          |
-| to change an existing deck              | `update`         | run `summary.mjs` on it first, then the reference for what they ask about (`flows.md` for a new flow, `modeling.md` for new cards and their types) |
-| a deck of a code repository             | `codebase`       | `references/from-codebase.md`                                                                                                                      |
-| a deck from Mermaid, C4 text or OpenAPI | `text`           | `references/from-text-formats.md`                                                                                                                  |
-| database tables and relationships       | `new` / `update` | `references/database.md`                                                                                                                           |
+| The user wants…                                                 | Mode             | Read                                                                                                                                               |
+| --------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a deck from a description (the default)                         | `new`            | `references/modeling.md`, plus `flows.md` when they mention a sequence, `rules.md` when they mention a decision or policy                          |
+| to change an existing deck                                      | `update`         | run `summary.mjs` on it first, then the reference for what they ask about (`flows.md` for a new flow, `modeling.md` for new cards and their types) |
+| a deck of a code repository                                     | `codebase`       | `references/from-codebase.md`                                                                                                                      |
+| a deck from Mermaid, C4 text or OpenAPI                         | `text`           | `references/from-text-formats.md`                                                                                                                  |
+| a deck from a whiteboard file, screenshot or photo of a diagram | `text`           | `references/from-diagrams.md` (run `outline.mjs` on `.excalidraw` files instead of reading them)                                                   |
+| database tables and relationships                               | `new` / `update` | `references/database.md`                                                                                                                           |
 
 Read `references/taste.md` once for any new deck: it is short and decides whether the deck is
 readable.
@@ -61,10 +62,11 @@ Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the rig
 
 ## Dials
 
-- **Detail** (`--detail` for lint): `faithful` (at most 24 cards per level), `balanced` (12, the
-  default), `simplified` (7). Pick `simplified` for an overview or a slide, `faithful` when the
-  user wants everything. A system bigger than the budget is split into levels (a parent card you
-  can open), not crammed into one screen.
+- **Detail**: by default, draw the system at the detail it really has (every use case, consumer,
+  topic and store the user would name); a large system makes a large deck, kept readable by
+  features, views and flows. Only when the user asks for an overview or a slide, merge pieces and
+  pass `--detail simplified` (at most 7 cards per level) or `balanced` (12) to lint, which then
+  checks the budget. `faithful` means no merging at all.
 - **Audience**: `engineer` (default: protocols, tech, payload samples), `mixed` (plain titles,
   short descriptions), `executive` (outcomes and owners, no protocols). The audience changes
   wording and which fields you fill, never the structure rules.
@@ -84,6 +86,26 @@ Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the rig
   previous one ended. A reply needs its own connector back (see `flows.md`).
 - **Leave positions out** of new decks. The app lays the deck out on import. In update mode, keep
   the positions that exist and give new cards none.
+
+- **Draw it so it reads.** Measured on a 56-card deck: 771 crossing connectors as first drawn,
+  25 after two changes. (1) **No groups on a big deck** (over ~25 cards): the layout keeps a group
+  together, so its cards leave their flows and every connector crosses the canvas; say the
+  boundary in each card's `host` or `tech` instead. On small decks, group only another company's
+  systems or the UI, never cards that share a type. (2) **A shared store, bus, job table or worker
+  gets connectors only where a flow walks through it**, plus its owner; name the other readers
+  and writers in its `description`. Every card still has at least one connector. Lint warns
+  `group-by-kind` and `hub-card`: fix them, don't explain them away.
+- **Explanations go in descriptions and step notes**, not sticky notes: notes on the canvas are
+  for a few one-line warnings.
+- **Features, views and rules are optional.** Add them only when the user asks for them; spend
+  the effort on cards, connectors and flows first.
+
+## New deck or update?
+
+When the user gives a source to draw (a description, a code map, a whiteboard, a repository),
+draw a **new** deck into a new file, even if an older deck or a generator script sits next to it:
+the older one was drawn under older rules and is what they want replaced. Use update mode only
+when they name an existing deck and ask to change it.
 
 ## Update mode
 
