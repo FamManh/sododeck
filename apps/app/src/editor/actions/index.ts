@@ -1,5 +1,6 @@
 import { ALIGN_ACTIONS } from './align-actions';
 import { ARRANGE_ACTIONS } from './arrange-actions';
+import { ARRANGE_TABLES_ACTIONS } from './arrange-tables-actions';
 import { CANVAS_ACTIONS } from './canvas-actions';
 import { CLIPBOARD_ACTIONS } from './clipboard-actions';
 import { COMMON_ACTIONS } from './common-actions';
@@ -41,6 +42,7 @@ export const ACTIONS: readonly Action[] = [
   ...IMAGE_ACTIONS,
   ...COMMON_ACTIONS,
   ...ALIGN_ACTIONS,
+  ...ARRANGE_TABLES_ACTIONS,
   ...ARRANGE_ACTIONS,
   SPREAD_ENDS_ACTION,
 ];
