@@ -410,11 +410,11 @@ Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; onl
 | Level | Zoom | Table shows |
 | --- | --- | --- |
 | Landscape | ≤ 30 % | the table icon on the colour fill; no text |
-| System | 31–50 % | name, PK / FK dots and the column count |
+| System | 31–50 % | the same rows as Container, so a zoomed-out schema still reads |
 | Container | 51–150 % | keys only and "+n columns" |
 | Component | > 150 % | all columns, up to the row limit |
 
-A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; at System and Landscape connectors run table to table from the title row and merge ×n.
+A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; rows are drawn at every level but Landscape; at Landscape connectors run table to table from the title row and merge ×n.
 
 #### Contrast (FR-013)
 

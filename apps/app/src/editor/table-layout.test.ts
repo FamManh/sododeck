@@ -222,10 +222,6 @@ describe('tableLayout rows (041 FR-005–FR-009)', () => {
     expect(layout(inPublic, context({}, { showSchema: true })).typeName).toBe('Table · public');
     expect(layout(orders, context({}, { showSchema: true })).typeName).toBe('Table');
   });
-
-  it('counts the System content: PK, FK (not PK) and columns', () => {
-    expect(layout(orders).compact).toEqual({ pkCount: 1, fkCount: 1, columnCount: 7 });
-  });
 });
 
 describe('rowAnchorY and connected rows (042 R2, R15)', () => {

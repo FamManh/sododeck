@@ -1039,13 +1039,10 @@ describe('DeckNode as a table card (041)', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows the title, key dots and column count at System level', () => {
+  it('keeps the title and the rows at System level, so a zoomed-out schema reads', () => {
     renderWithEditor(<DeckNode {...tableProps(tables(), { level: 'system' })} />, tables());
     expect(screen.getByText('orders')).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: '1 primary key, 1 foreign key, 7 columns' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Columns' })).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Columns' })).toBeInTheDocument();
   });
 
   it('shows the icon plate at Landscape level, in the same box', () => {

@@ -60,7 +60,7 @@ import {
 } from './flows/flow-overlay';
 import type { NodeStepMark, StepState } from './flows/step-marks';
 import type { CardLayout } from './card-layout';
-import type { Level } from './levels';
+import { rowsDrawn, type Level } from './levels';
 import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems/problem-marks';
 import { resolveLook, type CardLook, type StylePreview } from './style/card-style';
 import { cardTagLooks, sameTagLooks, tagColourMap, type TagColourMap } from './tags/card-tag-looks';
@@ -233,10 +233,7 @@ function sameRel(a: RelationshipData | undefined, b: RelationshipData | undefine
   );
 }
 
-/** Levels at which table rows are drawn (≥ 90 %, DESIGN.md "Table zoom levels"). */
-export function rowsDrawn(level: Level): boolean {
-  return level === 'container' || level === 'component';
-}
+export { rowsDrawn } from './levels';
 
 /**
  * Whether a relationship's label shows, per the deck's label mode (042 R10). `lit` is a focus or

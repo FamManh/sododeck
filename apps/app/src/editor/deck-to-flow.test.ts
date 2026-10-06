@@ -1403,8 +1403,9 @@ describe('relationships (042 US1)', () => {
     });
   });
 
-  it('runs on the outline below 90 %', () => {
-    expect(byId(shop, 'fk', { level: 'system' }).data.rel).toMatchObject({ rows: false });
+  it('keeps its rows at System and runs on the outline at Landscape', () => {
+    expect(byId(shop, 'fk', { level: 'system' }).data.rel).toMatchObject({ rows: true });
+    expect(byId(shop, 'fk', { level: 'landscape' }).data.rel).toMatchObject({ rows: false });
   });
 
   it('keeps the cached edge until the edge or an end table changes', () => {
@@ -1546,8 +1547,8 @@ describe('relationships at every detail level and zoom (042 US5)', () => {
     }
   });
 
-  it('runs table to table below 90 % and bundles parallel relationships', () => {
-    expect(relOf(shop, 'ship', 'system')?.rows).toBe(false);
+  it('runs table to table at Landscape and bundles parallel relationships', () => {
+    expect(relOf(shop, 'ship', 'landscape')?.rows).toBe(false);
     const graph = topLevelGraph(shop);
     const bundles = bundleEdges(shop, graph, {
       exclude: new Set(),

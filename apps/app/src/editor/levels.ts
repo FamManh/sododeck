@@ -59,6 +59,14 @@ export function levelWithHysteresis(zoom: number, current: Level): Level {
   }
 }
 
+/**
+ * Levels at which table rows are drawn: every level but Landscape (≤ 30 %), so a schema stays
+ * readable when zoomed out to see many tables (DESIGN.md "Table zoom levels").
+ */
+export function rowsDrawn(level: Level): boolean {
+  return level !== 'landscape';
+}
+
 export function effectiveLevel(zoomLevel: Level, scope: Scope): Level {
   return scope.node === null ? zoomLevel : 'component';
 }

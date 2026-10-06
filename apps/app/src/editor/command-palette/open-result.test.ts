@@ -258,7 +258,7 @@ describe('table and column results (048 FR-021, FR-022)', () => {
     const deck = tablesDeck();
     const env = renderWithEditor(null, deckOf(deck));
     const ctx = context(deck, env.editor());
-    ctx.getZoom.mockReturnValue(0.4);
+    ctx.getZoom.mockReturnValue(0.2);
     expect(openResult(column('c50'), ctx)).toBe(true);
     expect(toJSON(env.doc).nodes[0]?.expanded).toBe(true);
     expect(useUiStore.getState().selection.nodes).toEqual(['t']);
@@ -268,7 +268,7 @@ describe('table and column results (048 FR-021, FR-022)', () => {
     expect(ctx.setCenter).toHaveBeenCalledWith(
       100 + layout.width / 2,
       200 + layout.rowsTop + 49 * 24 + 12,
-      // System level draws no rows: the pan zooms in to show it.
+      // Landscape draws no rows: the pan zooms in to show it.
       { zoom: 1 },
     );
     act(() => {
