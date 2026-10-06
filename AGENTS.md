@@ -16,7 +16,7 @@ apps/app/         Vite + React SPA, the editor → app.sododeck.com
 apps/site/        Astro marketing/docs/blog → sododeck.com
 packages/schema/  JSON Schema v1 for .sododeck files → generated TS types + Zod
 packages/model/   Yjs document model, the ONLY Yjs ↔ JSON conversion
-packages/skill/   AI deck skill (027): Markdown + bundled offline validate/lint → dist/sododeck-deck.zip
+packages/skill/   AI diagram skill (027): Markdown + bundled offline validate/lint → dist/sododeck-diagram/
 packages/ui/      Design tokens, Tailwind v4 theme, shared React components (shadcn/ui, Radix, lucide)
 packages/config/  Shared tsconfig, ESLint, Prettier
 docs/             spec.md, decisions/ (ADRs), design/, deploy.md

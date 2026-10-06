@@ -1,5 +1,5 @@
 ---
-name: sododeck-deck
+name: sododeck-diagram
 description: >-
   Writes and edits Sododeck decks (.sododeck files): architecture components, connectors, groups,
   step-by-step flows and decision rules, laid out by hand and checked by bundled validate and lint
@@ -10,7 +10,7 @@ description: >-
   "Sododeck".
 ---
 
-# Sododeck deck
+# Sododeck diagram
 
 A Sododeck deck is a **model you can play**: cards, connectors between them, groups, flows that
 walk along connectors step by step, and decision tables on the steps that decide. It is also a
