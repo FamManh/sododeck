@@ -3,27 +3,35 @@
  * `meta.tableDisplay`; and the relationship display (042): `hideEnds`, `labels` and `notation` in
  * `meta.relationshipDisplay`. Each key is written on its own, so two tabs changing different
  * switches both keep theirs. A flag is stored `true` or removed; a default is the absent key.
+ * The canvas background (ADR 0044) is stored the same way in `meta.canvasBackground`.
  */
-import { jsonSchema, type RelationshipDisplay, type TableDisplay } from '@sododeck/schema';
+import {
+  jsonSchema,
+  type CanvasBackground,
+  type RelationshipDisplay,
+  type TableDisplay,
+} from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import type { YValue } from '../convert';
 import { DeckEditError } from '../errors';
-import { metaMap, relationshipDisplayMap, tableDisplayMap } from '../layout';
+import { canvasBackgroundMap, metaMap, relationshipDisplayMap, tableDisplayMap } from '../layout';
 import { assertValid, validateObject } from '../validate';
 import type { EditContext } from './context';
 import type { Patch } from './types';
 
-type DisplayKey = 'tableDisplay' | 'relationshipDisplay';
+type DisplayKey = 'tableDisplay' | 'relationshipDisplay' | 'canvasBackground';
 
 const KEYS: Record<DisplayKey, readonly string[]> = {
   tableDisplay: Object.keys(jsonSchema.$defs.TableDisplay.properties),
   relationshipDisplay: Object.keys(jsonSchema.$defs.RelationshipDisplay.properties),
+  canvasBackground: Object.keys(jsonSchema.$defs.CanvasBackground.properties),
 };
 
 const STORED: Record<DisplayKey, (ctx: EditContext) => Y.Map<YValue>> = {
   tableDisplay: (ctx) => tableDisplayMap(ctx.doc),
   relationshipDisplay: (ctx) => relationshipDisplayMap(ctx.doc),
+  canvasBackground: (ctx) => canvasBackgroundMap(ctx.doc),
 };
 
 /** The map, attached on the first write of a document stored before it existed (041 / 042). */
@@ -81,4 +89,13 @@ export function setTableDisplay(ctx: EditContext, patch: Patch<TableDisplay>): v
  */
 export function setRelationshipDisplay(ctx: EditContext, patch: Patch<RelationshipDisplay>): void {
   setDisplay(ctx, 'relationshipDisplay', patch);
+}
+
+/**
+ * Patches the canvas background (ADR 0044) in one undo step: a value sets a key; `null` removes it
+ * (dots, theme colour). The object leaves the file when it has no key. Validated first; nothing
+ * happens when nothing changes.
+ */
+export function setCanvasBackground(ctx: EditContext, patch: Patch<CanvasBackground>): void {
+  setDisplay(ctx, 'canvasBackground', patch);
 }

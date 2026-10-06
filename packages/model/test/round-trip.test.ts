@@ -1269,6 +1269,11 @@ describe('database schema (040)', () => {
         relationshipDisplay: { hideEnds: true, labels: 'off', notation: 'numeric' },
       },
     ],
+    // ADR 0044: canvas background with every key.
+    [
+      'canvas background with every key',
+      { ...empty, canvasBackground: { pattern: 'none', color: '#1f2a44' } },
+    ],
     [
       'enum colours, a palette name and a hex',
       {
@@ -1367,7 +1372,9 @@ describe('database schema (040)', () => {
     expect(keys.indexOf('relationshipDisplay')).toBe(keys.indexOf('tableDisplay') + 1);
     // 048: the grouping mode follows the relationship display.
     expect(keys.indexOf('groupingMode')).toBe(keys.indexOf('relationshipDisplay') + 1);
-    expect(keys.indexOf('nodes')).toBe(keys.indexOf('groupingMode') + 1);
+    // ADR 0044: the canvas background follows the grouping mode.
+    expect(keys.indexOf('canvasBackground')).toBe(keys.indexOf('groupingMode') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('canvasBackground') + 1);
     const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
     expect(Object.keys(orders)).toEqual([
       'id',

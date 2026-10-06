@@ -109,6 +109,16 @@ export function relationshipDisplayMap(doc: DeckDoc): Y.Map<YValue> {
 }
 
 /**
+ * The canvas background (ADR 0044): a `Y.Map` of the `CanvasBackground` keys, kept like
+ * `relationshipDisplay` (created empty by `fromJSON`; a detached empty map for older stored
+ * documents, attached by the first write), so reads never write.
+ */
+export function canvasBackgroundMap(doc: DeckDoc): Y.Map<YValue> {
+  const existing = metaMap(doc).get('canvasBackground');
+  return existing instanceof Y.Map ? existing : new Y.Map<YValue>();
+}
+
+/**
  * The packs that are on (030, R4): a `Y.Map<true>` keyed by pack id, present only once a deck has
  * a pack choice (a new deck, a file with `packs`, or the first toggle). Absent means Architecture
  * only, so a deck saved before 030 is written back byte-identical until its packs change.
