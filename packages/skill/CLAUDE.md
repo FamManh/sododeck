@@ -1,6 +1,6 @@
 # @sododeck/skill
 
-**Responsibility:** builds the AI deck skill (`sododeck-deck`, spec 027): the folder a user's own AI
+**Responsibility:** builds the AI diagram skill (`sododeck-diagram`, spec 027): the folder a user's own AI
 agent reads to write or update a valid `.sododeck` deck, with offline scripts that check it. Nothing
 here runs in the app; the app never sends deck content anywhere (constitution IV).
 
@@ -12,26 +12,31 @@ here runs in the app; the app never sends deck content anywhere (constitution IV
   re-implement a check the model has.
 - Authoring-check codes live in the model's catalogue (`packages/model/src/problem-codes.ts`,
   family `authoring`); the checks themselves are in `src/authoring.ts`.
-- Generated output (`dist/`) is never committed. The site copies `dist/sododeck-deck.zip` into its
-  build (`apps/site/scripts/copy-skill.mjs`).
+- Generated output (`dist/`) is never committed. The skill is published by building straight into
+  the public repository `FamManh/sododeck-diagram-skill` (ADR 0042):
+  `pnpm --filter @sododeck/skill build --out <that repo>/skills`, then commit there. Never edit
+  that repository's `skills/` by hand.
 
 **Layout**
 
-- `content/` Markdown sources: `SKILL.md` (router, < 500 lines) and `references/*.md`. Facts come
+- `content/` Markdown sources: `SKILL.md` (router, < 500 lines) and `references/*.md`
+  (`layout.md` teaches the hand layout the layout checks enforce). Facts come
   from `{{placeholders}}` filled by `src/generate.ts` (`cardTypes`, `deckCodes`, `authoringCodes`,
   `formatVersion`, `fingerprint`, `skillVersion`); an unknown placeholder fails the build.
-- `examples/*.sododeck`: hand-written decks; tests require zero lint entries, no positions and
-  playable flows.
-- `src/excalidraw.ts`: the `outline` command (boards, labelled shapes incl. labels drawn over shapes, arrows with bound or nearest ends) for from-diagrams mode.
-- `src/`: `authoring.ts`, `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
+- `examples/*.sododeck`: hand-written decks; tests require zero lint entries, a position on every
+  card and note (ADR 0042: skill decks are hand-laid) and playable flows.
+- `src/excalidraw.ts`: the `outline` command (boards, labelled shapes incl. labels drawn over
+  shapes, arrows with bound or nearest ends) for from-diagrams mode.
+- `src/`: `authoring.ts` (incl. the layout checks: positions, connector over card, frames, hub
+  cards; assumed card box `CARD_BOX` 184 × 96), `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
   (plain-text output), `cli/main.ts` (commands, exit codes, `deliver`), `version.ts` (schema
   fingerprint), `generate.ts`.
-- `scripts/build.ts` (esbuild bundle → `scripts/sododeck.mjs`, entry files, deterministic zip via
-  `scripts/zip.ts`).
+- `scripts/build.ts` (esbuild bundle → `scripts/sododeck.mjs`, entry files).
 - `evals/evals.json`: acceptance prompts for agent runs; not shipped.
 
-**Commands:** `pnpm --filter @sododeck/skill build` (→ `dist/sododeck-deck/`, `dist/sododeck-deck.zip`),
-`test` (includes a full build in a temp folder: drift, no network modules, byte-identical zip).
+**Commands:** `pnpm --filter @sododeck/skill build` (→ `dist/sododeck-diagram/`; `--out <dir>`
+builds into `<dir>/sododeck-diagram/`), `test` (includes a full build in a temp folder: drift, no
+network modules, byte-identical bundle).
 
 **Writing the skill:** explain why, not only what; keep `SKILL.md` a router and put detail in one
 reference per task; deterministic work belongs in a script. Don't name other diagram or database

@@ -1,36 +1,59 @@
 ---
-name: sododeck-deck
+name: sododeck-diagram
 description: >-
   Writes and edits Sododeck decks (.sododeck files): architecture components, connectors, groups,
-  drill-down levels, step-by-step flows and decision rules, checked by bundled validate and lint
+  step-by-step flows and decision rules, laid out by hand and checked by bundled validate and lint
   scripts so the file imports cleanly into Sododeck. Use this whenever the user wants a system,
-  architecture, service, data-flow or request-flow diagram, wants to document how a request moves
-  through services, has a .sododeck file to change, or asks for a deck built from a description, a
-  codebase, a database schema, Mermaid, C4 or OpenAPI, even if they never say "Sododeck".
+  architecture, service, data-flow or request-flow diagram, wants to document how a request or a
+  job moves through services, has a .sododeck file to change, or asks for a deck built from a
+  description, a codebase, a database schema, Mermaid, C4 or OpenAPI, even if they never say
+  "Sododeck".
 ---
 
-# Sododeck deck
+# Sododeck diagram
 
-A Sododeck deck is a **model, not a picture**: cards (components), connectors between them, groups,
-levels you can drill into, flows that walk along connectors step by step, and decision rules
-attached to steps. The app draws and lays it out. Your job is to get the structure right; never
-spend effort on coordinates.
+A Sododeck deck is a **model you can play**: cards, connectors between them, groups, flows that
+walk along connectors step by step, and decision tables on the steps that decide. It is also a
+**picture**, and the picture is your job: you place every card. The app can lay out cards that
+have no position, but it cannot know which lines matter; a hand-laid deck reads far better.
 
 Skill {{skillVersion}} · file format version {{formatVersion}} · schema fingerprint {{fingerprint}}.
-The full schema is `schema/v1.json`; you rarely need to read it, the references cover what matters.
+The full schema is `schema/v1.json`; you rarely need it, the references cover what matters.
+
+## What makes a deck good
+
+A reader should be able to press play on any flow and watch it travel across the screen without
+the line doubling back, jumping, or hiding behind a card. Everything below serves that:
+
+1. **Cards are the things that act or hold state**: a deployable, a use case, a consumer, a
+   worker, a listener, a table that hands work over, an outside system. A message broker topic is
+   **not** a card; it is the label of the connector that carries it (`OrderPaid · Kafka`).
+2. **Two kinds of connector.** Solid connectors are hand-offs, the path a flow walks. Dashed
+   connectors (`"style": { "dash": "dashed", "width": 1.5 }`) are side reads and writes (a service
+   writes its own table, a worker calls a pricing API); they explain the picture but are never a
+   flow step.
+3. **A flow is one unbroken walk** along solid connectors: each step starts where the previous one
+   ended. Side effects go in the step's `description`, decisions in a rule on the step.
+4. **Groups carry structure, levels are rare.** Put cards in frames by responsibility (nested
+   groups are fine) on one screen. Use a drill-down level only for a part most readers never open.
+5. **Hand layout on a grid**, data flowing left to right, no connector running over a card, no
+   frame covering a card of another group. Lint checks all three.
+6. **Only what you traced.** Every card and connector comes from the request or the code. Things
+   that look wrong in the code go on a sticky note ("Gap · …"), not into silent omissions.
 
 ## Workflow
 
-1. **Pick the mode** and read the one reference it needs (table below). Don't read the others:
-   they cost context and don't help the task.
-2. **Decide the dials** (detail, audience) from the request; defaults are fine when unsure.
-3. **Write the deck to a draft file** (for example `checkout.draft.sododeck`), never straight over
-   the user's file. In update mode, start the draft as a copy of their file and edit it in place.
-4. **Check it** with `validate.mjs` and then `lint.mjs` (commands below). Fix every `error`, rerun,
-   repeat until both exit 0. Each problem gives the `code`, the JSON `path`, the `subject` id and a
-   `fix`; follow the fix.
-5. **Deliver** with `deliver.mjs`: it moves the draft over the target only when it passes, so a
-   broken draft can never replace a good deck.
+1. **Pick the mode** and read the reference it names (table below), plus `references/layout.md`
+   for any new deck or any update that adds cards.
+2. **List before you draw**: cards (with their group), solid hand-offs, dashed side connectors,
+   flows as sequences of hand-offs. Check every flow is a walk before writing JSON.
+3. **Write the deck to a draft file** (`checkout.draft.sododeck`), never over the user's file. Over
+   about 15 cards, write a small generator script instead of the JSON by hand (`layout.md` shows
+   one): positions come from a column and row grid, and you can move a column in one edit.
+4. **Check** with `validate.mjs`, then `lint.mjs`. Fix every `error`, then every layout warning
+   (`card-without-position`, `connector-crosses-card`, `frame-covers-card`, `frames-overlap`), rerun
+   until clean. Each problem names the `code`, the JSON `path`, the `subject` id and a `fix`.
+5. **Deliver** with `deliver.mjs`: it replaces the target only when the draft passes.
 6. **Hand over** in the format at the end of this file.
 
 ```
@@ -40,65 +63,42 @@ node <skill>/scripts/deliver.mjs draft.sododeck target.sododeck [--mode …]
 ```
 
 `<skill>` is the folder this file is in. `--format text` prints one line when all is well and one
-short block per problem, which keeps your context small; leave it out when you want JSON to parse.
-All scripts need Node 20 or newer, work offline and read only the files you name.
-`references/scripts.md` lists every option and problem code.
+short block per problem; leave it out for JSON. All scripts need Node 20 or newer, work offline
+and read only the files you name. `references/scripts.md` lists every option and problem code.
 
 ## Modes
 
-| The user wants…                                                 | Mode             | Read                                                                                                                                               |
-| --------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a deck from a description (the default)                         | `new`            | `references/modeling.md`, plus `flows.md` when they mention a sequence, `rules.md` when they mention a decision or policy                          |
-| to change an existing deck                                      | `update`         | run `summary.mjs` on it first, then the reference for what they ask about (`flows.md` for a new flow, `modeling.md` for new cards and their types) |
-| a deck of a code repository                                     | `codebase`       | `references/from-codebase.md`                                                                                                                      |
-| a deck from Mermaid, C4 text or OpenAPI                         | `text`           | `references/from-text-formats.md`                                                                                                                  |
-| a deck from a whiteboard file, screenshot or photo of a diagram | `text`           | `references/from-diagrams.md` (run `outline.mjs` on `.excalidraw` files instead of reading them)                                                   |
-| database tables and relationships                               | `new` / `update` | `references/database.md`                                                                                                                           |
+| The user wants…                                                 | Mode             | Read                                                                                             |
+| --------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| a deck from a description (the default)                         | `new`            | `references/modeling.md`, `references/flows.md`; `rules.md` for a decision or policy             |
+| a deck of a code repository                                     | `codebase`       | `references/from-codebase.md` (it sends you to the others)                                       |
+| to change an existing deck                                      | `update`         | run `summary.mjs` first, then the reference for what they ask about                              |
+| a deck from Mermaid, C4 text or OpenAPI                         | `text`           | `references/from-text-formats.md`                                                                |
+| a deck from a whiteboard file, screenshot or photo of a diagram | `text`           | `references/from-diagrams.md` (run `outline.mjs` on `.excalidraw` files instead of reading them) |
+| database tables and relationships                               | `new` / `update` | `references/database.md`                                                                         |
 
-Read `references/taste.md` once for any new deck: it is short and decides whether the deck is
-readable.
-
-Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the right checks.
+Always also read `references/layout.md` (placing cards) and, once per new deck,
+`references/taste.md`. Pass the mode to lint (`--mode update`, `--mode codebase`).
 
 ## Dials
 
-- **Detail**: by default, draw the system at the detail it really has (every use case, consumer,
-  topic and store the user would name); a large system makes a large deck, kept readable by
-  features, views and flows. Only when the user asks for an overview or a slide, merge pieces and
-  pass `--detail simplified` (at most 7 cards per level) or `balanced` (12) to lint, which then
-  checks the budget. `faithful` means no merging at all.
-- **Audience**: `engineer` (default: protocols, tech, payload samples), `mixed` (plain titles,
-  short descriptions), `executive` (outcomes and owners, no protocols). The audience changes
-  wording and which fields you fill, never the structure rules.
+- **Detail**: by default, draw the system at the detail it really has and pass no `--detail`.
+  When the user asks for less, pass `--detail` to lint and it checks the cards on one screen:
+  `faithful` (at most 60), `balanced` (30), `simplified` (10, an overview or a slide).
+- **Audience**: `engineer` (default: protocols, tech, payloads, source links), `mixed` (plain
+  titles, short descriptions), `executive` (outcomes and owners, no protocols). The audience
+  changes wording and fields, never the structure rules.
 
 ## Rules that matter most
 
-- **Ids are permanent.** Pick a short lower-case slug once (`orders`, `orders-db`, `e-pay`) and
-  never change it, even when the title changes. Views, connectors and links the user adds later
-  attach by id; a new id silently detaches them.
-- **Only declared structure.** Add a connector only for a call the user described or the code
-  shows. If something is likely but unstated, leave it out and list it under "Assumed" in the
-  handover, so the user decides. When the request cannot be drawn without a piece it does not name
-  ("send a confirmation email" needs something that sends it), add the smallest piece that makes
-  it true, and list that under "Assumed" too. Don't add alternatives, retries or failure paths
-  nobody asked for.
-- **Flows walk along connectors.** Each step names a connector, and each step must start where the
-  previous one ended. A reply needs its own connector back (see `flows.md`).
-- **Leave positions out** of new decks. The app lays the deck out on import. In update mode, keep
-  the positions that exist and give new cards none.
-
-- **Draw it so it reads.** Measured on a 56-card deck: 771 crossing connectors as first drawn,
-  25 after two changes. (1) **No groups on a big deck** (over ~25 cards): the layout keeps a group
-  together, so its cards leave their flows and every connector crosses the canvas; say the
-  boundary in each card's `host` or `tech` instead. On small decks, group only another company's
-  systems or the UI, never cards that share a type. (2) **A shared store, bus, job table or worker
-  gets connectors only where a flow walks through it**, plus its owner; name the other readers
-  and writers in its `description`. Every card still has at least one connector. Lint warns
-  `group-by-kind` and `hub-card`: fix them, don't explain them away.
-- **Explanations go in descriptions and step notes**, not sticky notes: notes on the canvas are
-  for a few one-line warnings.
-- **Features, views and rules are optional.** Add them only when the user asks for them; spend
-  the effort on cards, connectors and flows first.
+- **Ids are permanent.** Pick a short lower-case slug once (`orders`, `orders-db`, `w-update`) and
+  never change it. Views, links and steps attach by id.
+- **A flow step uses a solid connector, and starts where the last step ended.** If the story
+  needs to come back ("the provider replies"), add the connector back. If it does not continue
+  from the target (a write to a table), the connector is dashed and not a step.
+- **Branches fork only at the end** of a flow's main path. An early exit ("unmatched → skipped")
+  goes in a step `description` or a rule, or becomes its own flow.
+- **Every card and note has a position**, on the grid from `layout.md`.
 
 ## New deck or update?
 
@@ -109,25 +109,25 @@ when they name an existing deck and ask to change it.
 
 ## Update mode
 
-Change only what was asked. Keep every other object and every id exactly as it is, including key
-order and wording you did not need to touch; edit the draft rather than regenerating the whole
-file, so the user's own diff tools stay quiet too. The user's file is untouched until you deliver,
-so before delivering run `node <skill>/scripts/diff.mjs <their file> <draft> --format text` and
-show the result: added (`+`), changed (`~`) and removed (`-`), matched by id. Anything removed must
-be something they asked to remove; say so explicitly. A `~` on an object you did not mean to touch
-is a slip: undo it.
+Change only what was asked. Keep every other object, id, position, key order and wording; edit
+the draft rather than regenerating the file. Place new cards in free space next to the cards they
+connect to, on the same grid, and rerun lint so no connector crosses a card. Before delivering run
+`node <skill>/scripts/diff.mjs <their file> <draft> --format text` and show the result. Anything
+removed must be something they asked to remove; a `~` on an object you did not mean to touch is a
+slip: undo it.
 
 ## Handover
 
 End with this, filled in (omit lines that don't apply):
 
 ```
-Deck: <path> (<n> cards, <n> connectors, <n> flows). validate ✓ lint ✓ (warnings: <n or none>)
-What's in it: <3–6 lines from summary.mjs>
+Deck: <path> (<n> cards, <n> connectors, <n> flows, <n> rules). validate ✓ lint ✓ (warnings: <n or none>)
+What's in it: <3–6 lines from summary.mjs: groups, then flows>
+Gaps found: <the sticky notes you added, one line each>      (codebase mode)
 Assumed: <what you inferred rather than read, or "nothing">
-Warnings kept: <code: why it is fine here>                (only when lint left warnings)
-Changes: <diff.mjs text output>                         (update mode)
-Fidelity: merged … · collapsed … · left out … · could not map …   (codebase / text modes)
+Warnings kept: <code: why it is fine here>                   (only when lint left warnings)
+Changes: <diff.mjs text output>                              (update mode)
+Fidelity: merged … · left out … · could not map …            (codebase / text modes)
 Import: open Sododeck, Library → Import (or drop the file on the library).
         If it reports problems, use "Copy problems" and paste them here.
 ```

@@ -7,13 +7,12 @@ Read this for any new deck and for update requests that add cards, connectors or
 1. The file skeleton
 2. Cards
 3. Card types
-4. Connectors
+4. Connectors: hand-offs and side connectors
 5. Groups and levels
 6. Ids
-7. Positions, sizes and style
-8. Features and views
-9. Notes, tags and links
-10. Complete examples
+7. Positions, sizes and colour
+8. Notes, features, tags and links
+9. Examples
 
 ## 1. The file skeleton
 
@@ -24,7 +23,7 @@ Every deck has these root keys, even when empty, in this order:
   "$schema": "https://sododeck.com/schema/v1.json",
   "version": {{formatVersion}},
   "name": "Checkout",
-  "description": "Optional, one or two sentences (markdown).",
+  "description": "Optional, one or two sentences (markdown). In codebase mode: the commits read.",
   "nodes": [],
   "groups": [],
   "edges": [],
@@ -36,9 +35,9 @@ Every deck has these root keys, even when empty, in this order:
 }
 ```
 
-`nodes` are cards, `edges` are connectors, `stickies` are sticky notes. `rules` is an object keyed
-by rule id (see `rules.md`), everything else is a list. For more than one feature, add views as in §8; otherwise leave `views`
-empty and the app shows its standard views. Unknown keys are refused, so don't invent fields.
+`nodes` are cards, `edges` connectors, `stickies` notes. `rules` is an object keyed by rule id
+(`rules.md`); everything else is a list. Leave `views` empty: the app creates its standard views.
+Unknown keys are refused, so don't invent fields.
 
 ## 2. Cards
 
@@ -49,17 +48,22 @@ empty and the app shows its standard views. Unknown keys are refused, so don't i
   "title": "Order Service",
   "description": "Creates orders and asks the payment provider to charge.",
   "tech": "Node.js",
-  "owner": "Checkout team",
-  "tags": ["core"]
+  "links": [{ "label": "source", "url": "src/orders/main.ts" }],
+  "group": "shop",
+  "position": { "x": 600, "y": 0 }
 }
 ```
 
-Required: `id`, `type`, `title`. Useful: `description` (markdown, the place for details),
-`tech`, `host`, `owner`, `tags`, `links` (`[{ "url": "…", "label": "…" }]`), `group`, `parent`,
-`level` (`landscape`, `system`, `container`, `component`: the zoom level the card belongs to).
+Required: `id`, `type`, `title`. Always: `position` (`layout.md`), `group` when the deck has
+groups. Useful: `description` (markdown: behaviour, guards, numbers), `tech`, `host`, `owner`,
+`tags`, `links`, `rules` (a policy the card applies everywhere), `parent` and `level` (section 5).
 
-The title is what people read on the card: 1–4 words, under 40 characters. Everything else goes in
-`description` or fields.
+A card is something that **acts or holds state**: a deployable, a use case, a consumer, a worker,
+a listener, an adapter, a store, an outside system. Not a card: a message topic (a connector
+label), a function call that is part of one card's job, a config value.
+
+The title is what people read: 1–4 words, under 40 characters, naming the role ("Reassign job
+completion", "Send to partner"). Details go in `description` and fields.
 
 ## 3. Card types
 
@@ -70,121 +74,80 @@ the Architecture pack need their pack listed in the root `packs` list (for examp
 {{cardTypes}}
 
 An unknown type id is kept and drawn as a generic card, with a warning. Prefer a built-in one.
+A queue table or a consumer of a topic is a `queue` card; a scheduled workflow is a `task`; a
+person or their device is `client`; another company's system is `external`.
 
-People and their devices (a customer, a support agent, a courier app) are `client` cards. Outside
-companies' systems (a payment provider, an email service) are `external` cards. Shapes are for
-plain sketches; prefer cards in an architecture deck.
-
-## 4. Connectors
+## 4. Connectors: hand-offs and side connectors
 
 ```json
 {
-  "id": "orders-payments",
+  "id": "orders-notify",
   "from": "orders",
-  "to": "payments",
-  "protocol": "http",
-  "label": "charge card"
+  "to": "notify",
+  "protocol": "event",
+  "label": "OrderPaid · Kafka"
 }
 ```
 
-Required: `id`, `from`, `to`. `from` and `to` are card ids (a group id also works, for "talks to
-the whole group"). `protocol` is one of `http` (REST, GraphQL, HTTPS), `grpc`, `event` (Kafka,
-queues, pub/sub), `sql`, `websocket`, `other`; put the specific technology in the label
-("OrderPaid · Kafka"). `direction` is `forward` (default), `both` or `none`.
+Required: `id`, `from`, `to` (card ids; a group id means "the whole group"; a note id ties a note
+to a card). `protocol`: `http` (REST, GraphQL), `grpc`, `event` (Kafka and other brokers), `sql`,
+`websocket`, `other` (in-process events and calls). The label says **what** travels, under 32
+characters: the topic or event name, the method, the operation.
 
-The label says **what** travels (`POST /checkout`, `OrderPaid`, `charge card`), under 32 characters.
-Draw a connector in the direction the call or message goes. Request and reply are two connectors
-only when a flow needs to walk back (see `flows.md`); otherwise one connector is enough.
+There are two kinds, and the difference is the most important modeling decision in a deck:
+
+- **Solid (default): a hand-off.** After it, the target holds the work. Flows walk these.
+- **Dashed: a side read or write.** The source writes its table, calls a lookup, seeds a status
+  key, and carries on. Mark it `"style": { "dash": "dashed", "width": 1.5 }`. Never a flow step.
+  Draw one only when the reader needs to see that store or service (where results land, a call
+  to another system); routine writes to the service's own tables stay in descriptions. If more
+  than a third of a deck's connectors are dashed, cut back.
+
+Draw every connector in the direction the work or data goes. Two connectors between the same pair
+(request and reply) only when a flow walks back. One connector per meaning: if the same pair
+carries two unrelated things, label one connector with both ("UPDATE · CHANGE_BOUND") rather than
+drawing two parallel lines.
 
 ## 5. Groups and levels
 
-**Groups** put related cards in one frame on the same screen: `{ "id": "core", "title": "Core
-services" }`, then `"group": "core"` on each card. Use them for teams, bounded contexts, network
-zones, "data stores". A group can sit inside another (`"parent": "outer"` on the group), but one
-level of groups is usually enough.
+**Groups** frame related cards on the same screen: `{ "id": "workers", "title": "Queue +
+workers", "parent": "backend", "style": { "fill": "indigo" } }`, then `"group": "workers"` on
+each card. Use them for each system, and inside the system the user cares about, for each role
+(use cases, workers, listeners, outbound). One or two levels of nesting.
 
-**Levels** let a reader drill in: a card with `"parent": "platform"` lives one level below the
-`platform` card and appears when the user opens it. Use levels when one screen would hold more
-cards than the detail dial allows: the top level shows the big blocks, each block opens to its
-services. Set `level` to say what kind of zoom it is (`system` on top, `container` or `component`
-below). Connectors at the top level stay between top-level cards; detailed connectors stay inside
-the level.
+**Levels** (`"parent": "<card id>"` on a card) put cards on another screen the reader opens from
+the parent card. Use a level only for detail most readers skip; a reader who has to open five
+cards to follow one flow loses the flow. A flow should stay on one screen.
 
 ## 6. Ids
 
-- Ids are opaque and permanent: 1–64 characters of letters, digits, `-`, `_`, `.`, `:`. Use short
-  lower-case slugs, at most 32 characters (`orders`, `orders-db`, `e-pay`, `s3`).
-- Unique within their collection; a card and a group should never share an id.
-- Never derived from the title in a way that would change with it: `order-service-v2-new` for
-  "Order Service v2 (new)" is the pattern lint warns about.
-- Steps, branches, rule columns and rows have ids too; short ones are fine (`s1`, `submit`).
-- References are always by id: `group`, `parent`, `from`, `to`, `edge`, `rules`.
+- Opaque and permanent: 1–64 characters of letters, digits, `-`, `_`, `.`, `:`. Use short
+  lower-case slugs, at most 32 characters, prefixed by role when it helps: `uc-update`,
+  `w-update`, `l-update`.
+- Unique within their collection; a card and a group never share an id.
+- Never rebuilt from the title (`order-service-v2-new` for "Order Service v2 (new)" is what lint
+  warns about).
+- Steps, branches, rule columns and rows have ids too; short ones are fine (`s1`, `enq`).
 
-## 7. Positions, sizes and style
+## 7. Positions, sizes and colour
 
-Leave `position` and `size` out. The app lays out every card without a position when the deck is
-imported, and keeps cards that have one exactly where they are. A deck with some cards placed and
-others not is fine only in update mode.
+Every card and every note has a `position` (top-left, canvas px); `layout.md` explains the grid.
+Leave `size` out unless a card holds long text. Colour the **groups** (`style.fill`, one named
+colour each: `red orange amber yellow lime green teal cyan blue indigo violet pink slate`), not
+the cards.
 
-`style` (`{ "fill": "blue" }`, named colours `red orange amber yellow lime green teal cyan blue
-indigo violet pink slate` or `#rrggbb`) is for at most one or two focal cards; colour carries
-meaning only when it is rare.
+## 8. Notes, features, tags and links
 
-## 8. Features and views
+- `stickies`: `{ "id": "gap-1", "text": "**Gap · no retry.** …", "color": "amber", "position": {
+"x": 1200, "y": -400 }, "size": { "width": 240, "height": 120 } }` (colours `amber blue green
+clay grey`), outside every group frame. Use them for gaps, open questions and caveats. Never
+  write `anchor`: notes are placed, not pinned.
+- `features`: `[{ "id": "auto", "title": "Auto" }]` groups flows (`"feature": "auto"` on a flow).
+- `tags`: short labels shared across the deck, for filtering views.
+- `links`: sources, documentation, dashboards. In codebase mode every card and connector has one.
 
-A big system stays readable through features and views, not through fewer cards.
+## 9. Examples
 
-- `features`: one per business capability, `[{ "id": "pricing", "title": "Pricing" }]`. Every
-  flow names its feature (`"feature": "pricing"`).
-- `views`: saved views the user switches between. The **first view is the base view** and shows
-  every card; write `{ "id": "overview", "type": "system", "title": "Overview" }` first. Then one
-  view per feature, in one of two shapes:
-
-```json
-{ "id": "view-pricing", "type": "feature", "title": "Pricing", "feature": "pricing" }
-```
-
-A **feature view** shows exactly the cards the feature's flows walk through (both ends of every
-step's connector). Prefer it: it stays right when flows change. Don't add `includes` to it: the
-view shows only cards that are in both, so a listed card off the flows stays hidden.
-
-```json
-{
-  "id": "view-pricing",
-  "type": "custom",
-  "title": "Pricing",
-  "includes": ["worker", "pricing-engine", "agreements-db", "candidates-db"]
-}
-```
-
-A **listed view** shows the cards you list. Use it when the feature's picture needs cards its
-flows don't walk through: a store a step writes (mentioned in its `notes`), a listener, a config
-table.
-
-Leave `positions` out of every view: on import the app lays each view out on its own, so it opens
-as a compact diagram of that feature. Cards shared by several features (a queue, a worker) appear
-in each view that needs them. A feature with no flows yet shows nothing in a feature view: give it
-a listed view. When the deck has no `views` at all, the app shows its standard Overview and Flows
-views.
-
-## 9. Notes, tags and links
-
-- Explanations belong in `description` (cards, flows, rules) and step `notes`: they show in the
-  inspector and never cover the diagram. Gaps, caveats and "documented vs implemented" go there.
-- `stickies`: a note sits on the canvas at its own `position`, so it needs one:
-  `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "position": { "x": 924, "y": -16 } }`
-  (colours `amber blue green clay grey`). A new deck leaves positions out (section 7), so there put
-  caveats and open questions in the card's `description` and leave `stickies` empty. In update
-  mode, add a note next to a card that has a position (for example 24 px right of it and 96 px
-  above). To tie a note to a card, add a connector between them: a connector may end on a note.
-  Never write `anchor`: notes are no longer pinned, and the key is only read from older files.
-- `tags`: short labels shared across the deck (`"tags": ["pci"]`), for filtering views.
-- `links`: documentation, dashboards, source files. In codebase mode every card and connector
-  carries its source link (see `from-codebase.md`).
-
-## 10. Complete examples
-
-- `examples/checkout.sododeck`: seven cards and one flow, every part together.
-- `examples/order-features.sododeck`: three features sharing one set of services, an Overview
-  and one view per feature, a rule on a step. Copy its shape for any system with several features.
-- `examples/platform.sododeck`: groups and two levels.
+`examples/checkout.sododeck`: a small deck with a group, a dashed side write, a Kafka topic as a
+connector label, a reply connector, one flow and a note. `examples/platform.sododeck`: groups on
+a level below a top-level card. `examples/refund-policy.sododeck`: a rule on a step.

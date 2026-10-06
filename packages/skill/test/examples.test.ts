@@ -32,9 +32,10 @@ describe('example decks (027 FR-003, FR-025)', () => {
       }
     });
 
-    it(`${name} leaves positions out, so the app lays it out on import`, () => {
+    it(`${name} places every card and note by hand`, () => {
       const { file } = lintText(text, name, 'test');
-      expect(file?.nodes.every((node) => node.position === undefined)).toBe(true);
+      expect(file?.nodes.every((node) => node.position !== undefined)).toBe(true);
+      expect(file?.stickies.every((sticky) => sticky.position !== undefined)).toBe(true);
     });
   }
 });

@@ -10,7 +10,9 @@ Add `"database"` to the root `packs` (for example `"packs": ["architecture", "da
 
 ## Tables
 
-A table is a card of type `db-table`. Its `title` is the table name.
+A table is a card of type `db-table`. Its `title` is the table name. Tables need a `position`
+like every card; put related tables in one column and a relationship's two tables on one row
+where you can (`layout.md`).
 
 ```json
 {
@@ -18,6 +20,7 @@ A table is a card of type `db-table`. Its `title` is the table name.
   "type": "db-table",
   "title": "orders",
   "description": "One row per order.",
+  "position": { "x": 300, "y": 0 },
   "columns": [
     { "id": "orders-id", "name": "id", "type": "bigint", "pk": true, "increment": true },
     { "id": "orders-customer", "name": "customer_id", "type": "bigint", "notNull": true },

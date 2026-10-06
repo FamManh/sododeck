@@ -1,74 +1,57 @@
 # Taste
 
-Read this once for every new deck. A valid deck can still be unreadable; these rules are what
-makes a reader understand the system in a minute.
+Read this once for every new deck. A valid deck can still be useless; these are the habits that
+make a reader understand a system in a minute and trust it.
 
-## Draw the system at the detail it has
+## The reader presses play
 
-- By default, draw what really exists at the level the user works at: every use case, consumer,
-  topic, table or external system they would name. A large system makes a large deck, and that is
-  fine: features, views, flows and levels keep it readable, not fewer cards.
-- Merge pieces only when the user asks for an overview, a slide or `simplified` detail, and then
-  say in the handover what you merged.
-- One card per thing, still: three replicas of a service are one card with `host: "3 replicas"`,
-  and a helper that only one card uses can live in that card's `description`.
-- Before adding a card, check it isn't already there under another name: shared parts (a queue, a
-  worker pool, an outbox, a job store) are drawn **once** and every flow walks through them.
+Judge the deck by playing each flow in your head. The light should move steadily across the
+screen, mostly left to right, one hop per step. If it jumps back to a card it just left, a
+connector is modelled as a call instead of a hand-off (`flows.md`). If it disappears into a card
+that sits on top of the line, the layout is wrong (`layout.md`). If a step's title does not say
+what happens, the reader stops.
 
-## Make a big deck readable
+## Every card earns its place
 
-What makes a large deck look tangled is almost never the number of cards; it is how they are
-tied together. Measured on a real 56-card, 112-connector deck: 771 crossing connectors as first
-drawn, 220 after removing groups of one kind, 25 after also trimming connectors to shared stores.
-
-- **No groups on a big deck.** Over ~25 cards, leave groups out: the layout keeps a group
-  together, so its members leave their flows and every connector to them crosses the canvas (even
-  a group for one deployable cost 363 crossings against 220 without). Put the boundary in each
-  card's `host` or `tech` ("work-order backend"). On a small deck, group only another company's
-  systems or the UI; never cards that share a type (lint: `group-by-kind`).
-- **Hubs get few connectors.** A store, event bus, job table or worker that everything touches
-  becomes a hub whose connectors cut through the whole picture. Draw its connectors only where a
-  flow walks through it, plus its one owner; list the other readers and writers in its
-  `description` (lint: `hub-card`, more than 8 connectors).
-- **Left to right is the story.** Entry points (users, upstream systems, topics) come first,
-  outputs (external systems, notifications) last; the app lays out along connector direction, so
-  draw each connector the way the request or message travels. Replies only where a flow needs them.
-- **Every card is connected.** A card with no connector floats wherever space is left.
-- **Explanations live in descriptions and step notes.** Sticky notes are for a handful of
-  one-line warnings that must be seen on the canvas.
+- One card per thing that acts or holds state and that a reader would name. Merge a helper into
+  the card that uses it and mention it in the `description`.
+- A topic is a label, a function call is a sentence, a config value is a field. None is a card.
+- Show the inside of the service the question is about, at the level the code is organised by
+  (use cases, workers, listeners). Keep the other systems as one or two cards each.
 
 ## Budgets
 
-|                     | Budget                                                 | Lint code           |
-| ------------------- | ------------------------------------------------------ | ------------------- |
-| Card or group title | 40 characters (1–4 words is best)                      | `label-too-long`    |
-| Connector label     | 32 characters                                          | `label-too-long`    |
-| Cards per level     | only when asked: balanced 12 · simplified 7            | `level-over-budget` |
-| Steps per flow      | 3–12 (split longer journeys)                           |                     |
-| Sticky note         | a short sentence (under ~60 characters), a handful max |                     |
-| Accent colours      | one colour on at most two focal cards                  |                     |
+|                     | Budget                                                           | Lint code           |
+| ------------------- | ---------------------------------------------------------------- | ------------------- |
+| Cards on one screen | faithful 60 · balanced 30 · simplified 10 (only with `--detail`) | `level-over-budget` |
+| Connectors per card | 8; a shared store or bus gets only the ones a flow walks         | `hub-card`          |
+| Card or group title | 40 characters (1–4 words is best)                                | `label-too-long`    |
+| Connector label     | 32 characters                                                    | `label-too-long`    |
+| Steps per flow path | 4–15 (main path plus one branch)                                 |                     |
+| Rows per rule       | as many cases as the code has                                    |                     |
+
+Over the card budget? First merge minor cards; then group harder; only then push a part a level
+down.
 
 ## Shape follows meaning
 
-- A sequence is a **flow**, not a chain of numbered cards.
-- A decision or policy is a **rule** on the step that applies it, not a diamond card.
-- One service fanning out to many is one card with many connectors, or a **group** of the targets.
-- Another company, the UI, or one deployable you draw the inside of is a **group**; a set of cards
-  that merely share a type is not.
-- A detail that only some readers need is a **level** below, not more cards on top.
+- A sequence is a **flow**; a decision is a **rule** on the step that decides; a team, system or
+  role is a **group**; a gap is a **note**.
+- A side write is a **dashed** connector, a hand-off a **solid** one.
+- A choice at the end of a flow is a **branch**; a choice in the middle is a rule plus a
+  description, or a separate flow.
 
 ## Words
 
-- Titles name the thing ("Order Service", "Orders DB"), labels name what travels ("charge card",
-  "OrderPaid"), step titles are verbs ("Charge card").
-- Put specifics in fields: `tech`, `host`, `owner`, `protocol`; prose in `description`; a real
-  example message in the step's `payload`.
-- For the `executive` audience, drop protocols and tech, keep owners and outcomes; for `mixed`,
-  plain titles and one-sentence descriptions.
+- Card titles name the role ("Refresh job completion"), connector labels name what travels
+  ("OrderPaid · Kafka", "enqueue RECALCULATE"), step titles say what happens ("Publish delete").
+- Numbers belong in descriptions and conditions: retry counts, dedupe windows, thresholds,
+  batch sizes. They are what engineers come to check.
+- For `executive` readers drop protocols and tech; for `mixed`, plain titles and one sentence.
 
 ## Honesty
 
-- Draw only what was described or what the code shows. Likely-but-unstated connectors go in the
-  handover under "Assumed", not in the deck.
-- Never leave a card without connections unless it is in a group or has a level below it; lint
-  reports `orphan-card`.
+- Draw what you read in the code or what the user said. A likely-but-unseen connector goes under
+  "Assumed" in the handover, not into the deck.
+- When the code and a document disagree, draw the code and add a gap note.
+- A card without connectors is fine only inside a group; lint reports `orphan-card` otherwise.

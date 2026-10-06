@@ -69,18 +69,21 @@ find it in the code. Ids are short slugs made once from those names (`gen-queue-
 ## 3. Build order
 
 1. Cards: every distinct box once, with type and a description that gathers the constants and
-   notes drawn next to it. Group only real boundaries (another company, the UI, one deployable);
-   a drawing's colour bands or "all use cases" columns are not groups (`taste.md`).
+   notes drawn next to it. Group them by system and, inside the system the drawing is about, by
+   role (use cases, workers, listeners, outbound), as `layout.md` describes. A drawing's colour
+   band is a group when it matches one of those; otherwise ignore it.
 2. Connectors: every arrow, deduplicated by (from, to, what travels). For a shared store, bus or
    job table drawn with arrows from everywhere, keep the arrows a flow walks and its owner; name
    the rest in its description.
 3. Flows: one per entry point, row or numbered path; add reply connectors only where the chain
    needs them.
 4. Features, views and rules only if the user asked for them.
-5. Validate, lint (clear `group-by-kind` and `hub-card`), deliver. Don't pass `--detail`: the
-   drawing's detail is the detail.
+5. Lay the deck out on the grid (`layout.md`); the drawing's own coordinates are a hint for the
+   column order, not positions to copy.
+6. Validate, lint (clear the layout warnings and `hub-card`), deliver. Don't pass `--detail`:
+   the drawing's detail is the detail.
 
-**Big decks.** Past about 40 cards, write a small script that builds the deck JSON (cards, then
+**Big decks.** Past about 15 cards, write a small script that builds the deck JSON (cards, then
 connectors, then flows from lists of connector ids) instead of typing it: it keeps ids consistent
 and lets you compute each listed view's `includes` from the flows plus the stores their notes name.
 Run it, then validate and lint the file it writes.
