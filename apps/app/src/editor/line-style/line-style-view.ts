@@ -3,8 +3,8 @@
  * `styleView`): the one value they all have, or Mixed plus the set of values in use. Effective
  * values count, so a connector with no `dash` is `solid`.
  */
-import { edgeLineStyle, type Dash, type Width } from '@sododeck/model';
-import type { ColorRef, Edge, EdgeShape } from '@sododeck/schema';
+import { edgeLineStyle, type Dash, type ShapedEdge, type Width } from '@sododeck/model';
+import type { ColorRef, EdgeShape } from '@sododeck/schema';
 
 import type { Shared } from '../inspector/derive';
 
@@ -33,7 +33,7 @@ function keyView<T>(values: readonly T[]): KeyView<T> {
   };
 }
 
-export function lineStyleView(edges: readonly Pick<Edge, 'route' | 'style'>[]): LineStyleView {
+export function lineStyleView(edges: readonly ShapedEdge[]): LineStyleView {
   const styles = edges.map(edgeLineStyle);
   return {
     shape: keyView(styles.map((s) => s.shape)),
