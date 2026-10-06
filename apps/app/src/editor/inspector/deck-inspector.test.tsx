@@ -29,14 +29,12 @@ const withRules = {
   },
 };
 
+/** Renders deck settings and switches to General (they open on Database). */
 function setup(onOpenRules?: () => void) {
   const { wrapper, doc, editor } = editorWrapper(withRules);
-  return {
-    ...render(<Harness onOpenRules={onOpenRules} />, { wrapper }),
-    doc,
-    editor,
-    user: userEvent.setup(),
-  };
+  const view = render(<Harness onOpenRules={onOpenRules} />, { wrapper });
+  fireEvent.click(screen.getByRole('tab', { name: 'General' }));
+  return { ...view, doc, editor, user: userEvent.setup() };
 }
 
 describe('DeckInspector (story 2, FR-012)', () => {
@@ -108,6 +106,10 @@ describe('DeckInspector (story 2, FR-012)', () => {
       screen.getByRole('textbox', { name: 'Description' }),
       screen.getByRole('combobox', { name: 'Add tag' }),
       screen.getByRole('button', { name: 'Rules 1' }),
+      // Canvas (ADR 0044); Reset is disabled while the deck follows the theme.
+      screen.getByRole('radio', { name: 'Dots' }),
+      screen.getByLabelText('Pick background colour'),
+      screen.getByRole('textbox', { name: 'Background colour' }),
       screen.getByRole('button', { name: 'Export .sododeck' }),
     ];
     screen.getByRole('textbox', { name: 'Name' }).focus();
@@ -127,11 +129,11 @@ describe('DeckInspector › Database (041 US4)', () => {
     ],
   };
 
-  /** Renders deck settings on the Database tab. */
+  /** Renders deck settings, which open on the Database tab. */
   function setupWith(file: typeof inspectorDeck) {
     const { wrapper, doc, editor } = editorWrapper(file);
     render(<Harness />, { wrapper });
-    fireEvent.click(screen.getByRole('tab', { name: 'Database' }));
+    expect(screen.getByRole('tab', { name: 'Database' })).toHaveAttribute('aria-selected', 'true');
     return { doc, editor, user: userEvent.setup() };
   }
 
@@ -211,12 +213,19 @@ describe('DeckInspector › Database (041 US4)', () => {
     expect(toJSON(doc)).not.toHaveProperty('groupingMode');
   });
 
-  it('is absent with no table and the Database pack off: no tab bar, General alone', () => {
+  it('opens on Database even with no table and the pack off: import only, no table settings', async () => {
     const { wrapper } = editorWrapper({ ...inspectorDeck, packs: ['architecture'] });
     render(<Harness />, { wrapper });
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Database' })).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    const database = screen.getByRole('tabpanel', { name: 'Database' });
     expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
+    const importButton = within(database).getByRole('button', { name: 'Import SQL or DBML…' });
+    await user.click(importButton);
+    expect(useUiStore.getState().importDialog).toEqual({ open: true, returnFocus: importButton });
+    act(() => {
+      useUiStore.getState().closeImport();
+    });
+    await user.click(screen.getByRole('tab', { name: 'General' }));
     expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
   });
@@ -231,7 +240,7 @@ describe('DeckInspector › tabs', () => {
     ],
   };
 
-  it('opens on General and switches to Database and back', async () => {
+  it('opens on Database and switches to General and back', async () => {
     const { wrapper } = editorWrapper(tableDeck);
     render(<Harness />, { wrapper });
     const user = userEvent.setup();
@@ -241,21 +250,32 @@ describe('DeckInspector › tabs', () => {
         .getAllByRole('tab')
         .map((t) => t.textContent),
     ).toEqual(['General', 'Database']);
-    expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Database' })).toHaveAttribute('aria-selected', 'true');
+    const database = screen.getByRole('tabpanel', { name: 'Database' });
+    expect(within(database).getByRole('list', { name: 'Show on tables' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'General' }));
     const general = screen.getByRole('tabpanel', { name: 'General' });
     expect(within(general).getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
     expect(within(general).getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
+    expect(useUiStore.getState().announcement.text).toBe('General tab');
 
-    await user.click(screen.getByRole('tab', { name: 'Database' }));
-    const database = screen.getByRole('tabpanel', { name: 'Database' });
-    expect(within(database).getByRole('list', { name: 'Show on tables' })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Name' })).not.toBeInTheDocument();
-    expect(useUiStore.getState().announcement.text).toBe('Database tab');
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Database' })).toHaveFocus();
+    expect(screen.getByRole('list', { name: 'Show on tables' })).toBeInTheDocument();
+  });
 
-    await user.keyboard('{ArrowLeft}');
-    expect(screen.getByRole('tab', { name: 'General' })).toHaveFocus();
-    expect(screen.getByRole('textbox', { name: 'Name' })).toBeInTheDocument();
+  it('opens on General when asked', () => {
+    const { wrapper } = editorWrapper(tableDeck);
+    render(
+      <MemoryRouter>
+        <DeckInspector deck={tableDeck} initialTab="general" />
+      </MemoryRouter>,
+      { wrapper },
+    );
+    expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('shows the Database tab with the Database pack on and no table yet', () => {
