@@ -63,6 +63,7 @@ import {
   type FieldRow,
 } from '../card-fields';
 import { SHAPE_TITLE_FONT, titleBox } from '../shapes/shape-geometry';
+import { textRotationOf } from '../shapes/text-rotation';
 import { shapeTitleLines } from '../shapes/shape-layout';
 import { tableContextOf } from '../table-keys';
 import { TABLE_CARD, type TableLayout } from '../table-layout';
@@ -115,6 +116,8 @@ export interface SceneCard {
   layout: CardLayout;
   /** Drawn as a shape (031): its geometry; `titleLines` then wrap in its title box. */
   geometry?: Geometry;
+  /** A turned text (ADR 0043): degrees clockwise around the box centre; absent when not turned. */
+  rotation?: number;
   /** A table card's body (041): the same `tableLayout` the canvas draws (`layout.table`). */
   table?: TableLayout;
   fill?: string;
@@ -389,6 +392,7 @@ function shapeCard(
   const measure = textMeasurer();
   const size = { width: layout.width, height: layout.height };
   const width = titleBox(geometry, { x: 0, y: 0, ...size }).width;
+  const rotation = textRotationOf(node);
   return {
     id: node.id,
     rect: { ...displayPosition(node, index), ...size },
@@ -413,6 +417,7 @@ function shapeCard(
     level,
     layout,
     geometry,
+    ...(rotation === 0 ? {} : { rotation }),
     ...((geometry === 'none' ? undefined : exportLook(node.style)) ?? EMPTY_LOOK),
   };
 }

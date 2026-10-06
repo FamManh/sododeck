@@ -512,6 +512,14 @@ export const sododeckFileSchema = z
                 'Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported (a shape from its own minimum, as small as 40 × 24); values outside that range are drawn clamped and reported as a problem.',
               )
               .optional(),
+            rotation: z
+              .number()
+              .gte(-180)
+              .lte(180)
+              .describe(
+                'Text nodes (`text`): how far the words are turned, in degrees clockwise around the centre of the box, from -180 to 180. Shared by every view. Absent means not turned; the app removes the key at 0. On other types it is kept and ignored.',
+              )
+              .optional(),
             style: z
               .object({
                 fill: z

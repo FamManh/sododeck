@@ -22,7 +22,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
-import { addTable, CANVAS_ATTR, canvasElement, nodeElement } from './canvas-actions';
+import {
+  addTable,
+  CANVAS_ATTR,
+  canvasElement,
+  isReturningFocus,
+  nodeElement,
+} from './canvas-actions';
 import { bundleEdges, bundleOptions } from './bundles';
 import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
@@ -745,7 +751,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           }
           return;
         }
-        if (pointerFocus.current) return;
+        // Focus put back by the app (after a delete, a closed menu) stays on the canvas: picking
+        // a card here would pan to it.
+        if (pointerFocus.current || isReturningFocus()) return;
         const ui = useUiStore.getState();
         // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
         if (ui.flowSession !== null) return;

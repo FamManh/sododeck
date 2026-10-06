@@ -518,6 +518,10 @@ export interface Node {
   rules?: IdList;
   position?: Position;
   size?: Size;
+  /**
+   * Text nodes (`text`): how far the words are turned, in degrees clockwise around the centre of the box, from -180 to 180. Shared by every view. Absent means not turned; the app removes the key at 0. On other types it is kept and ignored.
+   */
+  rotation?: number;
   style?: Style;
   schema?: DbName;
   /**

@@ -28,6 +28,7 @@ import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
 import { TYPE_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
 import { addComponent } from './canvas-actions';
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { GROUP_PADDING } from './canvas-geometry';
 import { frameContent } from './editing/frame-resize';
 import { clampFrame } from './editing/resize-limits';
@@ -719,6 +720,37 @@ describe('Canvas', () => {
       canvas.focus();
     });
     expect(ui().focusedId).toBeNull();
+  });
+
+  it('keeps focus on the canvas after a delete instead of handing it to another card', async () => {
+    // Founder feedback: deleting a component made the board jump to another one. The delete puts
+    // focus back on the canvas; treating that as a Tab into the canvas picked a card and panned.
+    function DeleteHarness() {
+      const editor = useEditor();
+      return (
+        <>
+          <Canvas />
+          <ConfirmDeleteDialog deck={useDeckSnapshot(editor.doc)} />
+        </>
+      );
+    }
+    const { container } = renderWithEditor(<DeleteHarness />, deck);
+    const nodeB = container.querySelector<HTMLElement>('[data-node-id="b"]');
+    if (nodeB === null) throw new Error('no card');
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().focus('b');
+      nodeB.focus();
+    });
+    act(() => {
+      ui().requestDelete({ nodes: ['b'] });
+    });
+    // The roving-focus handover runs on a timer; let it run.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(ui().focusedId).toBeNull();
+    expect(container.querySelector('[data-canvas]')).toHaveFocus();
   });
 
   it('drags a marquee with Select and pans with Hand (§g-57)', () => {

@@ -909,7 +909,13 @@ function shape(item: SceneCard, palette: ExportPalette): string {
   const fill = item.fill ?? palette.surface;
   const stroke = item.stroke ?? palette.borderStrong;
   const paths = shapePath(geometry, item.rect);
-  const out: string[] = [`<g data-export="shape" data-id="${escapeXml(item.id)}">`];
+  const { x, y, width, height } = item.rect;
+  // A turned text (ADR 0043) turns around its box centre, as on the canvas.
+  const turn =
+    item.rotation === undefined
+      ? {}
+      : { transform: `rotate(${n(item.rotation)} ${n(x + width / 2)} ${n(y + height / 2)})` };
+  const out: string[] = [`<g ${attrs({ 'data-export': 'shape', 'data-id': item.id, ...turn })}>`];
   const path = (part: string, d: string, values: Record<string, string | number>) =>
     `<path ${attrs({ 'data-part': part, d, 'stroke-width': BORDER, 'stroke-linejoin': 'round', ...values })}/>`;
   if (paths.lip !== null) out.push(path('lip', paths.lip, { fill: stroke, stroke }));
