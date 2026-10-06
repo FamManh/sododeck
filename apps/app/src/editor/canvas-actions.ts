@@ -263,11 +263,30 @@ export function nodeElement(id: string): HTMLElement | null {
   return canvasElement()?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(id)}"]`) ?? null;
 }
 
-/** Puts keyboard focus back on the canvas: the focused component, else the canvas itself. */
+// True only while `focusCanvas` moves focus: the focus event fires synchronously inside it.
+let returningFocus = false;
+
+/**
+ * Puts keyboard focus back on the canvas: the focused component, else the canvas itself.
+ *
+ * This is not a Tab into the canvas, so the canvas must not hand focus on to a card: after a
+ * delete there is no focused component, and the card it picked (often off-screen, or not the one
+ * the user was looking at) was panned into view, so the board jumped (founder feedback).
+ */
 export function focusCanvas(): void {
   const { focusedId } = useUiStore.getState();
   const target = (focusedId === null ? null : nodeElement(focusedId)) ?? canvasElement();
-  target?.focus({ preventScroll: true });
+  returningFocus = true;
+  try {
+    target?.focus({ preventScroll: true });
+  } finally {
+    returningFocus = false;
+  }
+}
+
+/** Whether the current focus event comes from `focusCanvas` (see there). */
+export function isReturningFocus(): boolean {
+  return returningFocus;
 }
 
 export const PALETTE_ID = 'palette-panel';
