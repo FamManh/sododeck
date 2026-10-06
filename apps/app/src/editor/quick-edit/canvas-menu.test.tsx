@@ -65,9 +65,12 @@ describe('CanvasMenu (019 US5)', () => {
       'Reset size',
       'Colour: none',
       'Icon…',
-      'CopyCtrl+C',
       'CutCtrl+X',
+      'CopyCtrl+C',
+      'PasteCtrl+V',
       'DuplicateCtrl+D',
+      'Copy as PNG',
+      'Copy as SVG',
       'GroupCtrl+G',
       'LockCtrl+Shift+L',
       'Align',
@@ -183,13 +186,31 @@ describe('CanvasMenu (019 US5)', () => {
     });
   });
 
+  it('offers the clipboard on a marquee selection of a card and a note (feedback)', () => {
+    setup();
+    act(() => {
+      ui().select({ nodes: ['a'], stickies: ['s'] });
+    });
+    fireEvent.contextMenu(card('Service: A'), { clientX: 40, clientY: 50 });
+    expect(screen.getByRole('menu', { name: 'Actions for 2 items' })).toBeInTheDocument();
+    for (const name of ['Cut', 'Copy', 'Duplicate', 'Copy as PNG', 'Copy as SVG']) {
+      expect(
+        within(menu()).getByRole('menuitem', { name: new RegExp(`^${name}(?! as)`) }),
+      ).toBeEnabled();
+    }
+    // Nothing was copied yet: Paste is shown, disabled, with its reason.
+    const paste = within(menu()).getByRole('menuitem', { name: /^Paste/ });
+    expect(paste).toHaveAttribute('aria-disabled', 'true');
+    expect(paste).toHaveAttribute('title', expect.stringMatching(/paste/));
+  });
+
   it('shows only non-editing actions in flow mode', () => {
     setup();
     act(() => {
       ui().openFlow('f');
     });
     fireEvent.contextMenu(card('Service: A'), { clientX: 40, clientY: 50 });
-    expect(items()).toEqual(['Open detailsEnter', 'CopyCtrl+C']);
+    expect(items()).toEqual(['Open detailsEnter', 'CopyCtrl+C', 'Copy as PNG', 'Copy as SVG']);
     expect(ui().activeFlow).not.toBeNull();
   });
 
@@ -218,9 +239,12 @@ describe('CanvasMenu (019 US5)', () => {
       'CollapseSpace',
       'Select members',
       'Colour: none',
-      'CopyCtrl+C',
       'CutCtrl+X',
+      'CopyCtrl+C',
+      'PasteCtrl+V',
       'DuplicateCtrl+D',
+      'Copy as PNG',
+      'Copy as SVG',
       'LockCtrl+Shift+L',
       'Spread ends evenly',
       'Delete group',

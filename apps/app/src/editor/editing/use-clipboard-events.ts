@@ -71,7 +71,7 @@ export function useClipboardEvents(): void {
         return;
       }
       event.clipboardData.setData('text/plain', copy.text);
-      copied(copy.fragment, cut ? 'Cut' : 'Copied');
+      copied(copy, cut ? 'Cut' : 'Copied');
       if (cut) deleteCut(editor, selection);
     };
     const onCopy = (event: ClipboardEvent) => {

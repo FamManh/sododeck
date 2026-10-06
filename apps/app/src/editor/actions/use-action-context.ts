@@ -10,6 +10,7 @@ import { useToast } from '@sododeck/ui/components/toast';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useMemo } from 'react';
 
+import { usePictureStore, type PictureStore } from '../../images/picture-store';
 import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import {
@@ -66,10 +67,12 @@ function contextOf(
   target: MenuTarget = targetOf(ui.selection),
   point: { x: number; y: number } | null = null,
   undoToast?: (message: string) => void,
+  pictures?: PictureStore | null,
 ): ActionContext {
   const graph = visibleGraph(view.deck, scopeOf(ui.drill), view.collapsed);
   return {
     ...(undoToast === undefined ? {} : { undoToast }),
+    ...(pictures === undefined ? {} : { pictures }),
     editor,
     deck,
     view,
@@ -120,6 +123,7 @@ export function useActionContext(
   const { fitView, screenToFlowPosition, getViewport, getNodes, getEdges } = useReactFlow();
   const toast = useToastMessage();
   const undoToast = useUndoToast();
+  const pictures = usePictureStore();
   return useMemo(
     () =>
       contextOf(
@@ -132,6 +136,7 @@ export function useActionContext(
         target,
         point ?? null,
         undoToast,
+        pictures,
       ),
     [
       editor,
@@ -150,6 +155,7 @@ export function useActionContext(
       target,
       point,
       undoToast,
+      pictures,
     ],
   );
 }
