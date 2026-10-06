@@ -2,7 +2,8 @@ import type { SchemaFormat } from '../../db/export/types';
 
 export type ImageAndDataFormat = 'json' | 'png' | 'svg';
 export type ExportFormat = ImageAndDataFormat | SchemaFormat;
-export type ImageScope = 'deck' | 'view' | 'flow';
+/** The Export dialog's picture scopes: the whole deck, the current view, or what is selected. */
+export type ImageScope = 'deck' | 'view' | 'selection';
 /** Scope of the schema formats (045): the selected tables, the database card in context, or all. */
 export type SchemaScope = 'selection' | 'database' | 'deck';
 export type PngScale = 1 | 2 | 3;

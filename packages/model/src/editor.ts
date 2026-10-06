@@ -4,6 +4,7 @@
  * generator. Undo covers only this editor's own transactions (research R5).
  */
 import type {
+  CanvasBackground,
   ColorRef,
   DbCheck,
   DbColumn,
@@ -81,7 +82,7 @@ import {
   type NewDbEnumValue,
 } from './ops/db-enums';
 import { setGroupingMode } from './ops/deck-grouping';
-import { setRelationshipDisplay, setTableDisplay } from './ops/table-display';
+import { setCanvasBackground, setRelationshipDisplay, setTableDisplay } from './ops/table-display';
 import type { GroupingMode } from './read';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
@@ -564,6 +565,12 @@ export interface DeckEditor {
    */
   setRelationshipDisplay(patch: Patch<RelationshipDisplay>): void;
   /**
+   * Patches the deck's canvas background (ADR 0044): `pattern` (`null` = dots) and `color`
+   * (`null` = follow the theme). The object leaves the file when empty. One undo step; nothing
+   * happens when nothing changes; bad keys or values are `invalid` with nothing written.
+   */
+  setCanvasBackground(patch: Patch<CanvasBackground>): void;
+  /**
    * Adds a column at `index` of a table (default: last) and returns its id (generated unless
    * given; a given id must be free among the deck's columns, indexes, checks, enums and values).
    * Flags are written `true` or left out. `invalid` for a node that is not a `db-table`.
@@ -1036,6 +1043,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setRelationshipDisplay: (patch) => {
       setRelationshipDisplay(ctx, patch);
+    },
+    setCanvasBackground: (patch) => {
+      setCanvasBackground(ctx, patch);
     },
     addColumn: (tableId, data, index) => addPart(ctx, tableId, 'columns', data, index),
     updateColumn: (tableId, columnId, patch) => {

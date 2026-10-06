@@ -28,6 +28,7 @@ import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
 import { TYPE_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
 import { addComponent } from './canvas-actions';
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { GROUP_PADDING } from './canvas-geometry';
 import { frameContent } from './editing/frame-resize';
 import { clampFrame } from './editing/resize-limits';
@@ -719,6 +720,37 @@ describe('Canvas', () => {
       canvas.focus();
     });
     expect(ui().focusedId).toBeNull();
+  });
+
+  it('keeps focus on the canvas after a delete instead of handing it to another card', async () => {
+    // Founder feedback: deleting a component made the board jump to another one. The delete puts
+    // focus back on the canvas; treating that as a Tab into the canvas picked a card and panned.
+    function DeleteHarness() {
+      const editor = useEditor();
+      return (
+        <>
+          <Canvas />
+          <ConfirmDeleteDialog deck={useDeckSnapshot(editor.doc)} />
+        </>
+      );
+    }
+    const { container } = renderWithEditor(<DeleteHarness />, deck);
+    const nodeB = container.querySelector<HTMLElement>('[data-node-id="b"]');
+    if (nodeB === null) throw new Error('no card');
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().focus('b');
+      nodeB.focus();
+    });
+    act(() => {
+      ui().requestDelete({ nodes: ['b'] });
+    });
+    // The roving-focus handover runs on a timer; let it run.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(ui().focusedId).toBeNull();
+    expect(container.querySelector('[data-canvas]')).toHaveFocus();
   });
 
   it('drags a marquee with Select and pans with Hand (§g-57)', () => {
@@ -1817,5 +1849,36 @@ describe('dropping files on the canvas (055 US2)', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(toJSON(doc).images).toBeUndefined();
+  });
+});
+
+describe('canvas background (ADR 0044)', () => {
+  const root = (container: HTMLElement) => container.querySelector<HTMLElement>('.react-flow');
+
+  it('draws dots on the theme colours by default', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    expect(container.querySelector('.react-flow__background pattern circle')).not.toBeNull();
+    expect(root(container)?.style.getPropertyValue('--color-canvas')).toBe('');
+  });
+
+  it('follows the stored pattern and colour, and back to the theme on reset', () => {
+    const { container, editor } = renderWithEditor(<Canvas />, {
+      ...deck,
+      canvasBackground: { pattern: 'grid', color: '#1f2a44' },
+    });
+    expect(container.querySelector('.react-flow__background pattern path')).not.toBeNull();
+    expect(root(container)?.style.getPropertyValue('--color-canvas')).toBe('#1f2a44');
+    expect(root(container)?.style.getPropertyValue('--color-dot')).not.toBe('');
+
+    act(() => {
+      editor().setCanvasBackground({ pattern: 'none' });
+    });
+    expect(container.querySelector('.react-flow__background')).toBeNull();
+
+    act(() => {
+      editor().setCanvasBackground({ pattern: null, color: null });
+    });
+    expect(container.querySelector('.react-flow__background pattern circle')).not.toBeNull();
+    expect(root(container)?.style.getPropertyValue('--color-canvas')).toBe('');
   });
 });

@@ -1,4 +1,4 @@
-/** The deck's table display (041, research R4) and relationship display (042), defaults filled in. */
+/** The deck's table display (041, research R4), relationship display (042) and canvas background (ADR 0044), defaults filled in. */
 import type { DbDetail, SododeckFile } from '@sododeck/schema';
 
 /** Deck detail: `auto` when the file stores none (every column from 90 % zoom). */
@@ -46,5 +46,26 @@ export function relationshipDisplayOf(
     hideEnds: stored.hideEnds === true,
     labels: labels !== undefined && LABELS.includes(labels) ? labels : 'follow',
     notation: stored.notation === 'numeric' ? 'numeric' : 'crow',
+  };
+}
+
+/** Canvas background with defaults (ADR 0044): `color` undefined follows the theme. */
+export interface ResolvedCanvasBackground {
+  pattern: 'dots' | 'grid' | 'none';
+  color: string | undefined;
+}
+
+const HEX = /^#[0-9a-f]{6}$/;
+
+/** Reads `canvasBackground` (ADR 0044): absent keys mean dots on the theme's canvas colour. */
+export function canvasBackgroundOf(
+  deck: Pick<SododeckFile, 'canvasBackground'>,
+): ResolvedCanvasBackground {
+  const stored = deck.canvasBackground ?? {};
+  const pattern = stored.pattern;
+  const color = stored.color;
+  return {
+    pattern: pattern === 'grid' || pattern === 'none' ? pattern : 'dots',
+    color: color !== undefined && HEX.test(color) ? color : undefined,
   };
 }

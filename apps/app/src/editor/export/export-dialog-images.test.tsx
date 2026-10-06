@@ -17,7 +17,7 @@ vi.mock('../../storage/download', async (importOriginal) => ({
   downloadText: vi.fn(),
   downloadBlob: vi.fn(),
 }));
-vi.mock('../../lib/clipboard', () => ({ copyText: vi.fn() }));
+vi.mock('../../lib/clipboard', () => ({ copyText: vi.fn(), copyItem: vi.fn() }));
 vi.mock('./rasterize', () => ({ rasterize: vi.fn() }));
 
 const ASSET = assetId(PNG_1X1);

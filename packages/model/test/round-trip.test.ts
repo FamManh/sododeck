@@ -846,6 +846,40 @@ describe('card size and connector route (017)', () => {
     expect(toJSON(fromJSON(withoutSize)).nodes[0]).not.toHaveProperty('size');
   });
 
+  it('round-trips a turned text, rotation right after size, and clears it with null', () => {
+    const file: SododeckFile = {
+      ...empty,
+      nodes: [
+        {
+          id: 't',
+          type: 'text',
+          title: 'Turned',
+          position: { x: 0, y: 0 },
+          size: { width: 160, height: 40 },
+          rotation: -32.5,
+          style: { fill: 'red' },
+        },
+      ],
+    };
+    expect(toJSON(fromJSON(file))).toEqual(file);
+    expect(reopen(file)).toEqual(file);
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    editor.add('nodes', { id: 't', type: 'text', title: 'T', position: { x: 1, y: 2 } });
+    editor.update('nodes', 't', { rotation: 90 });
+    editor.setCardSize('t', { width: 160, height: 40 });
+    expect(Object.keys(toJSON(doc).nodes[0] ?? {})).toEqual([
+      'id',
+      'type',
+      'title',
+      'position',
+      'size',
+      'rotation',
+    ]);
+    editor.update('nodes', 't', { rotation: null });
+    expect(toJSON(doc).nodes[0]).not.toHaveProperty('rotation');
+  });
+
   it('round-trips an edge route of sides only, offset only, all three, and a hand-written {}', () => {
     const base: Omit<SododeckFile, 'edges'> = {
       ...empty,
@@ -1235,6 +1269,11 @@ describe('database schema (040)', () => {
         relationshipDisplay: { hideEnds: true, labels: 'off', notation: 'numeric' },
       },
     ],
+    // ADR 0044: canvas background with every key.
+    [
+      'canvas background with every key',
+      { ...empty, canvasBackground: { pattern: 'none', color: '#1f2a44' } },
+    ],
     [
       'enum colours, a palette name and a hex',
       {
@@ -1333,7 +1372,9 @@ describe('database schema (040)', () => {
     expect(keys.indexOf('relationshipDisplay')).toBe(keys.indexOf('tableDisplay') + 1);
     // 048: the grouping mode follows the relationship display.
     expect(keys.indexOf('groupingMode')).toBe(keys.indexOf('relationshipDisplay') + 1);
-    expect(keys.indexOf('nodes')).toBe(keys.indexOf('groupingMode') + 1);
+    // ADR 0044: the canvas background follows the grouping mode.
+    expect(keys.indexOf('canvasBackground')).toBe(keys.indexOf('groupingMode') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('canvasBackground') + 1);
     const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
     expect(Object.keys(orders)).toEqual([
       'id',

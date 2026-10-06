@@ -36,19 +36,19 @@ describe('export dialog state', () => {
     );
     const flow = initialExportState({ flowMode: true });
     expect(flow.format).toBe('png');
-    expect(flow.imageScope).toBe('flow');
+    expect(flow.imageScope).toBe('deck');
   });
 
-  it('keeps image scope across format changes and rejects unavailable flow', () => {
-    let state = initialExportState({ flowMode: true });
+  it('keeps the "Selected" scope across format changes', () => {
+    let state = exportReducer(initialExportState({ flowMode: false }), {
+      type: 'scope',
+      scope: 'selection',
+    });
+    expect(state.imageScope).toBe('selection');
     state = exportReducer(state, { type: 'format', format: 'json' });
-    expect(state.imageScope).toBe('flow');
-    state = exportReducer(state, { type: 'format', format: 'png' });
-    expect(state.imageScope).toBe('flow');
-    state = exportReducer(state, { type: 'flowGone' });
-    expect(state.imageScope).toBe('deck');
-    expect(state.scopeNote).toBe('flow-deleted');
-    expect(exportReducer(state, { type: 'scope', scope: 'flow' })).toBe(state);
+    expect(state.imageScope).toBe('selection');
+    state = exportReducer(state, { type: 'scope', scope: 'view' });
+    expect(state.imageScope).toBe('view');
   });
 
   it('settles only current work and can retry', () => {

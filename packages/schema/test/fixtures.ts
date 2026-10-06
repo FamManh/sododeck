@@ -288,6 +288,18 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'nodes.0.position.z',
     code: 'schema-unknown-field',
   },
+  {
+    name: 'node rotation past half a turn',
+    input: set('nodes.0.rotation', 200),
+    path: 'nodes.0.rotation',
+    code: 'schema-range',
+  },
+  {
+    name: 'node rotation as text',
+    input: set('nodes.0.rotation', '15'),
+    path: 'nodes.0.rotation',
+    code: 'schema-type',
+  },
 
   // Enumerations
   {

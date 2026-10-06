@@ -16,6 +16,7 @@ import {
 import type { Direction, SododeckFile } from '@sododeck/schema';
 import { nodeIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
 
+import type { Selection } from '../../state/selection-kinds';
 import type { DrillFrame } from '../../state/ui-store';
 import { bundleEdges, type BundleResult } from '../bundles';
 import {
@@ -63,6 +64,7 @@ import {
   type FieldRow,
 } from '../card-fields';
 import { SHAPE_TITLE_FONT, titleBox } from '../shapes/shape-geometry';
+import { textRotationOf } from '../shapes/text-rotation';
 import { shapeTitleLines } from '../shapes/shape-layout';
 import { tableContextOf } from '../table-keys';
 import { TABLE_CARD, type TableLayout } from '../table-layout';
@@ -77,7 +79,14 @@ import {
 import { relationshipLabel } from '../relationships/relationship-label';
 import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
+import { groupSubtree, groupSubtreeImages } from '../editing/subtree';
 import type { ImageScope } from './types';
+
+/**
+ * What `buildScene` draws: an Export dialog scope, or `flow` (the current view reduced to the
+ * shown flow, with step badges; kept for the flow player, not offered by the dialog).
+ */
+export type SceneScope = ImageScope | 'flow';
 
 /** The icon a node's tile draws; a node drawn as a shape keeps its type's (038). */
 function iconOf(node: SododeckFile['nodes'][number]): ResolvedIcon {
@@ -115,6 +124,8 @@ export interface SceneCard {
   layout: CardLayout;
   /** Drawn as a shape (031): its geometry; `titleLines` then wrap in its title box. */
   geometry?: Geometry;
+  /** A turned text (ADR 0043): degrees clockwise around the box centre; absent when not turned. */
+  rotation?: number;
   /** A table card's body (041): the same `tableLayout` the canvas draws (`layout.table`). */
   table?: TableLayout;
   fill?: string;
@@ -263,8 +274,10 @@ export interface ExportScene {
 }
 export interface SceneInput {
   deck: SododeckFile;
-  scope: ImageScope;
+  scope: SceneScope;
   ui: {
+    /** `selection` scope: what is selected on the canvas (ignored by the other scopes). */
+    selection?: Pick<Selection, 'nodes' | 'groups' | 'stickies' | 'images'>;
     currentViewId: string | null;
     revealed: ReadonlySet<string>;
     drill: readonly DrillFrame[];
@@ -365,6 +378,38 @@ function flowMembers(deck: SododeckFile, graph: VisibleGraph, overlay: FlowOverl
   return ids;
 }
 
+/** What a `selection` scope keeps: drawn card ids, groups, notes and pictures. */
+interface SelectionMembers {
+  /** Card ids and `collapsed:<group>` ids, as `keep` sees them. */
+  drawn: ReadonlySet<string>;
+  groups: ReadonlySet<string>;
+  stickies: ReadonlySet<string>;
+  images: ReadonlySet<string>;
+}
+
+/**
+ * The selection widened like a copy (016 R10): a selected group brings its nested groups, member
+ * components and pictures. Connectors are not listed; they draw when both ends are kept.
+ */
+function selectionMembers(
+  deck: SododeckFile,
+  selection: SceneInput['ui']['selection'],
+): SelectionMembers {
+  const groupIds = selection?.groups ?? [];
+  const tree = groupSubtree(deck, groupIds);
+  const groups = new Set(tree.groups);
+  return {
+    drawn: new Set([
+      ...(selection?.nodes ?? []),
+      ...tree.nodes,
+      ...tree.groups.map((id) => `${COLLAPSED_NODE_PREFIX}${id}`),
+    ]),
+    groups,
+    stickies: new Set(selection?.stickies ?? []),
+    images: new Set([...(selection?.images ?? []), ...groupSubtreeImages(deck, groupIds)]),
+  };
+}
+
 /**
  * The picture an export draws, as positioned shapes in diagram coordinates (012 R1, R2). Pure:
  * it reuses the canvas's view, scope and flow helpers, never `toFlowNodes` / `toFlowEdges`
@@ -372,6 +417,8 @@ function flowMembers(deck: SododeckFile, graph: VisibleGraph, overlay: FlowOverl
  *
  * - `deck`: the raw deck at the top level with every group expanded.
  * - `view`: what the current view shows at the current drill level, over its whole extent.
+ * - `selection`: the current view reduced to the selected components, notes, pictures and groups
+ *   (with their members), and the connectors between them.
  * - `flow`: the current view reduced to the shown flow's objects, with step badges.
  */
 /**
@@ -389,6 +436,7 @@ function shapeCard(
   const measure = textMeasurer();
   const size = { width: layout.width, height: layout.height };
   const width = titleBox(geometry, { x: 0, y: 0, ...size }).width;
+  const rotation = textRotationOf(node);
   return {
     id: node.id,
     rect: { ...displayPosition(node, index), ...size },
@@ -413,6 +461,7 @@ function shapeCard(
     level,
     layout,
     geometry,
+    ...(rotation === 0 ? {} : { rotation }),
     ...((geometry === 'none' ? undefined : exportLook(node.style)) ?? EMPTY_LOOK),
   };
 }
@@ -436,7 +485,9 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     flow === undefined ? null : flowOverlay(source, analyzeFlow(flow, source.edges), null, null);
   const inFlow = overlay === null ? null : flowMembers(source, graph, overlay);
   const hiddenMarks = overlay === null ? null : collapseFlowMarks(overlay, graph).cards;
-  const keep = (id: string) => inFlow === null || inFlow.has(id);
+  const picked = scope === 'selection' ? selectionMembers(deck, ui.selection) : null;
+  const keep = (id: string) =>
+    (inFlow === null || inFlow.has(id)) && (picked === null || picked.drawn.has(id));
 
   const nodes = new Map(source.nodes.map((node, index) => [node.id, { node, index }]));
   const tagColours = tagColourMap(source.tagColors);
@@ -544,7 +595,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     ...ports.map((port) => [port.id, port.rect] as const),
   ]);
 
-  const groups = sceneGroups(source, graph, level, cards, inFlow);
+  const groups = sceneGroups(source, graph, level, cards, inFlow, picked?.groups ?? null);
   // Group frames are connector ends too (050 R6).
   for (const group of groups) rects.set(`${GROUP_NODE_PREFIX}${group.id}`, group.rect);
   // Notes as the canvas draws them, at their own point. A note belongs to no flow (ADR 0041:
@@ -552,7 +603,9 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const stickies: SceneSticky[] =
     inFlow !== null
       ? []
-      : source.stickies.map((sticky) => sceneSticky(sticky, tagColours, measure));
+      : source.stickies
+          .filter((sticky) => picked === null || picked.stickies.has(sticky.id))
+          .map((sticky) => sceneSticky(sticky, tagColours, measure));
 
   // Notes are connector ends too (053): `sticky:<id>`, as the visible graph names them.
   for (const sticky of stickies) rects.set(`${STICKY_NODE_PREFIX}${sticky.id}`, sticky.rect);
@@ -562,7 +615,9 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     inFlow !== null
       ? []
       : (source.images ?? []).flatMap((image) =>
-          graph.hiddenImages.has(image.id) ? [] : [sceneImage(source, image)],
+          graph.hiddenImages.has(image.id) || (picked !== null && !picked.images.has(image.id))
+            ? []
+            : [sceneImage(source, image)],
         );
   for (const image of images) rects.set(`${IMAGE_NODE_PREFIX}${image.id}`, image.rect);
   const stack = sceneStack(source, cards, images);
@@ -574,7 +629,11 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   );
   const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds, ui.labelsOn === true);
 
-  if (cards.length + collapsed.length + ports.length + images.length === 0) return emptyScene();
+  // Notes alone are no diagram, unless they are what was selected.
+  const drawnNotes = picked === null ? 0 : stickies.length;
+  if (cards.length + collapsed.length + ports.length + images.length + drawnNotes === 0) {
+    return emptyScene();
+  }
   let extent: Rect | null = null;
   for (const item of [...groups, ...collapsed, ...ports, ...cards, ...images, ...stickies]) {
     extent = union(extent, item.rect);
@@ -668,6 +727,8 @@ function sceneGroups(
   cards: readonly SceneCard[],
   /** Flow scope: the drawn ids the flow travels through; null outside it. */
   inFlow: ReadonlySet<string> | null,
+  /** Selection scope: the selected groups and the groups nested in them; null outside it. */
+  pickedGroups: ReadonlySet<string> | null,
 ): SceneGroup[] {
   const frames = groupBounds(deck, level);
   const counts = groupCounts(deck);
@@ -691,7 +752,14 @@ function sceneGroups(
   return graph.groups.flatMap((id) => {
     const rect = frames.get(id);
     const group = byId.get(id);
-    if (rect === undefined || group === undefined || (flowOnly && !withCard.has(id))) return [];
+    if (
+      rect === undefined ||
+      group === undefined ||
+      (flowOnly && !withCard.has(id)) ||
+      (pickedGroups !== null && !pickedGroups.has(id))
+    ) {
+      return [];
+    }
     return [
       {
         id,

@@ -375,6 +375,23 @@ export const sododeckFileSchema = z
         "How the deck's tables are grouped on the canvas (048): `schema` groups tables that share a schema name (shown as derived groups; stored groups and `group` / `parent` are untouched). Absent means By group, the groups stored in the file.",
       )
       .optional(),
+    canvasBackground: z
+      .object({
+        pattern: z
+          .enum(['grid', 'none'])
+          .describe('Canvas background pattern: `grid` lines or `none`; absent is dots.')
+          .optional(),
+        color: z
+          .string()
+          .regex(new RegExp('^#[0-9a-f]{6}$'))
+          .describe('Canvas background colour; absent follows the theme (light or dark).')
+          .optional(),
+      })
+      .strict()
+      .describe(
+        "How the canvas behind the deck looks (fb-ui, ADR 0044). Absent means dots on the theme's canvas colour.",
+      )
+      .optional(),
     nodes: z
       .array(
         z
@@ -510,6 +527,14 @@ export const sododeckFileSchema = z
               .strict()
               .describe(
                 'Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported (a shape from its own minimum, as small as 40 × 24); values outside that range are drawn clamped and reported as a problem.',
+              )
+              .optional(),
+            rotation: z
+              .number()
+              .gte(-180)
+              .lte(180)
+              .describe(
+                'Text nodes (`text`): how far the words are turned, in degrees clockwise around the centre of the box, from -180 to 180. Shared by every view. Absent means not turned; the app removes the key at 0. On other types it is kept and ignored.',
               )
               .optional(),
             style: z

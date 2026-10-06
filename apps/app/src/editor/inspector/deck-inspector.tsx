@@ -3,10 +3,12 @@ import { PanelSection } from '@sododeck/ui/components/panel';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ArrowRight, Layers } from 'lucide-react';
-import { useState } from 'react';
+import { Button } from '@sododeck/ui/components/button';
+import { ArrowRight, FileCode2, Layers } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 import { useEditor } from '../../model/use-editor';
+import { useUiStore } from '../../state/ui-store';
 import { DeckInspectorStorage } from '../deck-inspector-storage';
 import { FieldEdit } from '../field-edit';
 import { MarkdownField } from '../fields/markdown-field';
@@ -15,15 +17,15 @@ import { ProblemsPanel } from '../problems/problems-panel';
 import { useGoToProblem } from '../problems/use-go-to-problem';
 import { useRuleNav } from '../rules/rule-nav';
 import { TagsField } from '../fields/tags-field';
+import { CanvasBackgroundSection } from './canvas-background-section';
 import { deckStats } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { DatabaseSection } from './database/database-section';
-import { showsDatabaseSection } from './database/shows-database-section';
 import { DrawerTabs, type DrawerTab } from './drawer-tabs';
 
 const noop = () => undefined;
 
-type DeckTab = 'general' | 'database';
+export type DeckTab = 'general' | 'database';
 
 const DECK_TABS: readonly DrawerTab<DeckTab>[] = [
   { id: 'general', label: 'General' },
@@ -33,16 +35,20 @@ const DECK_TABS: readonly DrawerTab<DeckTab>[] = [
 /**
  * Deck inspector, shown when nothing is selected (FR-012, design 10). The General tab holds the
  * deck's problems first (015, design 60), name (required), markdown description, tags, counts
- * with a way into the rule editor, and 005's storage; the Database tab holds the dialect and the
- * tables' display settings (041, 052). A deck with no table and the Database pack off has no
- * Database tab, so the tab bar is hidden and General shows alone. The tab is UI-only state that
- * starts on General each time the settings open.
+ * with a way into the rule editor, the canvas background (ADR 0044) and 005's storage; the
+ * Database tab starts with "Import SQL or DBML…" and, in a deck with a table or the Database pack
+ * on, holds the dialect and the tables' display settings (041, 052). Both tabs always show. The
+ * tab is UI-only state that starts on Database each time the settings open, so DBML can be pasted
+ * right away (founder feedback 2026-10-06); `initialTab` asks for another.
  */
 export function DeckInspector({
   deck,
   onOpenRules,
+  initialTab = 'database',
 }: {
   deck: SododeckFile;
+  /** The tab to open on; Database unless a caller asks for General. */
+  initialTab?: DeckTab;
   /** Opens the rule editor; undefined outside a routed editor. */
   onOpenRules?: () => void;
 }) {
@@ -55,10 +61,10 @@ export function DeckInspector({
     },
     navigateToCanvas: noop,
   });
-  const [tab, setTab] = useState<DeckTab>('general');
+  const [tab, setTab] = useState<DeckTab>(initialTab);
+  const importButton = useRef<HTMLButtonElement>(null);
   const stats = deckStats(deck);
   const name = deck.name ?? 'Untitled deck';
-  const hasDatabase = showsDatabaseSection(deck);
   const general = (
     <>
       <ProblemsPanel onActivate={goTo} />
@@ -129,7 +135,27 @@ export function DeckInspector({
           </li>
         </ul>
       </PanelSection>
+      <CanvasBackgroundSection deck={deck} />
       <DeckInspectorStorage />
+    </>
+  );
+  const database = (
+    <>
+      <PanelSection label="Import">
+        <Button
+          ref={importButton}
+          onClick={() => {
+            useUiStore.getState().openImport(importButton.current);
+          }}
+        >
+          <FileCode2 />
+          Import SQL or DBML…
+        </Button>
+        <p className="text-caption text-ink-secondary">
+          Paste a schema to add its tables to this deck.
+        </p>
+      </PanelSection>
+      <DatabaseSection deck={deck} />
     </>
   );
   return (
@@ -138,19 +164,15 @@ export function DeckInspector({
       heading={name}
       subtitle="Deck"
     >
-      {hasDatabase ? (
-        <DrawerTabs
-          tabs={DECK_TABS}
-          tab={tab}
-          onChange={setTab}
-          label="Deck settings sections"
-          idPrefix="deck-settings"
-        >
-          {tab === 'database' ? <DatabaseSection deck={deck} /> : general}
-        </DrawerTabs>
-      ) : (
-        general
-      )}
+      <DrawerTabs
+        tabs={DECK_TABS}
+        tab={tab}
+        onChange={setTab}
+        label="Deck settings sections"
+        idPrefix="deck-settings"
+      >
+        {tab === 'database' ? database : general}
+      </DrawerTabs>
     </InspectorFrame>
   );
 }

@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  clipboardItemSupports,
   isApplePlatform,
   isQuotaError,
+  supportsClipboardItems,
   supportsClipboardRead,
   supportsCreateImageBitmap,
   supportsCryptoSubtle,
@@ -32,6 +34,24 @@ describe('feature detection', () => {
     expect(supportsClipboardWrite()).toBe(false);
     vi.stubGlobal('navigator', undefined);
     expect(supportsClipboardWrite()).toBe(false);
+  });
+
+  it('detects clipboard items and the types they take (copy as PNG / SVG)', () => {
+    const write = () => Promise.resolve();
+    vi.stubGlobal('navigator', { clipboard: { write } });
+    expect(supportsClipboardItems()).toBe(false); // no ClipboardItem in jsdom
+    expect(clipboardItemSupports('image/png')).toBe(false);
+    vi.stubGlobal('ClipboardItem', vi.fn());
+    expect(supportsClipboardItems()).toBe(true);
+    // Without `ClipboardItem.supports`: only the types every such browser takes.
+    expect(clipboardItemSupports('image/png')).toBe(true);
+    expect(clipboardItemSupports('image/svg+xml')).toBe(false);
+    vi.stubGlobal(
+      'ClipboardItem',
+      Object.assign(vi.fn(), { supports: (type: string) => type === 'image/svg+xml' }),
+    );
+    expect(clipboardItemSupports('image/svg+xml')).toBe(true);
+    expect(clipboardItemSupports('image/png')).toBe(false);
   });
 
   it('detects clipboard reading (016: the menu Paste item)', () => {

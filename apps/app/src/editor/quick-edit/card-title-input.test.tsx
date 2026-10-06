@@ -227,3 +227,95 @@ describe('CardTitleInput on a new card (019 US2)', () => {
     expect(titles()).toHaveLength(4);
   });
 });
+
+describe('CardTitleInput on a text (founder feedback, 2026-10-06)', () => {
+  const textDeck = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 't', type: 'text', title: 'Hello', position: { x: 0, y: 200 } },
+    ],
+  });
+
+  function renderTextCanvas() {
+    const env = renderWithEditor(
+      <>
+        <Canvas />
+        <EditorKeys />
+      </>,
+      textDeck,
+    );
+    const ids = () => toJSON(env.doc).nodes.map((n) => n.id);
+    const titles = () => toJSON(env.doc).nodes.map((n) => n.title);
+    return { ...env, ids, titles };
+  }
+
+  const addText = (editor: () => DeckEditor) => {
+    let id = '';
+    act(() => {
+      id = addComponent(editor(), 'text', { x: 600, y: 400 }, { edit: true });
+    });
+    return { id, field: screen.getByRole('textbox', { name: 'Component title' }) };
+  };
+
+  it('starts a new text empty with no "Name this component" placeholder', () => {
+    const { editor } = renderTextCanvas();
+    const { field } = addText(editor);
+    expect(field).toHaveValue('');
+    expect(field).not.toHaveAttribute('placeholder');
+  });
+
+  it('removes a new text left without typing, as one undo step', () => {
+    const { editor, ids } = renderTextCanvas();
+    const { id } = addText(editor);
+    expect(ids()).toContain(id);
+    act(() => {
+      card('Service: A').focus();
+    });
+    expect(ids()).toEqual(['a', 't']);
+    expect(ui().titleEdit).toBeNull();
+    expect(toJSON(editor().doc).nodes.some((n) => n.title === 'Untitled text')).toBe(false);
+    act(() => {
+      editor().undo();
+    });
+    expect(ids()).toContain(id);
+  });
+
+  it('removes a new text on Esc when nothing was typed', async () => {
+    const user = userEvent.setup();
+    const { editor, ids } = renderTextCanvas();
+    addText(editor);
+    await user.keyboard('{Escape}');
+    expect(ids()).toEqual(['a', 't']);
+  });
+
+  it('removes an existing text cleared to empty on blur, as one undo step', async () => {
+    const user = userEvent.setup();
+    const { editor, ids, titles } = renderTextCanvas();
+    act(() => {
+      ui().select({ nodes: ['t'] });
+      ui().focus('t');
+      ui().startTitleEdit({ target: 'node', id: 't', isNew: false });
+    });
+    const field = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Component title' });
+    await user.clear(field);
+    act(() => {
+      card('Service: A').focus();
+    });
+    expect(ids()).toEqual(['a']);
+    act(() => {
+      editor().undo();
+    });
+    expect(titles()).toEqual(['A', 'Hello']);
+  });
+
+  it('still keeps the old title of a card cleared to empty (FR-005)', async () => {
+    const user = userEvent.setup();
+    const { titles } = renderTextCanvas();
+    const field = startEdit('a');
+    await user.clear(field);
+    act(() => {
+      screen.getByRole('group', { name: /^Hello/ }).focus();
+    });
+    expect(titles()).toEqual(['A', 'Hello']);
+  });
+});

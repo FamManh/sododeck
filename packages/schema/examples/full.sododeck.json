@@ -93,6 +93,7 @@
   },
   "relationshipDisplay": { "hideEnds": false, "labels": "always", "notation": "numeric" },
   "groupingMode": "schema",
+  "canvasBackground": { "pattern": "grid", "color": "#f4efe6" },
   "nodes": [
     {
       "id": "payments-provider",
@@ -334,6 +335,13 @@
         { "id": "cat-id", "name": "id", "type": "bigint", "pk": true },
         { "id": "cat-parent", "name": "parent_id", "type": "bigint" }
       ]
+    },
+    {
+      "id": "turned-note",
+      "type": "text",
+      "title": "Checkout path",
+      "position": { "x": 1240, "y": 240 },
+      "rotation": -15
     }
   ],
   "groups": [

@@ -154,6 +154,12 @@
   transition: transform var(--sd-dur-hover) var(--sd-ease);
 }
 
+/* A turned text (ADR 0043): the `rotate` property, so it composes with the drag tilt on
+   `.sd-shape-art`'s `transform`. Paint-only: the box, handles and connectors stay put. */
+.sd-shape-turn {
+  rotate: var(--sd-turn, 0deg);
+}
+
 .sd-shape-outline {
   fill: var(--card-fill, var(--color-surface));
   stroke: var(--card-stroke, var(--color-border-strong));
@@ -181,6 +187,13 @@
   fill: none;
   stroke: var(--color-deck-orange);
   stroke-width: 2;
+}
+
+/* A text in title edit (founder feedback, 2026-10-06): its handles stay mounted, so connectors
+   keep their ends, but are not shown while the words are typed. `visibility`, not `display`: a
+   hidden handle keeps its measured bounds. */
+.sd-shape[data-editing] .react-flow__handle {
+  visibility: hidden;
 }
 
 .sd-shape-problem {
@@ -343,7 +356,8 @@
 [data-tool-hand] .react-flow__edge-path,
 [data-tool-hand] .react-flow__edge-interaction,
 [data-tool-hand] .sd-route-handle,
-[data-tool-hand] .sd-resize-handle {
+[data-tool-hand] .sd-resize-handle,
+[data-tool-hand] .sd-rotate-handle {
   /* React Flow sets pointer-events inline on each node, and on these parts in its CSS. Named
      classes only: a universal descendant selector slows every style recalc. */
   pointer-events: none !important;

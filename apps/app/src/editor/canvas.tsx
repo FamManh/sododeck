@@ -1,4 +1,10 @@
-import { analyzeFlow, deckPacks, isDbTable, observeDeck } from '@sododeck/model';
+import {
+  analyzeFlow,
+  canvasBackgroundOf,
+  deckPacks,
+  isDbTable,
+  observeDeck,
+} from '@sododeck/model';
 import { Button } from '@sododeck/ui/components/button';
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
@@ -22,8 +28,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
-import { addTable, CANVAS_ATTR, canvasElement, nodeElement } from './canvas-actions';
+import {
+  addTable,
+  CANVAS_ATTR,
+  canvasElement,
+  isReturningFocus,
+  nodeElement,
+} from './canvas-actions';
 import { bundleEdges, bundleOptions } from './bundles';
+import { BACKGROUND_GAP, backgroundVariant, canvasBackgroundVars } from './canvas-background';
 import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
@@ -299,6 +312,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const viewState = useViewState();
   const deck = viewState.deck;
   const render = viewState.render;
+  // The deck's canvas background (ADR 0044): the whole deck's setting, whatever the view.
+  const background = canvasBackgroundOf(fullDeck);
+  const variant = backgroundVariant(background.pattern);
+  const backgroundStyle = useMemo(() => canvasBackgroundVars(background.color), [background.color]);
   // Collapsed groups are saved per view (011 FR-050).
   const collapsed = viewState.collapsed;
   const selection = useUiStore((s) => s.selection);
@@ -745,7 +762,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           }
           return;
         }
-        if (pointerFocus.current) return;
+        // Focus put back by the app (after a delete, a closed menu) stays on the canvas: picking
+        // a card here would pan to it.
+        if (pointerFocus.current || isReturningFocus()) return;
         const ui = useUiStore.getState();
         // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
         if (ui.flowSession !== null) return;
@@ -777,6 +796,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     >
       <ReactFlow
         aria-label="Diagram canvas"
+        style={backgroundStyle}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -835,7 +855,14 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           hover.onRelationshipLeave(edge.id);
         }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
+        {variant !== null && (
+          <Background
+            variant={variant}
+            gap={BACKGROUND_GAP}
+            size={1}
+            {...(variant === BackgroundVariant.Lines ? { lineWidth: 1 } : {})}
+          />
+        )}
         {/* The minimap (018 FR-033): off by default, above the zoom island (M). */}
         {minimap && !hideUi && (
           <MiniMap<CanvasFlowNode>

@@ -387,6 +387,8 @@ describe('EditorPage', () => {
     act(() => {
       ui().openDrawer('deck');
     });
+    // Deck settings open on Database (founder feedback 2026-10-06).
+    fireEvent.click(screen.getByRole('tab', { name: 'General' }));
     expect(screen.getByText('Stored in this browser')).toBeInTheDocument();
     await waitFor(async () => {
       expect((await record())?.openedAt).not.toBeNull();
@@ -558,6 +560,7 @@ describe('EditorPage', () => {
       const { router, user } = await openEditor(withRule);
       await user.click(screen.getByRole('button', { name: 'Deck menu' }));
       await user.click(screen.getByRole('menuitem', { name: 'Deck settings' }));
+      await user.click(screen.getByRole('tab', { name: 'General' }));
       await user.click(screen.getByRole('button', { name: 'Rules 1' }));
       expect(router.state.location.pathname).toBe('/deck/d1/rules');
     });

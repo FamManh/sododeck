@@ -5,13 +5,13 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore, type TitleEdit } from '../../state/ui-store';
-import { addComponent } from '../canvas-actions';
+import { addComponent, focusCanvas } from '../canvas-actions';
 import { displayPosition } from '../canvas-geometry';
 import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX } from '../deck-to-flow';
 import { panToClear } from '../shell/shell-geometry';
 import { scopeOf, visibleGraph } from '../visible-graph';
 import { collapsedOf, readViewState } from '../views/use-current-view';
-import { commitTitle, nextTitleTarget, readingOrder } from './title-edit';
+import { commitTitle, nextTitleTarget, readingOrder, removeEmptyText } from './title-edit';
 
 /** Where a new card goes after ⌘⏎: one 24 px step down and right of the one just named (R3). */
 const NEXT_STEP = 24;
@@ -78,6 +78,9 @@ function useRevealWhileEditing(edit: TitleEdit) {
  * What you edit looks like what is shown (founder, 2026-10-02): a bare textarea with the caller's
  * type classes, wrapping over the same lines, so starting an edit moves nothing. Titles are one
  * paragraph: Enter commits and pasted line breaks become spaces.
+ *
+ * A text (`removeWhenEmpty`) has no placeholder, and leaving it empty removes it instead of
+ * keeping the old title or "Untitled text": on commit, and on Esc for a new one.
  */
 export function CardTitleInput({
   edit,
@@ -85,6 +88,7 @@ export function CardTitleInput({
   className,
   style,
   fitWidth = false,
+  removeWhenEmpty = false,
 }: {
   edit: TitleEdit;
   /** The committed title, from the document. */
@@ -95,6 +99,8 @@ export function CardTitleInput({
   style?: CSSProperties;
   /** One line as wide as the text (a group's label pill), not the wrapping card title. */
   fitWidth?: boolean;
+  /** A text: no placeholder, and an empty commit removes the component (founder, 2026-10-06). */
+  removeWhenEmpty?: boolean;
 }) {
   const editor = useEditor();
   const [draft, setDraft] = useState(edit.isNew ? '' : title);
@@ -112,6 +118,10 @@ export function CardTitleInput({
   const commit = (value: string) => {
     if (done.current) return;
     done.current = true;
+    if (removeWhenEmpty && edit.target === 'node' && value.trim() === '') {
+      if (removeEmptyText(editor, edit.id)) useUiStore.getState().announce('Empty text removed');
+      return;
+    }
     if (commitTitle(editor, edit.target, edit.id, value, title) === 'renamed') {
       useUiStore.getState().announce(`Renamed to ${value.trim()}`);
     }
@@ -156,7 +166,7 @@ export function CardTitleInput({
       fitWidth={fitWidth}
       aria-label={edit.target === 'node' ? 'Component title' : 'Group title'}
       value={draft}
-      {...(edit.isNew
+      {...(edit.isNew && !removeWhenEmpty
         ? { placeholder: edit.target === 'group' ? 'Name this group' : 'Name this component' }
         : {})}
       onChange={(event) => {
@@ -178,6 +188,13 @@ export function CardTitleInput({
         if (event.key === 'Escape') {
           event.preventDefault();
           event.stopPropagation();
+          // A new text left blank goes; any other Esc keeps what was there.
+          if (removeWhenEmpty && edit.isNew && draft.trim() === '') {
+            commit(draft);
+            end();
+            focusCanvas();
+            return;
+          }
           done.current = true;
           backToCard();
           return;

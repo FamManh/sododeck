@@ -66,32 +66,20 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     expect(toJSON(doc).name).toBe('Shop');
   });
 
-  it('offers the library, import, export, deck settings and JSON in its menu', async () => {
+  it('offers the library, import, export and deck settings in its menu, not the code views', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);
     await user.click(screen.getByRole('button', { name: 'Deck menu' }));
     const menu = screen.getByRole('menu', { name: 'Deck menu' });
-    for (const name of ['All decks', 'Import…', 'Export…', 'Deck settings', /Show JSON/]) {
+    for (const name of ['All decks', 'Import…', 'Export…', 'Deck settings']) {
       expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
     }
-    await user.click(within(menu).getByRole('menuitem', { name: /Show JSON/ }));
-    expect(useUiStore.getState().jsonShown).toBe(true);
+    // Moved to the tools island's ⋯ More menu (founder feedback 2026-10-06).
+    expect(within(menu).queryByRole('menuitem', { name: /JSON/ })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole('menuitem', { name: /DBML/ })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Deck settings' }));
+    await user.click(within(menu).getByRole('menuitem', { name: 'Deck settings' }));
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
-  });
-
-  it('opens and closes the DBML / SQL drawer from its menu (054)', async () => {
-    const user = userEvent.setup();
-    renderWithEditor(<Island />, shop);
-    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Show DBML / SQL' }));
-    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(true);
-
-    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Hide DBML / SQL' }));
-    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(false);
   });
 
   it('switches the theme from its menu (§g-60)', async () => {

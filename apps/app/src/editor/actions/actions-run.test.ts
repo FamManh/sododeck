@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiStore } from '../../state/ui-store';
 import { actionContext, actionDeck, sel, TARGETS } from '../../test/action-fixtures';
 import { deckOf } from '../../test/render-canvas';
-import { FRAGMENT_HINT_KEY } from '../editing/clipboard-ops';
+import { FRAGMENT_HINT_KEY, forgetFragment } from '../editing/clipboard-ops';
 import { shortcutLabel } from '../shell/shortcuts';
 import { actionsFor, findAction, runAction } from './actions-for';
 import { ACTIONS } from './index';
@@ -189,6 +189,7 @@ describe('clipboard actions (016 US1)', () => {
   };
   afterEach(() => {
     localStorage.clear();
+    forgetFragment();
   });
 
   it('copies the components with their connections and announces it', async () => {

@@ -310,6 +310,7 @@ export interface SododeckFile {
    * How the deck's tables are grouped on the canvas (048): `schema` groups tables that share a schema name (shown as derived groups; stored groups and `group` / `parent` are untouched). Absent means By group, the groups stored in the file.
    */
   groupingMode?: 'schema';
+  canvasBackground?: CanvasBackground;
   /**
    * Components of the system.
    */
@@ -474,6 +475,19 @@ export interface RelationshipDisplay {
   notation?: 'numeric';
 }
 /**
+ * The canvas background of this deck (ADR 0044). Absent keys mean dots and the theme's canvas colour, so light and dark themes keep working; the editor removes a key set back to its default and removes the object when it is empty.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "CanvasBackground".
+ */
+export interface CanvasBackground {
+  /**
+   * Canvas background pattern: `grid` lines or `none`; absent is dots.
+   */
+  pattern?: 'grid' | 'none';
+  color?: HexColor;
+}
+/**
  * A component of the system: a card of any type (service, database, queue, warehouse and so on).
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -518,6 +532,10 @@ export interface Node {
   rules?: IdList;
   position?: Position;
   size?: Size;
+  /**
+   * Text nodes (`text`): how far the words are turned, in degrees clockwise around the centre of the box, from -180 to 180. Shared by every view. Absent means not turned; the app removes the key at 0. On other types it is kept and ignored.
+   */
+  rotation?: number;
   style?: Style;
   schema?: DbName;
   /**

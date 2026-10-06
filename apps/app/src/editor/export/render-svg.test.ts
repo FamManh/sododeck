@@ -723,6 +723,27 @@ describe('shapes in the export (031 FR-016)', () => {
       expect(group.outerHTML).not.toMatch(/rotate|transform/);
     }
   });
+
+  it('turns a turned text around its box centre, as on the canvas (ADR 0043)', () => {
+    const turned = deckOf({
+      nodes: [
+        {
+          id: 'h',
+          type: 'text',
+          title: 'Checkout v2',
+          position: { x: 400, y: 300 },
+          size: { width: 160, height: 40 },
+          rotation: -30,
+        },
+        // Kept and ignored on any other type.
+        { id: 'ok', type: 'diamond', title: 'OK?', position: { x: 0, y: 0 }, rotation: 45 },
+      ],
+    });
+    const doc = parse(svgOf(turned));
+    const shape = (id: string) => doc.querySelector(`[data-export="shape"][data-id="${id}"]`);
+    expect(shape('h')?.getAttribute('transform')).toBe('rotate(-30 480 320)');
+    expect(shape('ok')?.hasAttribute('transform')).toBe(false);
+  });
 });
 
 describe('renderSvg: table cards (041 US5)', () => {

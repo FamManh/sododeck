@@ -1,5 +1,4 @@
 import type { SododeckFile } from '@sododeck/schema';
-import { EMBEDDED_FONT_CSS } from '@sododeck/ui/lib/embedded-fonts';
 import { useEffect, type Dispatch } from 'react';
 
 import { usePictureStore } from '../../images/picture-store';
@@ -8,14 +7,10 @@ import { schemaExport, schemaFileName } from '../../db/export/schema-export';
 import type { SchemaExportRequest } from '../../db/export/types';
 import type { ExportAction, ExportDialogState, ExportResult } from './export-dialog-state';
 import { exportFileName, formatBytes } from './export-file-name';
-import { ensureFontsLoaded } from './export-fonts';
-import { LIGHT_PALETTE } from './export-palette';
 import { jsonExport } from './json-export';
 import { largestScale, pngSize } from './png-size';
-import { renderSvg } from './render-svg';
-import { pictureDataUris } from './picture-data-uris';
-import { buildScene, type SceneInput } from './scene';
-import { canvasMeasurer, fixedWidthMeasurer } from './text-measure';
+import { renderImage } from './render-image';
+import type { SceneInput } from './scene';
 import { isSchemaFormat, type PngScale } from './types';
 
 type ExportUi = SceneInput['ui'];
@@ -80,7 +75,12 @@ export function exportRequestKey(request: ExportRequest, deck: SododeckFile, ui:
   const scopeUi =
     imageScope === 'deck'
       ? null
-      : [ui.currentViewId, [...ui.revealed].sort(), ui.drill, ui.activeFlowId];
+      : [
+          ui.currentViewId,
+          [...ui.revealed].sort(),
+          ui.drill,
+          imageScope === 'selection' ? (ui.selection ?? null) : null,
+        ];
   const settings = isSchemaFormat(format)
     ? request.schema
     : format === 'json'
@@ -151,31 +151,20 @@ export function useExportResult(
       if (format === 'json') return jsonResult(deck, json, await readPictureBytes(store, deck));
       // Text built on the main thread: < 50 ms for 150 tables (045 research R2, perf test).
       if (schema !== null) return schemaResult(deck, schema);
-      await ensureFontsLoaded();
-      const scene = buildScene({ deck, scope: imageScope, ui });
-      if (scene.bounds.width === 0 || scene.bounds.height === 0) return 'empty';
-      // The pictures go in as `data:` URIs, read before rendering: the SVG alone shows them and the
-      // PNG rasteriser (an SVG drawn as an `<img>`) loads nothing else (055 R6).
-      const pictures = scene.images.length === 0 ? undefined : await pictureDataUris(store, deck);
-      const svg = renderSvg(scene, {
-        ...(pictures === undefined ? {} : { pictures }),
-        transparent,
-        palette: LIGHT_PALETTE,
-        fonts: EMBEDDED_FONT_CSS,
-        measure: canvasMeasurer() ?? fixedWidthMeasurer(),
-        title: deck.name ?? 'Untitled deck',
-      });
-      const flow =
-        imageScope === 'flow'
-          ? deck.flows.find((entry) => entry.id === ui.activeFlowId)
-          : undefined;
+      const image = await renderImage({ deck, scope: imageScope, ui, transparent, store });
+      if (image === null) return 'empty';
+      const { svg, bounds } = image;
       return {
-        fileName: exportFileName(deck.name, flow?.title ?? null, format),
+        fileName: exportFileName(
+          deck.name,
+          imageScope === 'selection' ? 'selection' : null,
+          format,
+        ),
         // PNG: the dialog shows `pngSizeHint(bounds, scale)` for the scale currently chosen.
         sizeHint: format === 'png' ? '' : formatBytes(new TextEncoder().encode(svg).byteLength),
         text: format === 'svg' ? svg : null,
         svg,
-        bounds: { width: scene.bounds.width, height: scene.bounds.height },
+        bounds,
         notes: [],
       };
     };
