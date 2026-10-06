@@ -410,6 +410,11 @@ export function planSchemaSync(deck: SododeckFile, raw: RawSchema, ctx: SyncCont
     plainAdds,
     ctx.viewport,
     ctx.sizeOf ?? defaultSizeOf,
+    plan.relationshipOps.adds.map((rel) =>
+      rel.cardinality === '1-n'
+        ? { parent: rel.from, child: rel.to }
+        : { parent: rel.to, child: rel.from },
+    ),
   );
   for (const entry of plan.addTables) {
     const at = positions.get(entry.node.id);

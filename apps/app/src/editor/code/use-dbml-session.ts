@@ -8,6 +8,8 @@ import { useDeckSnapshot, readDeck } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import type { SchemaScope } from '../../state/json-panel-prefs';
 import { useUiStore } from '../../state/ui-store';
+import { getLayoutClient } from '../../layout/layout-client';
+import { arrangeRequest, placeArranged } from '../arrange-tables';
 import { cardSize } from '../canvas-geometry';
 import { tableContextOf } from '../table-keys';
 import { getImportClient } from '../import/import-session';
@@ -104,6 +106,8 @@ export function useDbmlSession(scope: SchemaScope): DbmlSessionBindings {
         return cardSize(node, undefined, { table });
       },
       memory,
+      arrange: async (current, ids) =>
+        placeArranged(current, ids, await getLayoutClient().layout(arrangeRequest(current, ids))),
       onRemoved: (removed) => {
         showUndoToast(latest.current.api, editor, removalMessage(removed));
       },
