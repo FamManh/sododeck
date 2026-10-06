@@ -33,6 +33,21 @@ export const FRAGMENT_HINT_KEY = 'sododeck:fragment-copied';
 
 export const CLIPBOARD_FAILED = 'Could not use the clipboard';
 
+/**
+ * The last fragment this tab copied, in memory only: the menu's Paste falls back to it when the
+ * browser cannot read the clipboard or refuses to. Never stored or sent anywhere.
+ */
+let remembered: string | null = null;
+
+export function rememberedFragment(): string | null {
+  return remembered;
+}
+
+/** Tests only: forget the in-memory copy. */
+export function forgetFragment(): void {
+  remembered = null;
+}
+
 export function markFragmentCopied(): void {
   try {
     localStorage.setItem(FRAGMENT_HINT_KEY, String(Date.now()));
@@ -228,10 +243,16 @@ export function copySelectionText(
   return fragment === null ? null : { text: serializeFragment(fragment), fragment };
 }
 
-/** After a copy reached the clipboard: the Paste hint and the announcement. */
-export function copied(fragment: Fragment, verb: 'Copied' | 'Cut'): void {
+/**
+ * After a copy reached the clipboard: the Paste hint, the in-memory fallback and the
+ * announcement. Returns the announced text ("Copied 2 components") for a toast.
+ */
+export function copied(copy: { text: string; fragment: Fragment }, verb: 'Copied' | 'Cut'): string {
   markFragmentCopied();
-  useUiStore.getState().announce(`${verb} ${countText(fragment)}`);
+  remembered = copy.text;
+  const message = `${verb} ${countText(copy.fragment)}`;
+  useUiStore.getState().announce(message);
+  return message;
 }
 
 /**

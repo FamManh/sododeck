@@ -35,7 +35,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
       ['Reset size', 'Colour: none', 'Icon…'],
-      ['Copy', 'Cut', 'Duplicate'],
+      ['Cut', 'Copy', 'Paste', 'Duplicate', 'Copy as PNG', 'Copy as SVG'],
       ['Group', 'Lock', 'Align', 'Arrange', 'Spread ends evenly'],
       ['Pin'],
       ['Delete'],
@@ -44,7 +44,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.components, 'menu')).toEqual([
       ['Open details'],
       ['Colour: none', 'Icon…'],
-      ['Copy', 'Cut', 'Duplicate'],
+      ['Cut', 'Copy', 'Paste', 'Duplicate', 'Copy as PNG', 'Copy as SVG'],
       ['Group', 'Lock', 'Align', 'Arrange', 'Spread ends evenly'],
       ['Pin all'],
       ['Delete'],
@@ -58,7 +58,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.group, 'menu')).toEqual([
       ['Open details', 'Open inside', 'Rename'],
       ['Collapse', 'Select members', 'Colour: none'],
-      ['Copy', 'Cut', 'Duplicate'],
+      ['Cut', 'Copy', 'Paste', 'Duplicate', 'Copy as PNG', 'Copy as SVG'],
       ['Lock', 'Spread ends evenly'],
       ['Delete group'],
     ]);
@@ -67,19 +67,25 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Add component', 'Add note'],
       ['Select all', 'Fit'],
     ]);
-    expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Delete']]);
+    expect(labels(TARGETS.sticky, 'menu')).toEqual([
+      ['Open details'],
+      ['Cut', 'Copy', 'Paste', 'Duplicate', 'Copy as PNG', 'Copy as SVG'],
+      ['Delete'],
+    ]);
     expect(labels(TARGETS.mixed, 'menu')).toEqual([
       ['Colour: none', 'Icon…'],
+      ['Cut', 'Copy', 'Paste', 'Duplicate', 'Copy as PNG', 'Copy as SVG'],
       ['Lock', 'Arrange', 'Spread ends evenly'],
       ['Delete'],
     ]);
   });
 
-  it('keeps only Open details, Copy and Fit in flow mode and sessions', () => {
+  it('keeps only Open details, the copies and Fit in flow mode and sessions', () => {
     for (const mode of ['flow', 'session'] as const) {
-      expect(labels(TARGETS.component, 'menu', mode)).toEqual([['Open details'], ['Copy']]);
+      const copies = ['Copy', 'Copy as PNG', 'Copy as SVG'];
+      expect(labels(TARGETS.component, 'menu', mode)).toEqual([['Open details'], copies]);
       expect(labels(TARGETS.connection, 'menu', mode)).toEqual([['Open details']]);
-      expect(labels(TARGETS.group, 'menu', mode)).toEqual([['Open details'], ['Copy']]);
+      expect(labels(TARGETS.group, 'menu', mode)).toEqual([['Open details'], copies]);
       expect(labels(TARGETS.canvas, 'menu', mode)).toEqual([['Fit']]);
     }
   });

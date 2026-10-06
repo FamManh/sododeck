@@ -29,6 +29,26 @@ export function supportsClipboardWrite(): boolean {
   return typeof clipboard?.writeText === 'function';
 }
 
+/**
+ * `navigator.clipboard.write` with `ClipboardItem` (copy as PNG / SVG): rich clipboard items.
+ * Missing outside secure contexts and in older browsers.
+ */
+export function supportsClipboardItems(): boolean {
+  const clipboard = (navigator as Partial<Navigator> | undefined)?.clipboard;
+  return typeof clipboard?.write === 'function' && typeof ClipboardItem === 'function';
+}
+
+/**
+ * Whether a `ClipboardItem` may carry `type`. Uses `ClipboardItem.supports` where the browser has
+ * it; without it, only the types every clipboard-item browser takes (`text/plain`, `image/png`).
+ */
+export function clipboardItemSupports(type: string): boolean {
+  if (!supportsClipboardItems()) return false;
+  const supports = (ClipboardItem as { supports?: (type: string) => boolean }).supports;
+  if (typeof supports === 'function') return supports.call(ClipboardItem, type);
+  return type === 'text/plain' || type === 'image/png';
+}
+
 /** `navigator.clipboard.readText` (016: the menu's Paste; ⌘V uses the paste event instead). */
 export function supportsClipboardRead(): boolean {
   const clipboard = (navigator as Partial<Navigator> | undefined)?.clipboard;

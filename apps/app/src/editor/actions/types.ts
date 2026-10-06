@@ -8,6 +8,7 @@ import type { Id, SododeckFile } from '@sododeck/schema';
 import type { ResolvedIcon } from '@sododeck/ui/icon-sets';
 import type { LucideIcon } from 'lucide-react';
 
+import type { PictureStore } from '../../images/picture-store';
 import type { MenuTarget, Selection, ToolbarFieldId } from '../../state/ui-store';
 import type { ShortcutId } from '../shell/shortcuts';
 import type { DrawnEdge, DrawnNode } from '../editing/spread-view';
@@ -54,6 +55,8 @@ export interface ActionContext {
   toast: (message: string) => void;
   /** Shows the Undo toast (043: a deleted column); absent in pure tests, which then announce. */
   undoToast?: (message: string) => void;
+  /** The open deck's picture bytes (Copy as PNG / SVG draws pictures); absent in pure tests. */
+  pictures?: PictureStore | null;
 }
 
 type Dynamic<T> = T | ((ctx: ActionContext) => T);

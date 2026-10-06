@@ -31,9 +31,7 @@ export interface ExportDialogState {
   schemaScope: SchemaScope;
   /** The dialect picked for SQL on a Generic deck, for this dialog session only. */
   sqlDialect: SqlDialect | null;
-  flowAvailable: boolean;
   options: ExportOptions;
-  scopeNote: 'flow-deleted' | null;
   result: ExportResultState;
   retryCount: number;
 }
@@ -52,7 +50,6 @@ export type ExportAction =
         sql: Partial<ExportOptions['sql']>;
       }>;
     }
-  | { type: 'flowGone' }
   | { type: 'clampScale'; max: PngScale | null }
   | { type: 'preparing'; key: string }
   | { type: 'settled'; key: string; result: ExportResult | 'empty' | 'error' | 'needs-dialect' }
@@ -71,17 +68,15 @@ export function initialExportState({
 }): ExportDialogState {
   return {
     format: format ?? (flowMode ? 'png' : 'json'),
-    imageScope: flowMode ? 'flow' : 'deck',
+    imageScope: 'deck',
     schemaScope,
     sqlDialect: null,
-    flowAvailable: flowMode,
     options: {
       json: { includeKnowledge: true, pretty: true },
       png: { scale: 2, transparent: false },
       svg: { transparent: false },
       sql: DEFAULT_SQL_OPTIONS,
     },
-    scopeNote: null,
     result: { status: 'preparing', key: '' },
     retryCount: 0,
   };
@@ -92,8 +87,7 @@ export function exportReducer(state: ExportDialogState, action: ExportAction): E
     case 'format':
       return { ...state, format: action.format };
     case 'scope':
-      if (action.scope === 'flow' && !state.flowAvailable) return state;
-      return { ...state, imageScope: action.scope, scopeNote: null };
+      return { ...state, imageScope: action.scope };
     case 'schemaScope':
       return { ...state, schemaScope: action.scope };
     case 'sqlDialect':
@@ -112,8 +106,6 @@ export function exportReducer(state: ExportDialogState, action: ExportAction): E
         },
       };
     }
-    case 'flowGone':
-      return { ...state, flowAvailable: false, imageScope: 'deck', scopeNote: 'flow-deleted' };
     case 'clampScale':
       return action.max !== null && state.options.png.scale > action.max
         ? {
