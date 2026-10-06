@@ -243,6 +243,7 @@ export const ShapeNode = memo(function ShapeNode({
               title={data.title}
               className={cn(titleClasses, 'pointer-events-auto w-full')}
               style={{ maxHeight: layout.titleLines * SHAPE_TITLE_LINE }}
+              removeWhenEmpty={isText}
             />
           ) : layout.titleCut ? (
             <Tooltip>

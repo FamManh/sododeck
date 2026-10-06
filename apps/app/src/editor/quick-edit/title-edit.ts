@@ -31,6 +31,19 @@ export function commitTitle(
   return 'renamed';
 }
 
+/**
+ * Removes a text whose words were all cleared (founder, 2026-10-06): a text is only its words,
+ * so an empty one is not kept as "Untitled text". One undo step brings it back. Returns whether
+ * it was removed (`false` when it is gone already).
+ */
+export function removeEmptyText(editor: DeckEditor, id: Id): boolean {
+  if (!readDeck(editor.doc).nodes.some((node) => node.id === id)) return false;
+  oneStep(editor, () => {
+    editor.remove('nodes', id);
+  });
+  return true;
+}
+
 /** Components in reading order: top to bottom, then left to right (the Tab order of titles). */
 export function readingOrder(deck: SododeckFile, visible: readonly Id[]): Id[] {
   const shown = new Set(visible);
