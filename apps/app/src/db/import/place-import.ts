@@ -8,6 +8,7 @@ import { fitGroupFrames, STICKY_DEFAULT_SIZE, type Point } from '@sododeck/model
 import type { Frame, Id, Node } from '@sododeck/schema';
 
 import { cardSize, GROUP_PADDING, type Rect } from '../../editor/canvas-geometry';
+import { layoutEdgeOf } from '../../editor/relationships/layout-edge';
 import { tableContextOf } from '../../editor/table-keys';
 import type { LayoutRequest, LayoutResult } from '../../layout/elk-layout';
 import type { ImportPlan } from './types';
@@ -34,6 +35,7 @@ export type RunLayout = (request: LayoutRequest) => Promise<LayoutResult>;
 export function importLayoutRequest(plan: ImportPlan): LayoutRequest {
   const { deck } = plan.fragment;
   const table = tableContextOf(deck);
+  const nodesById = new Map(deck.nodes.map((n) => [n.id, n]));
   return {
     nodes: deck.nodes.map((node) => ({
       id: node.id,
@@ -43,9 +45,7 @@ export function importLayoutRequest(plan: ImportPlan): LayoutRequest {
     groups: deck.groups.map((g) =>
       g.parent === undefined ? { id: g.id } : { id: g.id, parent: g.parent },
     ),
-    edges: deck.edges
-      .filter((e) => e.from !== e.to)
-      .map((e) => ({ id: e.id, source: e.from, target: e.to })),
+    edges: deck.edges.filter((e) => e.from !== e.to).map((e) => layoutEdgeOf(e, nodesById, table)),
     pinned: {},
   };
 }
