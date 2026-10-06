@@ -375,6 +375,23 @@ export const sododeckFileSchema = z
         "How the deck's tables are grouped on the canvas (048): `schema` groups tables that share a schema name (shown as derived groups; stored groups and `group` / `parent` are untouched). Absent means By group, the groups stored in the file.",
       )
       .optional(),
+    canvasBackground: z
+      .object({
+        pattern: z
+          .enum(['grid', 'none'])
+          .describe('Canvas background pattern: `grid` lines or `none`; absent is dots.')
+          .optional(),
+        color: z
+          .string()
+          .regex(new RegExp('^#[0-9a-f]{6}$'))
+          .describe('Canvas background colour; absent follows the theme (light or dark).')
+          .optional(),
+      })
+      .strict()
+      .describe(
+        "How the canvas behind the deck looks (fb-ui, ADR 0044). Absent means dots on the theme's canvas colour.",
+      )
+      .optional(),
     nodes: z
       .array(
         z

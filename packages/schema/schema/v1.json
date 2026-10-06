@@ -95,6 +95,10 @@
       "type": "string",
       "enum": ["schema"]
     },
+    "canvasBackground": {
+      "$ref": "#/$defs/CanvasBackground",
+      "description": "How the canvas behind the deck looks (fb-ui, ADR 0044). Absent means dots on the theme's canvas colour."
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
@@ -749,6 +753,22 @@
         "notation": {
           "enum": ["numeric"],
           "description": "Relationships (042): 1 / n text instead of crow's foot; absent is crow's foot."
+        }
+      }
+    },
+    "CanvasBackground": {
+      "title": "CanvasBackground",
+      "description": "The canvas background of this deck (ADR 0044). Absent keys mean dots and the theme's canvas colour, so light and dark themes keep working; the editor removes a key set back to its default and removes the object when it is empty.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "enum": ["grid", "none"],
+          "description": "Canvas background pattern: `grid` lines or `none`; absent is dots."
+        },
+        "color": {
+          "$ref": "#/$defs/HexColor",
+          "description": "Canvas background colour; absent follows the theme (light or dark)."
         }
       }
     },

@@ -93,6 +93,7 @@
   },
   "relationshipDisplay": { "hideEnds": false, "labels": "always", "notation": "numeric" },
   "groupingMode": "schema",
+  "canvasBackground": { "pattern": "grid", "color": "#f4efe6" },
   "nodes": [
     {
       "id": "payments-provider",
