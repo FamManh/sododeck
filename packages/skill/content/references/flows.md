@@ -17,8 +17,9 @@ So a flow is a walk along the arrows. Two consequences:
   at `payments`.
 - **A side effect that does not continue the story is not a step.** If Order Service also writes
   to its database and the flow moves on from Order Service, keep the database connector in the
-  deck but leave it out of the flow, or mention it in the step's `description`. Use a branch when
-  it is a real alternative path.
+  deck but leave it out of the flow, and say it in the step's `notes` ("writes the outbox row in
+  the same transaction"). With database-pack tables (`db-table` cards), use the step's `touches`
+  instead. Use a branch when it is a real alternative path.
 
 ## Shape
 
@@ -72,6 +73,17 @@ belong to each:
 Steps without `branch` are the main path. Every branch starts where the last main step ended, and
 its own steps chain like the main path. Each branch needs a non-empty `label` and `condition`;
 mark failure paths with `errorPath: true`. Conditions of two branches should not overlap.
+
+## Things a single chain can't say
+
+- **Two things at once** (a worker emits a per-item event and, after the batch, a summary event):
+  keep the main story as the flow; give the second effect its own short flow that starts at the
+  card where it forks ("Batch completed"), in the same feature, and say so in both flows'
+  `description`.
+- **A path that ends nowhere** (a guard stops, a flag drops the message, retries run out): there is
+  no connector to walk, so it is not a step. Put it in the rule that decides it (an output such as
+  "stop: flag off") and in the step's `notes`. If it does end somewhere real (a dead-letter table,
+  a FAILED status the UI shows), draw that card and make it a branch.
 
 ## Good flows
 

@@ -22,6 +22,7 @@ here runs in the app; the app never sends deck content anywhere (constitution IV
   `formatVersion`, `fingerprint`, `skillVersion`); an unknown placeholder fails the build.
 - `examples/*.sododeck`: hand-written decks; tests require zero lint entries, no positions and
   playable flows.
+- `src/excalidraw.ts`: the `outline` command (boards, labelled shapes incl. labels drawn over shapes, arrows with bound or nearest ends) for from-diagrams mode.
 - `src/`: `authoring.ts`, `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
   (plain-text output), `cli/main.ts` (commands, exit codes, `deliver`), `version.ts` (schema
   fingerprint), `generate.ts`.

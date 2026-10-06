@@ -206,7 +206,7 @@ When a headless browser is available on the user's machine, the agent renders th
 
 **Quality of the model**
 
-- **FR-019**: Detail dial: `faithful` (at most 24 components per view), `balanced` (at most 12, default) and `simplified` (at most 7). Audience dial: `engineer` (default), `mixed`, `executive`; it changes wording and which fields are filled, not the structure rules. Larger systems MUST be split into groups and levels rather than one crowded view.
+- **FR-019**: Detail dial (revised 2026-10-05, research R13): by default the deck has the detail the system really has, with no card budget; `balanced` (at most 12 per level) and `simplified` (at most 7) apply only when the user asks for a smaller picture; `faithful` means no merging. Audience dial: `engineer` (default), `mixed`, `executive`; it changes wording and which fields are filled, not the structure rules. Larger systems MUST be kept readable with features, one view per feature, groups and (where a reader drills in) levels, not by dropping cards.
 - **FR-020**: Taste rules MUST be written down for the agent: shape follows meaning (a fan-out is a group with many connectors, a sequence is a flow, a decision is a rule rather than a diamond card); every card earns its place; one accent colour for at most two focal cards; short labels, details in notes and fields.
 - **FR-021**: Only declared structure: the agent MUST NOT invent connectors, calls or components that are not in the description or the code. In codebase mode this is checked by the source-link rule (FR-012).
 - **FR-022**: Evidence in notes: the instructions MUST tell the agent to put real payloads or short code excerpts in a card's or step's note when they explain it better than prose.
