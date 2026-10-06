@@ -29,6 +29,11 @@ levels.
 - **`positions-mixed` is retired** (every card needs a position now, in every mode).
 - **Budgets per screen go up** (faithful 60, balanced 30, simplified 10): frames carry structure,
   so a screen holds more before it stops reading, and a flow should not need drill-in.
+- **Name and distribution.** The skill is renamed `sododeck-diagram` (was `sododeck-deck`). It is
+  no longer zipped or hosted by the site: the build writes the folder only, and it is published
+  by building into the public repository `FamManh/sododeck-diagram-skill` (Claude Code plugin
+  marketplace + plain skills folder, with example decks and screenshots). `/docs/ai-skill` links
+  there. This replaces 0040's archive and `/downloads/` bullets.
 - **Modelling conventions** (references, not checks): a broker topic is a connector label, never
   a card; solid connectors are hand-offs and the only ones flows use; dashed connectors are side
   reads and writes; branches fork only at the end of a flow, so mid-flow exits go in rules and
