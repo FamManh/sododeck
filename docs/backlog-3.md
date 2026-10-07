@@ -200,6 +200,9 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 068-picture-file-refs
 
+- **Status:** implemented (2026-10-07) — see [`spec.md`](../specs/068-picture-file-refs/spec.md),
+  [`tasks.md`](../specs/068-picture-file-refs/tasks.md) and
+  [ADR 0048](decisions/0048-picture-file-refs.md).
 - **Milestone:** any time · **Depends on:** 055 (pictures); H2 · **Estimate:** 2 d
 - **Goal:** A picture in a deck file can point at a file next to it instead of embedding base64, so
   hosts with a folder (workspace, vault) keep decks small and diffable.
@@ -235,7 +238,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
     wins, one undo step), never a "file changed on disk" choice; undo brings the unsaved edits
     back.
   - Pictures: setting "embed in file" (default) or "save next to the deck" (068 `path`, folder
-    `<deck>.assets/`).
+    `<deck>.assets/`). Refuse picture paths that resolve outside the workspace (068 FR-014).
   - Theme follows the editor's light / dark theme.
   - Commands: "New Sododeck deck", "Open in Sododeck web" (download only; no upload).
   - Packaging (`vsce`), marketplace README, icon; publishing to the VS Code Marketplace and Open
@@ -269,7 +272,8 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
     manual save) with `flush` on close.
   - Outside changes (vault sync, another pane, an AI agent) → `external-change` (066), ignoring
     our own writes.
-  - Pictures saved to the vault's attachment folder (068 `path`).
+  - Pictures saved to the vault's attachment folder (068 `path`). Refuse picture paths that resolve
+    outside the vault (068 FR-014).
   - Theme follows the app's light / dark class; "New Sododeck deck" command and file-menu entry.
   - Release through the community plugin list (manifest, versions file).
 - **Out of scope:** `.sododeck.md` Markdown wrapper, internal `[[links]]` from cards to notes,
