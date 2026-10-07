@@ -232,6 +232,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 069-vscode-extension
 
+- **Status:** implemented 2026-10-07 (code complete, real-editor spikes S1–S3 still to run) · spec `specs/069-vscode-extension/` · ADR `docs/decisions/0050-vscode-extension.md`. **Corrected behaviour:** an outside change on a dirty tab replaces the unsaved edits (the file wins) and undo does _not_ bring them back.
 - **Milestone:** after 067 · **Depends on:** 067, 068 · **Estimate:** 5 d
 - **Goal:** `.sododeck` files open as a canvas in VS Code, save with the editor's normal save, and
   live in the repo like any file.

@@ -40,6 +40,10 @@ cd apps/app && pnpm dlx wrangler pages deploy        # uses wrangler.toml
 
 Deploying from GitHub Actions instead needs a `CLOUDFLARE_API_TOKEN` (Pages:Edit) and `CLOUDFLARE_ACCOUNT_ID` secret. Not set up; decide before adding it.
 
+## VS Code extension
+
+The extension (`apps/vscode`) is released separately from the web app; see `docs/release/vscode-extension.md`.
+
 ## Verify after the first deploy
 
 - `https://app.sododeck.com/deck/demo` (deep link) loads the editor, and a hard refresh still works.

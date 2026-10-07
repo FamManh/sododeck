@@ -7,6 +7,7 @@ Decisions for plan.md. Facts about the VS Code API come from its published exten
 **Decision**: `CustomEditorProvider` with an own `DeckDocument` (the latest text the canvas sent, plus the last saved text), not `CustomTextEditorProvider`.
 
 **Rationale**:
+
 - The canvas owns the document and its undo (Principle I). With a content-change event (`CustomDocumentContentChangeEvent`) VS Code marks the tab changed but does not run its own undo stack; with the text type every canvas change becomes a text edit on VS Code's undo stack, so Ctrl+Z could undo the text model and the canvas separately.
 - Save As: the custom editor API has `saveCustomDocumentAs`, where FR-017a copies the picture files. The text type saves through VS Code and gives no hook.
 - Each 067 `change` carries the complete latest text, so the document model is one string; save, backup and revert are a few lines each.
@@ -65,6 +66,7 @@ Decisions for plan.md. Facts about the VS Code API come from its published exten
 ## R7. Save, save as, revert, backup, hot exit
 
 **Decision**:
+
 - `saveCustomDocument`: send `flush`, await `flushed` (timeout 2 s, then continue with the last text and show a warning), write `DeckDocument.text` to the uri with `workspace.fs.writeFile` (file scheme, not a symlink: write a temp sibling and rename over it; otherwise write directly), set `savedText = lastWritten = text`.
 - `saveCustomDocumentAs`: flush, then `save-as.ts` copies picture files (FR-017a) and writes the rewritten text to the new uri; the old document and files are untouched.
 - `revertCustomDocument`: read the disk text, set both texts, send `external-change`.
@@ -76,6 +78,7 @@ Decisions for plan.md. Facts about the VS Code API come from its published exten
 ## R8. Pictures
 
 **Decision**:
+
 - **Setting** `sododeck.pictures.storage`: `"embed"` (default) or `"file"`. Capability `pictures` is declared only when the setting is `"file"`, the deck has a `file`-like writable uri (not untitled), and the workspace is trusted (FR-016, FR-026, Q3, Q1). When any of these change while open, the extension sends a second `init` (067: treated as an outside change with the new capabilities).
 - **Store** (`picture-put {id,type,name,bytes}`): the file name is `<first 16 hex of id>.<ext from type>` in `<deck base name>.assets/` next to the deck. If the name exists: identical bytes (hash) → reuse; different → add `-2`, `-3`… Answer `picture-stored {id, path: '<deck base name>.assets/<file>'}`. The path is checked with the model's `checkPicturePath` before answering; a violation (for example a `:` in the deck's name, which 068 forbids) answers `picture-store-failed` with the rule's plain text and the picture stays embedded (FR-021).
 - **Serve** (`picture-get {id}`): find the entry by id in the document text through the model (`assets[id].path`), resolve against the deck's folder, check containment (R9), read it, check size ≤ 5 MiB and SHA-256 equals the id (FR-020), answer `picture` or `picture-missing {reason}` (reasons: not found, outside the workspace, unreadable, "the file changed", workspace not trusted).
@@ -106,13 +109,17 @@ Decisions for plan.md. Facts about the VS Code API come from its published exten
 
 ## Gaps for 067 and spikes
 
-| Id | Item | Needed for | Fallback if 067 does not change |
-| --- | --- | --- | --- |
-| G1 | Pluggable transport for the embed | simpler shim | the shim replaces `window.parent` (R4) |
-| G2 | Inline (blob) workers in the embed build | strict CSP | build script rewrites worker loaders (R5) |
-| G3 | A scripted fake **editor** next to 067's fake host | host-side tests | `apps/vscode/test/fake-editor.ts` on `memoryTransportPair` |
-| S1 | Programmatic revert clears the mark | FR-013 | the mark clears on next save or revert; spec reworded |
-| S2 | Real webview: shim, CSP, workers, fonts, typed arrays, 500-node timing | everything | per-item fallbacks above |
-| S3 | Keys and undo inside the webview | US1, US2 | shim forwards keys |
+| Id  | Item                                                                   | Needed for      | Fallback if 067 does not change                            |
+| --- | ---------------------------------------------------------------------- | --------------- | ---------------------------------------------------------- |
+| G1  | Pluggable transport for the embed                                      | simpler shim    | the shim replaces `window.parent` (R4)                     |
+| G2  | Inline (blob) workers in the embed build                               | strict CSP      | build script rewrites worker loaders (R5)                  |
+| G3  | A scripted fake **editor** next to 067's fake host                     | host-side tests | `apps/vscode/test/fake-editor.ts` on `memoryTransportPair` |
+| S1  | Programmatic revert clears the mark                                    | FR-013          | the mark clears on next save or revert; spec reworded      |
+| S2  | Real webview: shim, CSP, workers, fonts, typed arrays, 500-node timing | everything      | per-item fallbacks above                                   |
+| S3  | Keys and undo inside the webview                                       | US1, US2        | shim forwards keys                                         |
 
 If a spike fails in a way no fallback covers, stop and report before building on it.
+
+## Spike results
+
+Not run yet (2026-10-07): S1, S2 and S3 need the Extension Development Host. Record numbers and decisions here when run (tasks T006–T008).
