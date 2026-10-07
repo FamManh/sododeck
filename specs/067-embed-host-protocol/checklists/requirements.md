@@ -31,6 +31,6 @@
 
 ## Notes
 
-- H1 (editor in a frame) taken as the backlog recommendation; recorded in Assumptions.
+- H1 (editor in a frame) decided in Clarifications 2026-10-07.
 - Undo rule follows 066 as implemented (outside change is not an undo step), superseding the backlog draft.
-- "Read-only while the file is invalid" is an assumption worth confirming in `/speckit.clarify`.
+- Clarify session 2026-10-07: invalid file → read-only; H1 frame; picture paths from host (depends on 068); no "Saved" state; deck screen only, Mermaid by paste.
