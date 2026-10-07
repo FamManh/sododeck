@@ -4,9 +4,11 @@ export {
   getObject,
   getRule,
   loadDeck,
+  prepareDeck,
   serializeDeck,
   toJSON,
   type LoadedDeck,
+  type PreparedDeck,
 } from './deck';
 export { trimCrops, type TrimmedCrop } from './load-checks';
 export {

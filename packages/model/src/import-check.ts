@@ -86,7 +86,7 @@ function invalidJson(error: unknown, text: string): ProblemEntry {
 }
 
 /** A `version` above the one this app reads, which no other check should judge. */
-function newerVersion(input: unknown): ProblemEntry | undefined {
+export function newerVersion(input: unknown): ProblemEntry | undefined {
   if (!isRecord(input) || typeof input.version !== 'number') return undefined;
   if (input.version <= FORMAT_VERSION) return undefined;
   return {
@@ -99,9 +99,14 @@ function newerVersion(input: unknown): ProblemEntry | undefined {
   };
 }
 
-/** Reads `text` as a deck file: refused with every problem, or loaded (062 R5). */
-export function inspectDeckText(text: string): DeckTextResult {
-  const body = text.startsWith('﻿') ? text.slice(1) : text;
+/**
+ * The text half of reading a deck file (062 R5, shared with 066's `applyDeckText`): strips a BOM,
+ * parses JSON and refuses a newer format version. Never throws.
+ */
+export function parseDeckText(
+  text: string,
+): { ok: false; entries: ProblemEntry[] } | { ok: true; input: unknown } {
+  const body = text.startsWith('\uFEFF') ? text.slice(1) : text;
   let input: unknown;
   try {
     input = JSON.parse(body);
@@ -110,15 +115,25 @@ export function inspectDeckText(text: string): DeckTextResult {
   }
   const version = newerVersion(input);
   if (version !== undefined) return { ok: false, entries: [version] };
+  return { ok: true, input };
+}
+
+/** The sorted import entries for a file the load pipeline refused. */
+export function refusalEntries(error: DeckValidationError, input: unknown): ProblemEntry[] {
+  return sortEntries(error.issues.map((issue) => issueEntry(issue, input)));
+}
+
+/** Reads `text` as a deck file: refused with every problem, or loaded (062 R5). */
+export function inspectDeckText(text: string): DeckTextResult {
+  const parsed = parseDeckText(text);
+  if (!parsed.ok) return parsed;
+  const { input } = parsed;
   let loaded: LoadedDeck;
   try {
     loaded = loadDeck(input);
   } catch (error) {
     if (!(error instanceof DeckValidationError)) throw error;
-    return {
-      ok: false,
-      entries: sortEntries(error.issues.map((issue) => issueEntry(issue, input))),
-    };
+    return { ok: false, entries: refusalEntries(error, input) };
   }
   // The file passed validation, so it is the deck as loaded, in the user's order: problem paths
   // point into the file they will fix. Damaged pictures were repaired into placeholders, which

@@ -3,7 +3,15 @@ import { readFileSync } from 'node:fs';
 import { emptySododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { inspectDeckText, problemReport, stringifyReport, type ProblemEntry } from '../src';
+import {
+  DeckValidationError,
+  inspectDeckText,
+  prepareDeck,
+  problemReport,
+  stringifyReport,
+  type ProblemEntry,
+} from '../src';
+import { parseDeckText, refusalEntries } from '../src/import-check';
 
 const broken = (name: string) =>
   readFileSync(new URL(`./fixtures/broken/${name}`, import.meta.url), 'utf8');
@@ -158,5 +166,34 @@ describe('inspectDeckText: decks that open (062 US2)', () => {
     const result = inspectDeckText(JSON.stringify(emptySododeckFile()));
     expect(result.ok).toBe(true);
     expect(result.entries).toEqual([]);
+  });
+});
+
+describe('shared text helpers (066)', () => {
+  it('parseDeckText strips a BOM, refuses non-JSON and a newer version', () => {
+    const file = emptySododeckFile();
+    expect(parseDeckText(`\uFEFF${JSON.stringify(file)}`)).toEqual({ ok: true, input: file });
+    const notJson = parseDeckText('{ oops');
+    expect(notJson.ok ? [] : notJson.entries.map((e) => e.code)).toEqual(['invalid-json']);
+    const newer = parseDeckText(JSON.stringify({ ...file, version: 2 }));
+    expect(newer.ok ? [] : newer.entries.map((e) => e.code)).toEqual(['unsupported-version']);
+  });
+
+  it('refusalEntries gives the sorted entries inspectDeckText shows', () => {
+    const input = {
+      ...emptySododeckFile(),
+      nodes: [
+        { id: 'a', type: 'service', title: '' },
+        { id: 'a', type: 'service', title: 'A' },
+      ],
+    };
+    let error: unknown;
+    try {
+      prepareDeck(input);
+    } catch (caught) {
+      error = caught;
+    }
+    if (!(error instanceof DeckValidationError)) throw new Error('expected a refusal');
+    expect(refusalEntries(error, input)).toEqual(refused(JSON.stringify(input)));
   });
 });

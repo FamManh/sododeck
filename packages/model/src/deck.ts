@@ -70,6 +70,7 @@ import {
   metaOf,
   repairAssets,
   type AssetBytes,
+  type AssetId,
   type AssetMeta,
   type AssetProblem,
 } from './assets';
@@ -108,6 +109,51 @@ export interface LoadedDeck {
   trimmedCrops: TrimmedCrop[];
 }
 
+/** Brand of a `PreparedDeck`: recognised by this mark, never by its shape (066 contract). */
+const PREPARED: unique symbol = Symbol('sododeck.preparedDeck');
+
+/**
+ * A file that went through the load pipeline (066 R6): validated, legacy notes freed, crops
+ * trimmed, damaged pictures replaced by placeholders. Pure data plus a private brand, so
+ * `applyFile` can skip validating it again.
+ */
+export interface PreparedDeck {
+  readonly [PREPARED]: true;
+  readonly file: SododeckFile;
+  /** What the document stores per picture (no bytes). */
+  readonly metas: ReadonlyMap<AssetId, AssetMeta>;
+  /** Decoded bytes of sound pictures, for the caller's blob store. */
+  readonly bytes: Map<AssetId, Uint8Array>;
+  readonly problems: AssetProblem[];
+  readonly trimmedCrops: TrimmedCrop[];
+}
+
+/** True for a value made by `prepareDeck` (the brand, not the shape). */
+export function isPreparedDeck(value: unknown): value is PreparedDeck {
+  return typeof value === 'object' && value !== null && PREPARED in value;
+}
+
+/**
+ * The load pipeline shared by `loadDeck` and `applyFile` (066 R6): picture repair → crop trim →
+ * validation → legacy-note upgrade. Pure and worker-safe.
+ * TODO(067): a structured clone drops the brand, so a host validating in a worker must re-brand.
+ * @throws DeckValidationError when the input is not a valid v1 file.
+ */
+export function prepareDeck(input: unknown): PreparedDeck {
+  const repaired = repairAssets(input);
+  const crops = trimCrops(repaired.input);
+  // A legacy anchored note becomes a free note at the point it was shown at (ADR 0041).
+  const file = freeAnchoredStickies(validateDeckFile(crops.input));
+  return {
+    [PREPARED]: true,
+    file,
+    metas: repaired.metas,
+    bytes: repaired.bytes,
+    problems: repaired.problems,
+    trimmedCrops: crops.trimmed,
+  };
+}
+
 /**
  * Validates `input` against the v1 schema and loads it into a new Y.Doc, returning the picture
  * bytes next to it (055). A picture whose data is damaged (bad base64, wrong size, hash that is
@@ -118,13 +164,12 @@ export interface LoadedDeck {
  * @throws DeckValidationError when the input is not a valid v1 file.
  */
 export function loadDeck(input: unknown): LoadedDeck {
-  const repaired = repairAssets(input);
-  const crops = trimCrops(repaired.input);
+  const prepared = prepareDeck(input);
   return {
-    doc: buildDoc(crops.input, repaired.metas),
-    bytes: repaired.bytes,
-    problems: repaired.problems,
-    trimmedCrops: crops.trimmed,
+    doc: buildDoc(prepared),
+    bytes: prepared.bytes,
+    problems: prepared.problems,
+    trimmedCrops: prepared.trimmedCrops,
   };
 }
 
@@ -154,10 +199,8 @@ export function validateDeckFile(input: unknown): SododeckFile {
   return file;
 }
 
-function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Map()): DeckDoc {
-  // A legacy anchored note becomes a free note at the point it was shown at (ADR 0041).
-  const file = freeAnchoredStickies(validateDeckFile(input));
-
+/** A new Y.Doc holding a prepared file. */
+export function buildDoc({ file, metas }: PreparedDeck): DeckDoc {
   const doc = new Y.Doc();
   doc.transact(() => {
     const meta = metaMap(doc);
