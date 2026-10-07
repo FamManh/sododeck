@@ -200,8 +200,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 - **Goal:** A picture in a deck file can point at a file next to it instead of embedding base64, so
   hosts with a folder (workspace, vault) keep decks small and diffable.
 - **In scope:**
-  - Schema: `Asset.data` optional; new optional `path` (relative, forward slashes, no `..` outside
-    the deck's folder); exactly one of `data` / `path`. ADR for the format change; Ajv/Zod parity.
+  - Schema: `Asset.data` optional; new optional `path` (relative to the deck, forward slashes; leading `..` allowed, founder 2026-10-07; hosts refuse paths outside their workspace or vault); exactly one of `data` / `path`. ADR for the format change; Ajv/Zod parity.
   - The web app keeps embedding (`data`); importing a file with `path` pictures shows them as
     missing with a clear reason, never fails the import.
   - Model and skill validator accept both forms; the id rule (SHA-256 of the bytes) is unchanged.
