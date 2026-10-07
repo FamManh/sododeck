@@ -180,7 +180,7 @@ export function writeField(map: YObject, kind: TextKind, key: string, value: unk
  * Replaces a node's typed values (032) with `values` (absent clears them): one `$value:<field>`
  * key each, unchanged keys left alone so a concurrent edit of another value survives.
  */
-function writeValues(map: YObject, values: unknown): void {
+export function writeValues(map: YObject, values: unknown): void {
   const next = isRecord(values) ? values : {};
   for (const key of [...map.keys()]) {
     if (key.startsWith(VALUE_PREFIX) && !Object.hasOwn(next, key.slice(VALUE_PREFIX.length))) {

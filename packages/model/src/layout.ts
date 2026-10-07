@@ -287,7 +287,7 @@ function slotKeys(
 }
 
 /** Gives every item of `ordered` a fresh key in that order (fallback for a damaged list). */
-function rekeyAll(list: ListMap, ordered: readonly YObject[]): void {
+export function rekeyAll(list: ListMap, ordered: readonly YObject[]): void {
   const keys = keysBetween(null, null, ordered.length);
   lastKeys.delete(list);
   ordered.forEach((item, i) => {

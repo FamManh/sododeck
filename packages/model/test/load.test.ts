@@ -5,11 +5,15 @@ import {
   createEditor,
   DeckValidationError,
   fromJSON,
+  loadDeck,
   observeDeck,
+  prepareDeck,
   serializeDeck,
   toJSON,
 } from '../src';
+import { buildDoc, isPreparedDeck } from '../src/deck';
 import { readExample, reopen } from './helpers';
+import { picture } from './image-helpers';
 
 function loadError(input: unknown): DeckValidationError {
   try {
@@ -384,5 +388,76 @@ describe('decks saved before tag colours (033, US5)', () => {
     createEditor(doc);
     toJSON(doc);
     expect(transactions).toBe(0);
+  });
+});
+
+describe('prepareDeck (066 R6)', () => {
+  it('returns the validated file, picture facts and bytes for the full example', async () => {
+    const full = await readExample('full.sododeck.json');
+    const prepared = prepareDeck(full);
+    expect(toJSON(buildDoc(prepared))).toEqual(toJSON(loadDeck(full).doc));
+    expect(prepared.file.nodes).toHaveLength(full.nodes.length);
+    expect(prepared.problems).toEqual([]);
+    expect(prepared.trimmedCrops).toEqual([]);
+    expect(prepared.bytes.size).toBe(prepared.metas.size);
+  });
+
+  it('frees a legacy anchored note in the prepared file', () => {
+    const prepared = prepareDeck({
+      ...emptySododeckFile(),
+      nodes: [{ ...node('n'), position: { x: 100, y: 100 } }],
+      stickies: [{ id: 's', text: 'On n', anchor: 'n' }],
+    });
+    const sticky = prepared.file.stickies[0];
+    expect(sticky).not.toHaveProperty('anchor');
+    expect(sticky?.position).toBeDefined();
+  });
+
+  it('lists a damaged picture and keeps a placeholder meta', () => {
+    const p = picture(1);
+    const prepared = prepareDeck({
+      ...emptySododeckFile(),
+      images: [
+        { id: 'img-a', asset: p.id, position: { x: 0, y: 0 }, size: { width: 50, height: 50 } },
+      ],
+      assets: { [p.id]: { ...p.meta, data: '!!not base64!!' } },
+    });
+    expect(prepared.problems).toEqual([{ id: p.id, name: p.meta.name, reason: 'bad-data' }]);
+    expect(prepared.metas.get(p.id)).toEqual({ ...p.meta, bytes: 1 });
+    expect(prepared.bytes.size).toBe(0);
+  });
+
+  it('lists an over-wide crop as trimmed', () => {
+    const p = picture(1);
+    const prepared = prepareDeck({
+      ...emptySododeckFile(),
+      images: [
+        {
+          id: 'img-a',
+          asset: p.id,
+          position: { x: 0, y: 0 },
+          size: { width: 50, height: 50 },
+          crop: { x: 0.6, y: 0, width: 0.6, height: 1 },
+        },
+      ],
+      assets: { [p.id]: { ...p.meta, data: p.data } },
+    });
+    expect(prepared.trimmedCrops).toEqual([{ imageId: 'img-a', path: '/images/0/crop' }]);
+    expect(prepared.file.images?.[0]?.crop?.width).toBeCloseTo(0.4);
+  });
+
+  it('throws DeckValidationError for a file load refuses (a rule row with too few cells)', () => {
+    const rows = [{ id: 'r', when: [], then: [] }];
+    const inputs = [{ id: 'i', label: 'I' }];
+    expect(() =>
+      prepareDeck({ ...emptySododeckFile(), rules: { R: rule({ inputs, rows }) } }),
+    ).toThrow(DeckValidationError);
+  });
+
+  it('is recognised by its brand, not by its shape', () => {
+    const prepared = prepareDeck(emptySododeckFile());
+    expect(isPreparedDeck(prepared)).toBe(true);
+    expect(isPreparedDeck({ ...prepared })).toBe(true);
+    expect(isPreparedDeck(structuredClone({ file: prepared.file }))).toBe(false);
   });
 });
