@@ -43,3 +43,25 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e   # definitio
 ## Report
 
 Record the SC-003 timings from the perf test output in the final report. No canvas code changes, so `pnpm bench` is not required.
+
+## Coverage (T026, 2026-10-07)
+
+| #   | Test                                                                                                                                                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `apply-file.test.ts` › renames one card: one change naming it, every other stored map and snapshot kept                                                                                                                |
+| 2   | `apply-file.test.ts` › adds a connector and removes a note                                                                                                                                                             |
+| 3   | `apply-file.test.ts` › changes a step text, a rule cell and a table column type                                                                                                                                        |
+| 4   | `apply-file.test.ts` › moves a step, a rule row, a table column and a view; `apply-lists.test.ts` › exactly one order key when one item moved                                                                          |
+| 5   | `apply-file.test.ts` › applies the same file twice                                                                                                                                                                     |
+| 6   | `apply-file-roundtrip.test.ts` › every corpus pair, and 200 generated edit rounds                                                                                                                                      |
+| 7   | `apply-file-undo.test.ts` › undo and redo move only the user’s edit                                                                                                                                                    |
+| 8   | `apply-file-undo.test.ts` › adds no undo step on a fresh editor                                                                                                                                                        |
+| 9   | `apply-file-undo.test.ts` › keeps the file’s title when the user undoes an overwritten title                                                                                                                           |
+| 10  | `apply-file-undo.test.ts` › keeps the file’s whole description when the user undoes their typing                                                                                                                       |
+| 11  | `apply-file-undo.test.ts` › does not split a typing burst that an apply lands in                                                                                                                                       |
+| 12  | `apply-file.test.ts` › refuses … (duplicate id, missing title, rule row cells, version 2); `applyDeckText` not-JSON / BOM. A dangling reference is not refused: load accepts it (integrity problem), so apply does too |
+| 13  | `apply-file-images.test.ts` (new picture, damaged picture, `data: ''`, removed image)                                                                                                                                  |
+| 14  | `apply-file.test.ts` › applies a move and an unlock to a locked card                                                                                                                                                   |
+| 15  | `apply-file-undo.test.ts` › applies at once during a gesture                                                                                                                                                           |
+| 16  | `apply-file.test.ts` › throws a TypeError for an editor origin; `applyDeckText` the same                                                                                                                               |
+| 17  | `perf.test.ts` › applying a changed file to the large deck ([perf-results.md](perf-results.md))                                                                                                                        |
