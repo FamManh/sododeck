@@ -12,6 +12,7 @@ import {
   endSegmentDrag,
   moveSegment,
   nudgeSegment,
+  relationshipSegmentVertices,
   resetSegment,
   segmentVertices,
   startSegmentDrag,
@@ -412,5 +413,148 @@ describe('nudgeSegment', () => {
     expect(hasActiveGesture()).toBe(false);
     editor.undo();
     expect(route()).toBeUndefined();
+  });
+});
+
+describe('relationships (064 US3)', () => {
+  // `orders` (0,0 240×200) → `users` (400,100 240×200); row anchors (240,94) and (400,182), so
+  // the 24 px stub tips are (264,94) and (376,182).
+  const relFile: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      {
+        id: 'o',
+        type: 'db-table',
+        title: 'orders',
+        position: { x: 0, y: 0 },
+        columns: [{ id: 'o1', name: 'user_id', type: 'int' }],
+      },
+      {
+        id: 'u',
+        type: 'db-table',
+        title: 'users',
+        position: { x: 400, y: 100 },
+        columns: [{ id: 'u1', name: 'id', type: 'int' }],
+      },
+    ],
+    edges: [{ id: 'r', from: 'o', to: 'u', fromColumns: ['o1'], toColumns: ['u1'] }],
+  };
+  const oCentre = { x: 120, y: 100 };
+  const uCentre = { x: 520, y: 200 };
+  const q1 = { x: 264, y: 94 };
+  const q2 = { x: 376, y: 182 };
+  const relCtx = (bends: readonly Point[] = []): SegmentContext => ({
+    edgeId: 'r',
+    fromCentre: oCentre,
+    toCentre: uCentre,
+    start: q1,
+    end: q2,
+    bends,
+    fromBox: { x: 0, y: 0, width: 240, height: 200 },
+    toBox: { x: 400, y: 100, width: 240, height: 200 },
+    fromSide: 'right',
+    toSide: 'left',
+    fromAt: 0.5,
+    toAt: 0.5,
+    mode: 'relationship',
+  });
+
+  it('runs from stub tip to stub tip, as the relationship line draws', () => {
+    expect(relationshipSegmentVertices(q1, q2, 'right', 'left', [])).toEqual([
+      q1,
+      { x: 320, y: 94 },
+      { x: 320, y: 182 },
+      q2,
+    ]);
+    expect(segmentVertices(relCtx())).toEqual(
+      relationshipSegmentVertices(q1, q2, 'right', 'left', []),
+    );
+  });
+
+  it('runs out to the farther stub first when both ends leave the same side', () => {
+    const far = { x: 300, y: 182 };
+    const v = relationshipSegmentVertices(q1, far, 'right', 'right', []);
+    expect(v?.[0]).toEqual(q1);
+    expect(v?.at(-1)).toEqual(far);
+    expect(v?.some((p) => p.x === 300 && p.y === 94)).toBe(true);
+  });
+
+  it('gives a self-reference no segments', () => {
+    expect(relationshipSegmentVertices(q1, q2, 'right', 'right', [], true)).toBeNull();
+  });
+
+  it('moves the middle run by its two inner vertices and writes only waypoints', () => {
+    const doc = fromJSON(relFile);
+    const editor = createEditor(doc, { captureTimeout: 0 });
+    const c = relCtx();
+    const run = elbowRuns(segmentVertices(c), 0, 1).find((r) => r.index === 1);
+    if (run === undefined) throw new Error('no middle run');
+    const session = startSegmentDrag(editor, c, run);
+    moveSegment(session, { x: 350, y: 0 }, { mod: true, zoom: 1 });
+    expect(useUiStore.getState().bendPreview?.bends).toEqual([
+      { x: 350, y: 94 },
+      { x: 350, y: 182 },
+    ]);
+    endSegmentDrag(editor, session);
+    const edge = toJSON(doc).edges[0];
+    expect(Object.keys(edge?.route ?? {})).toEqual(['waypoints']);
+    expect(edge?.fromColumns).toEqual(['o1']);
+    expect(edge?.toColumns).toEqual(['u1']);
+    const bends = decodeWaypoints(edge?.route?.waypoints ?? [], oCentre, uCentre);
+    expect(bends.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }))).toEqual([
+      { x: 350, y: 94 },
+      { x: 350, y: 182 },
+    ]);
+    editor.undo();
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+  });
+
+  it('an end run jogs off its stub tip and still writes only waypoints', () => {
+    const doc = fromJSON(relFile);
+    const editor = createEditor(doc, { captureTimeout: 0 });
+    const c = relCtx([
+      { x: 320, y: 94 },
+      { x: 320, y: 182 },
+    ]);
+    const run = elbowRuns(segmentVertices(c), 0, 1).find((r) => r.index === 0);
+    if (run === undefined) throw new Error('no start run');
+    const session = startSegmentDrag(editor, c, run);
+    moveSegment(session, { x: 0, y: 60 }, { mod: true, zoom: 1 });
+    endSegmentDrag(editor, session);
+    const route = toJSON(doc).edges[0]?.route;
+    expect(Object.keys(route ?? {})).toEqual(['waypoints']);
+    expect(decodeWaypoints(route?.waypoints ?? [], oCentre, uCentre)[0]?.y).toBeCloseTo(94);
+  });
+
+  it('reset of an inner run drops its bends, and never writes sides or at', () => {
+    const doc = fromJSON({
+      ...relFile,
+      edges: [
+        {
+          ...relFile.edges[0],
+          id: 'r',
+          from: 'o',
+          to: 'u',
+          route: {
+            waypoints: [
+              encodeWaypoint({ x: 350, y: 94 }, oCentre, uCentre),
+              encodeWaypoint({ x: 350, y: 182 }, oCentre, uCentre),
+            ],
+          },
+        },
+      ],
+    });
+    const editor = createEditor(doc, { captureTimeout: 0 });
+    const c = relCtx([
+      { x: 350, y: 94 },
+      { x: 350, y: 182 },
+    ]);
+    const inner = elbowRuns(segmentVertices(c), 0, 1).find((r) => r.index === 1);
+    const start = elbowRuns(segmentVertices(c), 0, 1).find((r) => r.index === 0);
+    if (inner === undefined || start === undefined) throw new Error('no runs');
+    resetSegment(editor, c, start);
+    expect(editor.canUndo()).toBe(false);
+    resetSegment(editor, c, inner);
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
   });
 });

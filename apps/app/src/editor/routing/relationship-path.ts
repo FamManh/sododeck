@@ -38,6 +38,11 @@ export interface RelPath {
   to: RelMarkAt;
   /** Middle of the line, where the label pill sits. */
   label: Point;
+  /**
+   * The tips of the two 24 px stubs on curved and elbow lines (064): the fixed ends of the part a
+   * user reshapes; absent on straight lines and loops.
+   */
+  stubs?: { from: Point; to: Point };
 }
 
 const normal = (side: RelSide): Point => ({ x: side === 'right' ? 1 : -1, y: 0 });
@@ -91,6 +96,28 @@ function stubMiddle(q1: Point, q2: Point, n1: Point, n2: Point, shape: PathShape
 }
 
 /**
+ * The points an elbow or curve passes between the stub tips `q1` and `q2`: the user's `bends`, or
+ * with none and both ends on one side, out to the farther stub first so an elbow never doubles
+ * back over itself (overlapping tables). Shared with the segment drag (064), so its runs are the
+ * drawn ones.
+ */
+export function relationshipMiddle(
+  q1: Point,
+  q2: Point,
+  fromSide: RelSide,
+  toSide: RelSide,
+  shape: PathShape,
+  bends: readonly Point[],
+): readonly Point[] {
+  if (shape !== 'elbow' || bends.length > 0 || fromSide !== toSide || q1.y === q2.y) return bends;
+  const x = fromSide === 'right' ? Math.max(q1.x, q2.x) : Math.min(q1.x, q2.x);
+  return [
+    { x, y: q1.y },
+    { x, y: q2.y },
+  ];
+}
+
+/**
  * The line between two row-anchored ends. Curved and elbow leave each end on a 24 stub along the
  * side normal and pass `bends` (user bends, absolute) between the stubs; straight is the direct
  * line and its marks follow the line angle (planning correction of FR-008).
@@ -117,16 +144,7 @@ export function relationshipPath(
   }
   const q1 = { x: a.p.x + n1.x * REL_STUB, y: a.p.y };
   const q2 = { x: b.p.x + n2v.x * REL_STUB, y: b.p.y };
-  let middle: readonly Point[] = bends;
-  // Both ends on one side (overlapping tables): an elbow runs out to the farther stub first, so
-  // it never doubles back over itself.
-  if (shape === 'elbow' && bends.length === 0 && from.side === to.side && q1.y !== q2.y) {
-    const x = from.side === 'right' ? Math.max(q1.x, q2.x) : Math.min(q1.x, q2.x);
-    middle = [
-      { x, y: q1.y },
-      { x, y: q2.y },
-    ];
-  }
+  const middle = relationshipMiddle(q1, q2, from.side, to.side, shape, bends);
   const inner = pointsToPath([q1, ...middle, q2], shape, {
     start: n1,
     end: { x: -n2v.x, y: 0 },
@@ -139,6 +157,7 @@ export function relationshipPath(
     to: { at: b.p, u: n2v },
     label:
       middle === bends && bends.length === 0 ? stubMiddle(q1, q2, n1, n2v, shape) : middleOf(d),
+    stubs: { from: q1, to: q2 },
   };
 }
 
