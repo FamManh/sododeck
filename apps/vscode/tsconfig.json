@@ -1,0 +1,5 @@
+{
+  "extends": "@sododeck/config/tsconfig/library.json",
+  "compilerOptions": { "lib": ["ES2023", "DOM"], "allowJs": true, "checkJs": false },
+  "include": ["src", "scripts", "test", "*.ts"]
+}

@@ -5,7 +5,7 @@ Rules for every AI agent working in this repo (Claude Code, Codex, others). `CLA
 Interactive, editable architecture & flow diagram workspace. One model (nodes, edges, flows, steps, rules, notes, stickies, views) rendered as a **canvas + a JSON code panel kept in sync** (the panel is read-only for now; editing from JSON comes later, see `docs/backlog.md` 004).
 
 - **MVP:** no login, no backend. Open the app and use it. Local-first: decks live in the browser (IndexedDB); export/import `.sododeck` (older `.sododeck.json` also opens).
-- Global audience, English UI. Closed source (private repo).
+- Global audience, English UI. Open source, MIT (see `LICENSE`).
 - Team: one founder + AI agents. Code must be **simple, typed, well-tested, well-documented**.
 - Product spec: `docs/spec.md`. Design system: `DESIGN.md`. Decisions: `docs/decisions/`. Deploy: `docs/deploy.md`.
 
@@ -13,6 +13,7 @@ Interactive, editable architecture & flow diagram workspace. One model (nodes, e
 
 ```
 apps/app/         Vite + React SPA, the editor → app.sododeck.com; also the "embed" build (`embed.html` → `dist-embed/`, storage-free, for host programs)
+apps/vscode/        VS Code extension (a host): opens .sododeck as the canvas by loading the app's embed build → Marketplace
 apps/site/        Astro marketing/docs/blog → sododeck.com
 packages/schema/  JSON Schema v1 for .sododeck files → generated TS types + Zod
 packages/model/   Yjs document model, the ONLY Yjs ↔ JSON conversion
@@ -26,7 +27,7 @@ docs/             spec.md, decisions/ (ADRs), design/, deploy.md
 
 Each app/package has its own `CLAUDE.md` with its responsibility and boundaries. **Read it before changing that package.**
 
-Dependency direction (never the reverse): `app → model → schema`, `app → host-protocol`, `skill → model → schema`, `app → ui`, `site → ui`, everything → `config`. The site only copies the skill's built archive (no code import).
+Dependency direction (never the reverse): `app → model → schema`, `app → host-protocol`, `vscode → host-protocol`, `vscode → model → schema`, `skill → model → schema`, `app → ui`, `site → ui`, everything → `config`. The site only copies the skill's built archive (no code import). The extension only copies `apps/app`'s embed build (`dist-embed/` → `media/embed/`) and imports nothing from it.
 
 ## Commands (repo root)
 

@@ -5,7 +5,7 @@ Interactive, editable architecture & flow diagrams: a canvas and a JSON model in
 - **Editor:** `apps/app` → app.sododeck.com
 - **Website:** `apps/site` → sododeck.com
 
-Private repository. See [`docs/spec.md`](docs/spec.md) for the product spec and [`AGENTS.md`](AGENTS.md) for architecture rules and conventions.
+Open source under the [MIT license](LICENSE). See [`docs/spec.md`](docs/spec.md) for the product spec and [`AGENTS.md`](AGENTS.md) for architecture rules and conventions.
 
 ## Requirements
 

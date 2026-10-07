@@ -1,0 +1,30 @@
+import { assetId, createDeck, serializeDeck, toJSON } from '@sododeck/model';
+import type { SododeckFile } from '@sododeck/schema';
+
+/** A real 1×1 PNG, so `sniffType` and the hash behave as on a real picture. */
+export const PNG = new Uint8Array([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+  0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xff, 0xff, 0x3f,
+  0x00, 0x05, 0xfe, 0x02, 0xfe, 0xa7, 0x35, 0x81, 0x84, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+  0x44, 0xae, 0x42, 0x60, 0x82,
+]);
+
+export const PNG_ID = assetId(PNG);
+
+/** The canonical text of an empty deck. */
+export function emptyDeckText(): string {
+  return serializeDeck(toJSON(createDeck()));
+}
+
+/** A deck with one picture that points at `path` instead of embedding its bytes (068). */
+export function deckWithPathPicture(id: string, path: string, name = 'pic.png'): string {
+  const file: SododeckFile = {
+    ...toJSON(createDeck()),
+    images: [
+      { id: 'img-1', asset: id, position: { x: 0, y: 0 }, size: { width: 100, height: 100 } },
+    ],
+    assets: { [id]: { type: 'image/png', bytes: PNG.length, width: 1, height: 1, name, path } },
+  };
+  return serializeDeck(file);
+}

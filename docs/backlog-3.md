@@ -27,8 +27,10 @@ forked.
 
 ```
 packages/model/          + diffDecks, applyFile(doc, file): merge a changed file into an open doc by id (066)
+packages/model/          + `.sododeck.md` form: toMarkdown / fromMarkdown, pure text, no Yjs (070)
 packages/host-protocol/  new: messages between the editor and a host, typed + Zod, versioned (067)
 apps/app/                + "embed" build: the editor only, storage through the host (067)
+apps/app/                + import and export of `.sododeck.md` (070)
 apps/vscode/             new: VS Code custom editor adapter (069)
 apps/obsidian/           new: Obsidian file view adapter (070)
 ```
@@ -96,7 +98,7 @@ the editor hides what the host cannot do, as `features.ts` does for browser APIs
 | --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | H1  | How the editor runs inside a host          | **An iframe in every host.** VS Code requires a webview (an iframe). In Obsidian, mounting React into its DOM would leak Tailwind's preflight and `:root` tokens and Radix portals into the host's UI. |
 | H2  | Where pictures live when a file is on disk | **Host decides; file can reference.** Make `assets[id].data` optional and add a relative `path` (068), so a host can keep pictures as sibling files or vault attachments.                              |
-| H3  | File name in Obsidian                      | **`.sododeck` first** (registered as a file type). A Markdown wrapper (`.sododeck.md`, readable text + JSON block, for search and backlinks) is "Later".                                               |
+| H3  | File name in Obsidian                      | **Both, `.sododeck.md` recommended** (amended by the founder, 2026-10-07, in the 070 spec). `.sododeck.md` is a Markdown note (readable text + the full deck as a JSON block) so search, backlinks and picture links that the app rewrites on a move all work; plain `.sododeck` is also registered and opens and edits too. `.sododeck.json` is not supported in Obsidian. |
 
 ## Dependency graph
 
@@ -232,6 +234,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 069-vscode-extension
 
+- **Status:** implemented 2026-10-07 (code complete, real-editor spikes S1–S3 still to run) · spec `specs/069-vscode-extension/` · ADR `docs/decisions/0050-vscode-extension.md`. **Corrected behaviour:** an outside change on a dirty tab replaces the unsaved edits (the file wins) and undo does _not_ bring them back.
 - **Milestone:** after 067 · **Depends on:** 067, 068 · **Estimate:** 5 d
 - **Goal:** `.sododeck` files open as a canvas in VS Code, save with the editor's normal save, and
   live in the repo like any file.
@@ -270,27 +273,48 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 070-obsidian-plugin
 
-- **Milestone:** after 069 · **Depends on:** 067, 068 · **Estimate:** 4 d
-- **Goal:** `.sododeck` files in an Obsidian vault open as a canvas, on desktop and mobile.
+- **Status:** specified and planned (2026-10-07) — see [`spec.md`](../specs/070-obsidian-plugin/spec.md)
+  and [`plan.md`](../specs/070-obsidian-plugin/plan.md). The founder changed the scope in the
+  clarification: decks in a vault are Markdown notes (`.sododeck.md`); the former "Later" item is
+  now part of this feature. The spec and plan replace the draft below where they differ.
+- **Milestone:** after 069 · **Depends on:** 066, 067, 068 (069 is the pattern, not a code
+  dependency) · **Estimate:** 6–8 d (4 d plugin + 2–4 d Markdown form); the plan marks the split
+  point (phase A: Markdown form in the model and the web app, shippable alone; phase B: plugin)
+  if one feature is too large.
+- **Goal:** decks in an Obsidian vault open as a canvas, on desktop and mobile, and behave like
+  vault notes: searchable, linkable, and with pictures that keep working when files move.
 - **In scope:**
-  - `apps/obsidian`: registers the `.sododeck` file type and a file view that hosts the embed build
-    in an iframe (H1); reads and writes through the vault API; autosave (the notes app has no
-    manual save) with `flush` on close.
-  - Outside changes (vault sync, another pane, an AI agent) → `external-change` (066), ignoring
-    our own writes.
-  - Pictures saved to the vault's attachment folder (068 `path`). Refuse picture paths that resolve
-    outside the vault (068 FR-014).
-  - Theme follows the app's light / dark class; "New Sododeck deck" command and file-menu entry.
-  - Release through the community plugin list (manifest, versions file).
-- **Out of scope:** `.sododeck.md` Markdown wrapper, internal `[[links]]` from cards to notes,
-  embedding a deck preview inside a note (all "Later").
-- **Acceptance criteria (draft):**
-  - Given a vault with a `.sododeck` file, When opened on desktop and mobile, Then the canvas shows
-    and edits are saved within a second.
+  - **Markdown form** (`packages/model`, pure text, no Yjs): `.sododeck.md` = front matter marker,
+    a readable part (titles and notes with a stable-id marker each, picture link list) and the full
+    deck as a hidden JSON block. Titles and notes edited in the text are read back by id (the
+    readable text wins). Lossless round trip tested. Web app imports and exports the form.
+  - `apps/obsidian`: one file view for `.sododeck.md` notes (detected by the front matter marker,
+    view swapped) and for plain `.sododeck` (registered file type); the embed runs in a sandboxed
+    iframe (H1), inlined in `main.js`; reads and writes through the vault API; autosave (no manual
+    save) within 1 s with `flush` on close and when the app goes to the background.
+  - Outside changes (vault sync, another pane, text edit, an AI agent) → `external-change` (066),
+    ignoring our own writes.
+  - Pictures: new ones go to the vault's attachment location (the app's own setting) and are linked
+    from the note by a link the app rewrites on move or rename; one setting keeps them embedded.
+    Plain `.sododeck` keeps pictures embedded. Refuse picture paths outside the vault (068 FR-014).
+  - Theme follows the app's light / dark class; "New Sododeck deck" command and folder-menu entry.
+  - Release through the community plugin list (manifest, versions file, three release assets).
+- **Out of scope:** `.sododeck.json` in Obsidian, conversion commands (the web app converts),
+  clicking a `[[link]]` from a card to open a note, a deck preview inside a note, "Open in
+  Sododeck web", opening `.sododeck.md` in the code editor (069) or the skill (027) (both "Later").
+- **Acceptance criteria:**
+  - Given a vault with a `.sododeck.md` or `.sododeck` file, When opened on desktop and mobile,
+    Then the canvas shows and edits are in the file within a second.
+  - Given a deck note, When the user searches a card title, Then the note is found; When the user
+    edits that title in the text, Then the open canvas shows it in place.
+  - Given a picture stored by the plugin, When the picture or the deck is moved or renamed in the
+    app, Then the picture still shows.
   - Given the same deck changed by vault sync, When the view is open, Then it updates in place.
   - Given the plugin running, When the user edits, Then no network request is made.
-- **Risks:** mobile webview memory on large decks; iframe resource URLs on mobile.
-- **`/speckit.specify` prompt:**
+- **Risks (spikes S1–S5 in the plan):** swapping the Markdown view for the canvas without a flash;
+  the sandboxed iframe, workers and `main.js` size on mobile; the app's save and reload behaviour;
+  link rewriting for the picture list.
+- **`/speckit.specify` prompt (original; superseded by the spec):**
   > Ship an Obsidian plugin that opens .sododeck files in a vault as the Sododeck canvas, on desktop
   > and mobile. Changes save automatically, a deck changed by sync or in another pane updates in
   > place, pictures go to the vault's attachment folder, and the canvas follows the light or dark
@@ -307,12 +331,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   user's unsaved edits; an object removed by one side and edited by the other is kept with the
   edit. Do it when users report lost edits, or when 065 needs whole-deck `edit_deck` with
   `baseRevision`.
-- **`.sododeck.md`** for Obsidian: titles, notes and rules written as readable Markdown (search,
-  backlinks, block references) with the full JSON in a fenced block. Estimate 2–4 d (founder asked,
-  2026-10-07): Obsidian picks a view by the last extension only, so `x.sododeck.md` is a Markdown
-  file and the plugin has to detect it (frontmatter) and swap the Markdown view for the canvas; plus
-  a second file format in the model (write the readable part, read the JSON block, decide what
-  happens to hand edits of the readable part) and web import / export. Do it after 070.
+- **`.sododeck.md` in other hosts and tools:** the code-editor extension (069) and the skill (027) open and validate the Markdown form too. (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
 - **`.sododeck.svg`** / **`.sododeck.png`**: an image file that also carries the deck, so it renders
   on code hosts and in Markdown previews and still opens for editing.
 - **Links to notes and code:** a card or note links to a vault note or a workspace file and the

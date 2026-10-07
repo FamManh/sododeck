@@ -4,17 +4,18 @@ No file-format change. These are the extension's in-memory shapes; none is persi
 
 ## DeckDocument (one per open file; the custom editor's document)
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `uri` | URI | The deck file; may be `untitled:` for a new unsaved deck |
-| `text` | string | The latest file text from the canvas (`change.text`), or the text it was started with. Never reformatted |
-| `savedText` | string | What the disk held when last read or written by us |
-| `lastWritten` | string \| null | Text of our last save, used to ignore its echo (R6) |
-| `lastSentSeq` | number | Highest `change.seq` seen; stale or repeated seq ignored |
-| `dirty` | derived | `text !== savedText` (VS Code's own mark follows the events we fire) |
-| `problems` | list \| null | From the model's check at open and at each outside change; drives the "Open as text" notice |
+| Field         | Type           | Notes                                                                                                    |
+| ------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
+| `uri`         | URI            | The deck file; may be `untitled:` for a new unsaved deck                                                 |
+| `text`        | string         | The latest file text from the canvas (`change.text`), or the text it was started with. Never reformatted |
+| `savedText`   | string         | What the disk held when last read or written by us                                                       |
+| `lastWritten` | string \| null | Text of our last save, used to ignore its echo (R6)                                                      |
+| `lastSentSeq` | number         | Highest `change.seq` seen; stale or repeated seq ignored                                                 |
+| `dirty`       | derived        | `text !== savedText` (VS Code's own mark follows the events we fire)                                     |
+| `problems`    | list \| null   | From the model's check at open and at each outside change; drives the "Open as text" notice              |
 
 **Transitions**
+
 - open → `text = savedText = disk` (or backup text with `savedText = disk`, dirty).
 - `change` (ok) → `text = change.text`; fire content-change if `text !== savedText`; answer `change-result ok`.
 - save → flush, write, `savedText = lastWritten = text`.
@@ -24,13 +25,13 @@ No file-format change. These are the extension's in-memory shapes; none is persi
 
 ## HostSession (one per webview)
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `phase` | `'waiting' \| 'ready' \| 'fatal'` | `ready` message → `init`; version mismatch → `fatal` |
-| `capabilities` | `Capabilities` (067) | Computed from the setting, deck location, trust (R8) |
-| `scheme` | `'light' \| 'dark'` | From the colour theme kind |
-| `pendingFlush` | map requestId → resolver | Save waits on `flushed` |
-| `pendingPictures` | map id → state | In-flight `picture-put` / `picture-get` |
+| Field             | Type                              | Notes                                                |
+| ----------------- | --------------------------------- | ---------------------------------------------------- |
+| `phase`           | `'waiting' \| 'ready' \| 'fatal'` | `ready` message → `init`; version mismatch → `fatal` |
+| `capabilities`    | `Capabilities` (067)              | Computed from the setting, deck location, trust (R8) |
+| `scheme`          | `'light' \| 'dark'`               | From the colour theme kind                           |
+| `pendingFlush`    | map requestId → resolver          | Save waits on `flushed`                              |
+| `pendingPictures` | map id → state                    | In-flight `picture-put` / `picture-get`              |
 
 ## PictureEntry (read from the deck text through the model)
 
@@ -38,8 +39,8 @@ No file-format change. These are the extension's in-memory shapes; none is persi
 
 ## Setting
 
-| Key | Values | Default | Scope |
-| --- | --- | --- | --- |
+| Key                         | Values          | Default | Scope                           |
+| --------------------------- | --------------- | ------- | ------------------------------- |
 | `sododeck.pictures.storage` | `embed`, `file` | `embed` | user, overridable per workspace |
 
 ## Messages
