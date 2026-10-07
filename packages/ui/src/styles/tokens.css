@@ -156,7 +156,7 @@
   --sd-dur-ring: 200ms;
   /* Flyouts, detail drawer and JSON overlay enter with a fade + 4px slide (018). */
   --sd-dur-overlay: 120ms;
-  --sd-flow-token-loop: 1400ms;
+  --sd-flow-token-loop: 1700ms;
   --sd-flow-step: 1700ms;
   --sd-toast: 2600ms;
   /* Toast that offers Undo (delete): long enough to reach the button (§g-19). */
