@@ -88,7 +88,7 @@ A user selects a relationship between two tables and adjusts it the same way as 
 6. **Given** a reshaped relationship, **When** the user undoes, **Then** the previous path comes back in one step per drag.
 7. **Given** a reshaped relationship, **When** the deck is exported to `.sododeck` and opened again, **Then** the shape and path are identical.
 8. **Given** a selected relationship, **When** the user picks curved, elbow or straight with the same shape control as a card connector, **Then** only that relationship is redrawn in the new shape, keeping its row ends and its end marks (crow's feet, cardinality).
-9. **Given** a relationship with bends, **When** the user switches it to straight, **Then** the bends are dropped as they are for a card connector (a straight line has only its two ends), and undo brings them back.
+9. **Given** a relationship with bends, **When** the user switches it to straight, **Then** the line is drawn straight without bends, as for a card connector; the stored bends are kept, so switching back to curved or elbow shows them again.
 10. **Given** a relationship whose shape was never set, **When** it is drawn, **Then** it keeps today's default elbow shape.
 
 ---
