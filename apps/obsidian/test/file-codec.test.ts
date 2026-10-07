@@ -14,6 +14,7 @@ describe('kindOfPath', () => {
   it('chooses the codec by the file name', () => {
     expect(kindOfPath('docs/Shop.sododeck.md')).toBe('markdown');
     expect(kindOfPath('docs/Shop.SODODECK.MD')).toBe('markdown');
+    expect(kindOfPath('docs/test 2.md')).toBe('markdown');
     expect(kindOfPath('docs/Shop.sododeck')).toBe('plain');
   });
 });

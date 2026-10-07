@@ -14,8 +14,12 @@ export interface Problem {
 
 export type Decoded = { ok: true; deckText: string } | { ok: false; problems: Problem[] };
 
+/**
+ * Any `.md` note that reaches the deck view carries the marker (the view swap checks it), so it is
+ * a deck note whatever its name: `Shop.sododeck.md` or `test 2.md`.
+ */
 export function kindOfPath(path: string): FileKind {
-  return /\.sododeck\.md$/i.test(path) ? 'markdown' : 'plain';
+  return /\.md$/i.test(path) ? 'markdown' : 'plain';
 }
 
 /** The deck text the canvas should show for a file's text. An empty file is an empty deck. */
