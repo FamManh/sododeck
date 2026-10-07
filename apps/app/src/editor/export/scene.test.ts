@@ -1170,3 +1170,45 @@ describe('buildScene: images (055)', () => {
     expect(s.stack).toEqual([]);
   });
 });
+
+describe('buildScene reshaped relationships (064 US3)', () => {
+  const table = (id: string, x: number) => ({
+    id,
+    type: 'db-table',
+    title: id,
+    position: { x, y: 0 },
+    columns: [{ id: `${id}.id`, name: 'id', type: 'int' }],
+  });
+  const withRoute = (style?: { shape: 'curved' | 'straight' }, bent = true) =>
+    deckOf({
+      nodes: [table('orders', 0), table('customers', 500)],
+      edges: [
+        {
+          id: 'fk',
+          from: 'orders',
+          to: 'customers',
+          fromColumns: ['orders.id'],
+          toColumns: ['customers.id'],
+          cardinality: 'n-1',
+          ...(bent ? { route: { waypoints: [{ x: 0.5, dy: -60 }] } } : {}),
+          ...(style === undefined ? {} : { style }),
+        },
+      ],
+    });
+  const pathOf = (file: SododeckFile) => scene(file).edges.find((e) => e.id === 'fk')?.path ?? '';
+
+  it('draws an elbow relationship through its stored bend, from the row stubs', () => {
+    const path = pathOf(withRoute());
+    expect(path.startsWith('M 240 82 L 264 82')).toBe(true);
+    // The bend sits half way between the table centres (x 120 → 620).
+    expect(path).toContain('370');
+  });
+
+  it('draws a curved relationship through its bend, and a straight one without it', () => {
+    const curved = pathOf(withRoute({ shape: 'curved' }));
+    expect(curved.startsWith('M 240 82 L 264 82')).toBe(true);
+    expect(curved).toContain('C');
+    expect(curved).not.toBe(pathOf(withRoute({ shape: 'curved' }, false)));
+    expect(pathOf(withRoute({ shape: 'straight' }))).toBe('M 240 82 L 500 82');
+  });
+});
