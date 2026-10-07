@@ -31,6 +31,12 @@ export {
   repairAssets,
 } from './assets';
 export {
+  pictureFileEntry,
+  pictureSize,
+  sniffType,
+  type PictureFileEntryRefusal,
+} from './picture-facts';
+export {
   ARRAY_COLLECTIONS,
   COLLECTIONS,
   isLegacyLayout,
