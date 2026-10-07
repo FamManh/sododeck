@@ -24,6 +24,7 @@ import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { LibraryClientError, getLibraryClient } from '../../storage/library-client';
 import { LibraryUnavailableError, useDeckServices } from '../deck-services';
+import { useSaveControls } from '../save-context';
 import { showUndoToast } from '../undo-toast';
 import { useViewState } from '../views/use-current-view';
 import { applyMermaid, MermaidApplyError } from './apply-mermaid';
@@ -60,6 +61,8 @@ export function MermaidImportDialog() {
   const view = useViewState();
   const { fitView } = useReactFlow();
   const services = useDeckServices();
+  // A host program has no file chooser to offer: paste only (067 FR-020).
+  const canChooseFile = useSaveControls().mode !== 'host';
   const toastApi = useToast();
   const returnFocus = useUiStore((s) => s.mermaidDialog.returnFocus);
   const closeDialog = useUiStore((s) => s.closeMermaidImport);
@@ -177,8 +180,9 @@ export function MermaidImportDialog() {
             <DialogHeader>
               <DialogTitle>Import Mermaid</DialogTitle>
               <DialogDescription>
-                Paste a flowchart or sequence diagram, or choose a file. Nothing leaves this
-                browser.
+                {canChooseFile
+                  ? 'Paste a flowchart or sequence diagram, or choose a file. Nothing leaves this browser.'
+                  : 'Paste a flowchart or sequence diagram. Nothing leaves this editor.'}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
@@ -229,33 +233,37 @@ export function MermaidImportDialog() {
                 ))}
               </RadioGroup>
             )}
-            <input
-              ref={file}
-              type="file"
-              accept=".mmd,.mermaid,.md,.txt,text/plain"
-              hidden
-              data-testid="mermaid-file-input"
-              onChange={(event) => {
-                const [chosen] = event.target.files ?? [];
-                event.target.value = '';
-                if (chosen === undefined) return;
-                void chosen.text().then((content) => {
-                  setText(content);
-                  setError(null);
-                });
-              }}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                disabled={running}
-                onClick={() => {
-                  file.current?.click();
+            {canChooseFile && (
+              <input
+                ref={file}
+                type="file"
+                accept=".mmd,.mermaid,.md,.txt,text/plain"
+                hidden
+                data-testid="mermaid-file-input"
+                onChange={(event) => {
+                  const [chosen] = event.target.files ?? [];
+                  event.target.value = '';
+                  if (chosen === undefined) return;
+                  void chosen.text().then((content) => {
+                    setText(content);
+                    setError(null);
+                  });
                 }}
-              >
-                <FileUp />
-                Choose file
-              </Button>
+              />
+            )}
+            <DialogFooter>
+              {canChooseFile && (
+                <Button
+                  type="button"
+                  disabled={running}
+                  onClick={() => {
+                    file.current?.click();
+                  }}
+                >
+                  <FileUp />
+                  Choose file
+                </Button>
+              )}
               <Button type="button" disabled={running} onClick={close}>
                 Cancel
               </Button>

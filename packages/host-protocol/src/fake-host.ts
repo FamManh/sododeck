@@ -114,6 +114,11 @@ export function createFakeHost(
         if (host.options.refusePictures === true) {
           send({ type: 'picture-store-failed', id: message.id, reason: 'Pictures are refused' });
         } else {
+          // Kept, so a later `picture-get` for it is served like a real host's file would be.
+          (host.options.pictures ??= new Map()).set(message.id, {
+            mime: message.mime,
+            bytes: message.bytes,
+          });
           send({ type: 'picture-stored', id: message.id, path: `assets/${message.name}` });
         }
         break;

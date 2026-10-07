@@ -65,6 +65,19 @@ describe('createFakeHost', () => {
     expect((received as { type: string }[]).map((m) => m.type)).toEqual(['init']);
   });
 
+  it('serves a stored picture back on picture-get', async () => {
+    const { fake, received, send } = setup();
+    const bytes = new Uint8Array([1, 2, 3]);
+    await send({ type: 'picture-put', id: HEX, mime: 'image/png', name: 'a.png', bytes });
+    const kept = fake.options.pictures?.get(HEX);
+    expect(kept?.mime).toBe('image/png');
+    expect([...(kept?.bytes ?? [])]).toEqual([1, 2, 3]);
+    await send({ type: 'picture-get', id: HEX });
+    const answer = received.at(-1) as { type: string; bytes: Uint8Array };
+    expect(answer.type).toBe('picture');
+    expect([...answer.bytes]).toEqual([1, 2, 3]);
+  });
+
   it('flush resolves on flushed; sendExternal and setTheme post', async () => {
     const { fake, received, send } = setup();
     const done = fake.flush();
