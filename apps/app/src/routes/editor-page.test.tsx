@@ -23,6 +23,7 @@ import { renameDeck } from '../library/library-actions';
 import { inProcessLibraryClient } from '../test/in-process-library-client';
 import { setLibraryDbForTests } from '../storage/library-db-instance';
 import { EditorProbe } from '../test/editor-probe';
+import { savedFile } from '../test/saved-file';
 import { legacyDeckBytes, pinnedNoteDeckBytes } from '../test/legacy-deck';
 import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
 import { RulesPage } from '../editor/rules/rules-page';
@@ -422,7 +423,7 @@ describe('EditorPage', () => {
   });
 
   it('exports <name>.sododeck from the deck menu dialog', async () => {
-    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const downloadBlob = vi.spyOn(download, 'downloadBlob').mockImplementation(() => undefined);
     const file = { ...emptySododeckFile(), name: 'Shop' };
     const { user } = await openEditor(file);
     await user.click(screen.getByRole('button', { name: 'Deck menu' }));
@@ -432,11 +433,14 @@ describe('EditorPage', () => {
       expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
     });
     await user.click(screen.getByRole('button', { name: 'Download' }));
-    expect(downloadText).toHaveBeenCalledWith(
-      'shop.sododeck',
-      serializeDeck(file),
-      'application/json',
-    );
+    await waitFor(() => {
+      expect(downloadBlob).toHaveBeenCalled();
+    });
+    expect(await savedFile(downloadBlob)).toEqual({
+      name: 'shop.sododeck',
+      text: serializeDeck(file),
+      type: 'application/json',
+    });
     await waitFor(async () => {
       expect((await record())?.exportedAt).not.toBeNull();
     });

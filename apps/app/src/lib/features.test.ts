@@ -4,6 +4,7 @@ import {
   clipboardItemSupports,
   isApplePlatform,
   isQuotaError,
+  resetWorkerSupportForTests,
   supportsClipboardItems,
   supportsClipboardRead,
   supportsCreateImageBitmap,
@@ -14,6 +15,7 @@ import {
   supportsIdleCallback,
   supportsMatchMedia,
   supportsResizeObserver,
+  supportsWorkers,
 } from './features';
 
 afterEach(() => {
@@ -154,5 +156,47 @@ describe('picture feature detection (055)', () => {
     const missing = await import('./features');
     vi.stubGlobal('createImageBitmap', undefined);
     expect(await missing.supportsAvifDecode()).toBe(false);
+  });
+});
+
+describe('supportsWorkers (067 R14)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    resetWorkerSupportForTests();
+  });
+
+  it('is false when constructing a module worker throws (sandboxed frame), and remembers it', () => {
+    const construct = vi.fn(() => {
+      throw new DOMException('blocked', 'SecurityError');
+    });
+    vi.stubGlobal('Worker', construct);
+    URL.createObjectURL = vi.fn(() => 'blob:probe');
+    URL.revokeObjectURL = vi.fn();
+    resetWorkerSupportForTests();
+    expect(supportsWorkers()).toBe(false);
+    expect(supportsWorkers()).toBe(false);
+    expect(construct).toHaveBeenCalledTimes(1);
+  });
+
+  it('is true when a module worker can be constructed', () => {
+    const terminate = vi.fn();
+    vi.stubGlobal(
+      'Worker',
+      class {
+        terminate = terminate;
+      },
+    );
+    URL.createObjectURL = vi.fn(() => 'blob:probe');
+    URL.revokeObjectURL = vi.fn();
+    resetWorkerSupportForTests();
+    expect(supportsWorkers()).toBe(true);
+    expect(terminate).toHaveBeenCalled();
+  });
+
+  it('is false without a Worker', () => {
+    vi.stubGlobal('Worker', undefined);
+    resetWorkerSupportForTests();
+    expect(supportsWorkers()).toBe(false);
   });
 });

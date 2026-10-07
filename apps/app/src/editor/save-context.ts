@@ -1,7 +1,11 @@
 import { createContext, useContext } from 'react';
 
-/** How the open deck is kept: in the library, or not at all (demo, blocked storage). */
-export type SaveMode = 'stored' | 'demo' | 'memory';
+/**
+ * How the open deck is kept: in the library, or not at all (demo, blocked storage), or by the
+ * host program that embeds the editor (`host`, 067: the host's file is the store, so the editor
+ * shows no save state).
+ */
+export type SaveMode = 'stored' | 'demo' | 'memory' | 'host';
 
 export interface SaveControls {
   mode: SaveMode;

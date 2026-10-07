@@ -3,16 +3,10 @@ import { useCallback, type DragEvent } from 'react';
 
 import { diagramType, prepare } from '../import-mermaid/detect';
 import { LibraryClientError } from '../storage/library-client';
+import { importMessage } from './import-messages';
 import type { ImportProblemsRequest } from './import-problems-dialog';
 import { importDeckFile, importedMessage, problemCount } from './library-actions';
 import type { LibraryCommands } from './use-library-commands';
-
-export function importMessage(error: unknown): string {
-  if (error instanceof LibraryClientError && error.code === 'unsupported-version') {
-    return 'That file was made with a newer version of Sododeck.';
-  }
-  return 'That file is not a valid .sododeck file. Older .sododeck.json files also open.';
-}
 
 /**
  * What a file's text is, by content and never by name (contracts/file-naming.md): JSON starting
@@ -23,6 +17,8 @@ export function kindOfText(text: string): 'deck' | 'mermaid' | 'unknown' {
   if (trimmed.startsWith('{')) return 'deck';
   return diagramType(prepare(text).lines) === 'none' ? 'unknown' : 'mermaid';
 }
+
+export { importMessage };
 
 export interface ImportFilesOptions {
   /** Text that is Mermaid goes here (the library page opens its import dialog on it). */

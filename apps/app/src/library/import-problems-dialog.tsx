@@ -40,7 +40,8 @@ function locationOf(entry: ProblemEntry): string {
   return 'whole file';
 }
 
-function ProblemRow({ entry }: { entry: ProblemEntry }) {
+/** One problem with its location and fix hint (also the embed's read-only problem list, 067). */
+export function ProblemRow({ entry }: { entry: ProblemEntry }) {
   return (
     <li className="flex gap-2 border-b border-hairline px-3 py-2 last:border-b-0">
       <ProblemSeverityIcon severity={entry.severity} />

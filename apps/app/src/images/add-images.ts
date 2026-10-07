@@ -98,7 +98,11 @@ export async function addImages(
 
   try {
     for (const picture of pictures) {
-      await store.put(picture.id, { type: picture.type, bytes: picture.bytes });
+      await store.put(picture.id, {
+        type: picture.type,
+        bytes: picture.bytes,
+        name: picture.name,
+      });
     }
   } catch (error) {
     const reason = isQuotaError(error) ? ': browser storage is full' : '';

@@ -26,36 +26,36 @@ editor                                   host
 
 ## Editor → host
 
-| `type`          | Fields                                                    | When                                                                                                                                                                      |
-| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ready`         | `protocolVersion: 1`, `editorVersion: string`             | Once, on load                                                                                                                                                             |
-| `change`        | `seq: number`, `text: string`                             | ≤ 100 ms after the first edit of a burst; one per burst window; always the complete latest file, valid, canonical. `seq` increases by 1 per message. Never after a merge. |
-| `flushed`       | `requestId: string`                                       | Answer to `flush`, after any pending `change` was sent                                                                                                                    |
-| `picture-put`   | `id: string`, `type: string`, `name: string`, `bytes: Uint8Array` | A new picture, only when `capabilities.pictures`. `id` is the picture's SHA-256 (lowercase hex), as in the file's `assets` key                                           |
-| `picture-get`   | `id: string`                                              | The deck names a picture the editor has no bytes for, only when `capabilities.pictures`                                                                                   |
-| `open-link`     | `href: string`                                            | The user opens a link, only when `capabilities.openLinks`. `href` is `http:`, `https:` or relative to the deck file                                                       |
-| `export-file`   | `name: string`, `mime: string`, `bytes: Uint8Array`       | The user exports (image, document, deck copy), only when `capabilities.exportFiles`. The host chooses where to save (usually asks the user)                                |
-| `fatal`         | `code: 'protocol-version'`, `editorVersion`, `protocolVersion: 1` | Version mismatch at `init`                                                                                                                                         |
+| `type`        | Fields                                                            | When                                                                                                                                                                      |
+| ------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ready`       | `protocolVersion: 1`, `editorVersion: string`                     | Once, on load                                                                                                                                                             |
+| `change`      | `seq: number`, `text: string`                                     | ≤ 100 ms after the first edit of a burst; one per burst window; always the complete latest file, valid, canonical. `seq` increases by 1 per message. Never after a merge. |
+| `flushed`     | `requestId: string`                                               | Answer to `flush`, after any pending `change` was sent                                                                                                                    |
+| `picture-put` | `id: string`, `mime: string`, `name: string`, `bytes: Uint8Array` | A new picture, only when `capabilities.pictures`. `id` is the picture's SHA-256 (lowercase hex), as in the file's `assets` key                                            |
+| `picture-get` | `id: string`                                                      | The deck names a picture the editor has no bytes for, only when `capabilities.pictures`                                                                                   |
+| `open-link`   | `href: string`                                                    | The user opens a link, only when `capabilities.openLinks`. `href` is `http:`, `https:` or relative to the deck file                                                       |
+| `export-file` | `name: string`, `mime: string`, `bytes: Uint8Array`               | The user exports (image, document, deck copy), only when `capabilities.exportFiles`. The host chooses where to save (usually asks the user)                               |
+| `fatal`       | `code: 'protocol-version'`, `editorVersion`, `protocolVersion: 1` | Version mismatch at `init`                                                                                                                                                |
 
 ## Host → editor
 
-| `type`                 | Fields                                                                                  | Meaning                                                                                                                                                     |
-| ---------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`                 | `protocolVersion: 1`, `text: string`, `theme: 'light' \| 'dark'`, `capabilities: Capabilities` | Start. `text` may be empty (a new file): the editor opens an empty deck                                                                              |
-| `external-change`      | `text: string`                                                                          | The file changed outside the editor. Send the whole new text. Sending back a text the editor sent is harmless (ignored)                                     |
-| `change-result`        | `seq: number`, `ok: boolean`, `reason?: string`                                         | Answer to `change`: `ok: true` means the host took the text (it is the file's current contents, saved or not). `ok: false` + `reason` shows an error. Answer within 5 s |
-| `flush`                | `requestId: string`                                                                     | Before saving or closing: the editor sends what is pending, then `flushed`                                                                                  |
-| `theme`                | `scheme: 'light' \| 'dark'`                                                             | The host's scheme changed                                                                                                                                   |
-| `picture-stored`       | `id: string`, `path: string`                                                            | Answer to `picture-put`: stored at `path`, relative to the deck file's folder, following the file format's picture path rules (068). The editor writes it into the file |
-| `picture-store-failed` | `id: string`, `reason: string`                                                          | Answer to `picture-put`: not stored. The editor keeps the picture embedded in the file                                                                      |
-| `picture`              | `id: string`, `type: string`, `bytes: Uint8Array`                                       | Answer to `picture-get`                                                                                                                                     |
-| `picture-missing`      | `id: string`, `reason: string`                                                          | Answer to `picture-get` when the host has no such picture. The editor shows it as missing with `reason`                                                     |
+| `type`                 | Fields                                                                                         | Meaning                                                                                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `init`                 | `protocolVersion: 1`, `text: string`, `theme: 'light' \| 'dark'`, `capabilities: Capabilities` | Start. `text` may be empty (a new file): the editor opens an empty deck                                                                                                 |
+| `external-change`      | `text: string`                                                                                 | The file changed outside the editor. Send the whole new text. Sending back a text the editor sent is harmless (ignored)                                                 |
+| `change-result`        | `seq: number`, `ok: boolean`, `reason?: string`                                                | Answer to `change`: `ok: true` means the host took the text (it is the file's current contents, saved or not). `ok: false` + `reason` shows an error. Answer within 5 s |
+| `flush`                | `requestId: string`                                                                            | Before saving or closing: the editor sends what is pending, then `flushed`                                                                                              |
+| `theme`                | `scheme: 'light' \| 'dark'`                                                                    | The host's scheme changed                                                                                                                                               |
+| `picture-stored`       | `id: string`, `path: string`                                                                   | Answer to `picture-put`: stored at `path`, relative to the deck file's folder, following the file format's picture path rules (068). The editor writes it into the file |
+| `picture-store-failed` | `id: string`, `reason: string`                                                                 | Answer to `picture-put`: not stored. The editor keeps the picture embedded in the file                                                                                  |
+| `picture`              | `id: string`, `mime: string`, `bytes: Uint8Array`                                              | Answer to `picture-get`                                                                                                                                                 |
+| `picture-missing`      | `id: string`, `reason: string`                                                                 | Answer to `picture-get` when the host has no such picture. The editor shows it as missing with `reason`                                                                 |
 
 ```ts
 type Capabilities = {
-  openLinks: boolean;   // the host can open http(s) and relative links
+  openLinks: boolean; // the host can open http(s) and relative links
   exportFiles: boolean; // the host can save files the user exports
-  pictures: boolean;    // the host stores pictures and answers picture-put / picture-get
+  pictures: boolean; // the host stores pictures and answers picture-put / picture-get
 };
 ```
 

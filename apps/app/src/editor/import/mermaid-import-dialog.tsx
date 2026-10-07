@@ -14,18 +14,17 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
 import { FileUp } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
 
 import { summaryText, type ImportReport } from '../../import-mermaid/import-report';
 import { applyLayout, toLayoutRequest } from '../../import-mermaid/layout-input';
 import { getLayoutClient } from '../../layout/layout-client';
 import { ImportReportView } from '../../library/import-report-view';
-import { importMermaidDeck } from '../../library/library-actions';
 import { mermaidErrorMessage } from '../../library/library-error-message';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { LibraryClientError, getLibraryClient } from '../../storage/library-client';
-import { getLibraryDb } from '../../storage/library-db-instance';
+import { LibraryUnavailableError, useDeckServices } from '../deck-services';
+import { useSaveControls } from '../save-context';
 import { showUndoToast } from '../undo-toast';
 import { useViewState } from '../views/use-current-view';
 import { applyMermaid, MermaidApplyError } from './apply-mermaid';
@@ -61,7 +60,9 @@ export function MermaidImportDialog() {
   const editor = useEditor();
   const view = useViewState();
   const { fitView } = useReactFlow();
-  const navigate = useNavigate();
+  const services = useDeckServices();
+  // A host program has no file chooser to offer: paste only (067 FR-020).
+  const canChooseFile = useSaveControls().mode !== 'host';
   const toastApi = useToast();
   const returnFocus = useUiStore((s) => s.mermaidDialog.returnFocus);
   const closeDialog = useUiStore((s) => s.closeMermaidImport);
@@ -86,10 +87,8 @@ export function MermaidImportDialog() {
     setError(null);
     try {
       if (kind === 'new-deck') {
-        const db = await getLibraryDb();
-        if (db === null)
-          throw new Error('This browser cannot keep decks, so nothing was imported.');
-        const result = await importMermaidDeck({ db, client: getLibraryClient() }, text, null);
+        if (services === null) throw new LibraryUnavailableError();
+        const result = await services.importMermaidAsNewDeck(text);
         setDone({ kind: 'new-deck', ...result });
         return;
       }
@@ -162,7 +161,7 @@ export function MermaidImportDialog() {
                   variant="primary"
                   onClick={() => {
                     closeDialog();
-                    void navigate(`/deck/${done.deckId}`);
+                    services?.openDeck(done.deckId);
                   }}
                 >
                   Open deck
@@ -181,8 +180,9 @@ export function MermaidImportDialog() {
             <DialogHeader>
               <DialogTitle>Import Mermaid</DialogTitle>
               <DialogDescription>
-                Paste a flowchart or sequence diagram, or choose a file. Nothing leaves this
-                browser.
+                {canChooseFile
+                  ? 'Paste a flowchart or sequence diagram, or choose a file. Nothing leaves this browser.'
+                  : 'Paste a flowchart or sequence diagram. Nothing leaves this editor.'}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
@@ -209,54 +209,61 @@ export function MermaidImportDialog() {
                 </p>
               )}
             </div>
-            <RadioGroup
-              aria-label="Import into"
-              value={kind}
-              className="grid grid-cols-2 gap-3 max-sm:grid-cols-1"
-              onValueChange={(value) => {
-                setKind(value === 'new-deck' ? 'new-deck' : 'deck');
-              }}
-            >
-              {TARGETS.map((option) => (
-                <RadioGroupItem
-                  key={option.kind}
-                  value={option.kind}
-                  label={option.label}
-                  disabled={running}
-                  className={cn(
-                    'rounded-card border px-4 py-3',
-                    kind === option.kind ? 'border-primary bg-primary-soft' : 'border-border',
-                  )}
-                />
-              ))}
-            </RadioGroup>
-            <input
-              ref={file}
-              type="file"
-              accept=".mmd,.mermaid,.md,.txt,text/plain"
-              hidden
-              data-testid="mermaid-file-input"
-              onChange={(event) => {
-                const [chosen] = event.target.files ?? [];
-                event.target.value = '';
-                if (chosen === undefined) return;
-                void chosen.text().then((content) => {
-                  setText(content);
-                  setError(null);
-                });
-              }}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                disabled={running}
-                onClick={() => {
-                  file.current?.click();
+            {/* A new deck goes to the library, which only the web app has. */}
+            {services !== null && (
+              <RadioGroup
+                aria-label="Import into"
+                value={kind}
+                className="grid grid-cols-2 gap-3 max-sm:grid-cols-1"
+                onValueChange={(value) => {
+                  setKind(value === 'new-deck' ? 'new-deck' : 'deck');
                 }}
               >
-                <FileUp />
-                Choose file
-              </Button>
+                {TARGETS.map((option) => (
+                  <RadioGroupItem
+                    key={option.kind}
+                    value={option.kind}
+                    label={option.label}
+                    disabled={running}
+                    className={cn(
+                      'rounded-card border px-4 py-3',
+                      kind === option.kind ? 'border-primary bg-primary-soft' : 'border-border',
+                    )}
+                  />
+                ))}
+              </RadioGroup>
+            )}
+            {canChooseFile && (
+              <input
+                ref={file}
+                type="file"
+                accept=".mmd,.mermaid,.md,.txt,text/plain"
+                hidden
+                data-testid="mermaid-file-input"
+                onChange={(event) => {
+                  const [chosen] = event.target.files ?? [];
+                  event.target.value = '';
+                  if (chosen === undefined) return;
+                  void chosen.text().then((content) => {
+                    setText(content);
+                    setError(null);
+                  });
+                }}
+              />
+            )}
+            <DialogFooter>
+              {canChooseFile && (
+                <Button
+                  type="button"
+                  disabled={running}
+                  onClick={() => {
+                    file.current?.click();
+                  }}
+                >
+                  <FileUp />
+                  Choose file
+                </Button>
+              )}
               <Button type="button" disabled={running} onClick={close}>
                 Cancel
               </Button>

@@ -76,7 +76,33 @@ export function isQuotaError(error: unknown): boolean {
 
 /** Module workers (problems check, layout, schema import). Missing in jsdom; the app then checks in-process. */
 export function supportsWorkers(): boolean {
-  return typeof Worker !== 'undefined';
+  if (typeof Worker === 'undefined') return false;
+  workersUsable ??= canConstructWorker();
+  return workersUsable;
+}
+
+let workersUsable: boolean | undefined;
+
+/**
+ * A sandboxed frame (an embed inside a host, 067) can forbid workers by throwing on construction;
+ * the in-process fallbacks then take over. Probed once with an empty module worker.
+ */
+function canConstructWorker(): boolean {
+  let url: string | undefined;
+  try {
+    url = URL.createObjectURL(new Blob([''], { type: 'text/javascript' }));
+    new Worker(url, { type: 'module' }).terminate();
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (url !== undefined) URL.revokeObjectURL(url);
+  }
+}
+
+/** Forgets the probe result (tests). */
+export function resetWorkerSupportForTests(): void {
+  workersUsable = undefined;
 }
 
 /** `requestIdleCallback` (prefetching the export chunk, 012). Missing in older Safari. */

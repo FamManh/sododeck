@@ -30,6 +30,7 @@ import { placeUnplaced } from '../layout/place-unplaced';
 import type { LibraryClient } from '../storage/library-client';
 import type { DeckSummary } from '../storage/deck-summary';
 import type { FolderNameError as FolderNameCode } from '../storage/folder-names';
+import { importedMessage, problemCount } from './import-messages';
 import { useLibraryStore, type UndoEntry } from './library-store';
 
 export interface LibraryActionContext {
@@ -224,18 +225,8 @@ export async function importDeckFile(
   return { deckId, name: stored.summary.name, report: imported.openReport };
 }
 
-/** How many problems a report counts, omitted ones included. */
-export function problemCount(report: ProblemReport | null): number {
-  if (report === null) return 0;
-  return report.counts.error + report.counts.warning + report.counts.info;
-}
-
-/** The import toast: names the deck and, once, how many problems it opened with (062 FR-011). */
-export function importedMessage(name: string, problems: number, suffix = ''): string {
-  const base = `Imported "${name}"${suffix}`;
-  if (problems === 0) return base;
-  return `${base} with ${String(problems)} problem${problems === 1 ? '' : 's'}`;
-}
+// The pure wording lives in import-messages.ts (storage-free); re-exported for existing callers.
+export { importedMessage, problemCount };
 
 export interface MermaidImportResult {
   deckId: string;

@@ -9,7 +9,7 @@ import { router } from './app/router';
 import { readEnv } from './lib/env';
 import { getLibraryDb } from './storage/library-db-instance';
 import { initTelemetry } from './telemetry';
-import { initTheme } from './theme/theme-store';
+import { initTheme } from './theme/theme-init';
 
 initTheme();
 // Start opening the library now; nothing waits for it except the pages that need it.

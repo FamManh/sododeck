@@ -1,5 +1,5 @@
 import { createEditor, serializeDeck, toJSON } from '@sododeck/model';
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
@@ -9,6 +9,7 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import * as download from '../storage/download';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
+import { savedFile } from '../test/saved-file';
 import { Inspector } from './inspector';
 
 const deck = deckOf({
@@ -187,15 +188,21 @@ describe('Inspector', () => {
   });
 
   it('shows where the deck is stored and exports it when nothing is selected', async () => {
-    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const downloadBlob = vi.spyOn(download, 'downloadBlob').mockImplementation(() => undefined);
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'General' }));
     expect(screen.getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
     // The component tests run without a stored deck: the demo wording.
     expect(screen.getByText('Demo deck · not stored')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Export .sododeck' }));
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck', serializeDeck(deck));
-    downloadText.mockRestore();
+    await waitFor(() => {
+      expect(downloadBlob).toHaveBeenCalled();
+    });
+    expect(await savedFile(downloadBlob)).toMatchObject({
+      name: 'Shop.sododeck',
+      text: serializeDeck(deck),
+    });
+    downloadBlob.mockRestore();
   });
 });
 

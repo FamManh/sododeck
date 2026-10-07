@@ -12,6 +12,7 @@ import {
 import { ImageOff, Lock } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 
+import { usePictureStore } from '../../images/picture-store';
 import { usePictureUrl } from '../../images/use-picture-url';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
@@ -75,8 +76,11 @@ export const ImageNode = memo(function ImageNode({
 }: NodeProps<ImageFlowNode>) {
   const editor = useEditor();
   const { getZoom } = useReactFlow();
-  // A picture saved as a file next to the deck is never read or looked up here (068).
-  const picture = usePictureUrl(data.filePath === undefined ? data.asset : undefined);
+  // A picture saved as a file next to the deck is never read or looked up here (068), unless the
+  // picture store can fetch it by id (the embed's host-backed store, 067).
+  const store = usePictureStore();
+  const shownAsFile = data.filePath !== undefined && store?.readsFilePaths !== true;
+  const picture = usePictureUrl(shownAsFile ? undefined : data.asset);
   const editable = useUiStore((state) => !isFlowMode(state) && state.flowSession === null);
   const openConnectPopover = useUiStore((state) => state.openConnectPopover);
   // A dragged connector end would land on this picture: it is the hot target.
@@ -97,7 +101,9 @@ export const ImageNode = memo(function ImageNode({
     },
     [editor],
   );
-  const missing = !data.known || data.filePath !== undefined || picture.status === 'missing';
+  const missing = !data.known || shownAsFile || picture.status === 'missing';
+  // The store's own words for why a picture is missing (a host says why).
+  const reason = picture.status === 'missing' ? store?.missingReason?.(data.asset) : undefined;
   // Crop mode (057): the overlay replaces the picture and the chrome until it is closed.
   const cropOpen = useUiStore((state) => state.cropSession?.imageId === data.imageId);
   const cropping = cropOpen && !missing && data.natural !== undefined;
@@ -115,7 +121,7 @@ export const ImageNode = memo(function ImageNode({
       {...(endTarget === null ? {} : { 'data-endpoint-target': endTarget })}
       role="group"
       aria-roledescription="image"
-      aria-label={imageName(data, missing)}
+      aria-label={imageName(data, missing, reason)}
       aria-selected={selected}
       aria-keyshortcuts="C Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
       tabIndex={0}
@@ -183,6 +189,9 @@ export const ImageNode = memo(function ImageNode({
         >
           <ImageOff aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5 shrink-0" />
           <span className="text-caption font-medium">Picture missing</span>
+          {reason !== undefined && (
+            <span className="max-w-full text-caption break-words">{reason}</span>
+          )}
           {data.filePath !== undefined && (
             <>
               <span className="text-caption">Saved as a separate file</span>

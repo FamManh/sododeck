@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PNG_1X1 } from '../images/test-pictures';
 import * as download from '../storage/download';
 import { deckOf, editorWrapper } from '../test/render-canvas';
+import { savedFile } from '../test/saved-file';
 import { useExportDeck } from './use-export-deck';
 
 const id = assetId(PNG_1X1);
@@ -16,7 +17,7 @@ afterEach(() => {
 
 describe('useExportDeck (055)', () => {
   it('writes the pictures its images use into the downloaded file', async () => {
-    const spy = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const spy = vi.spyOn(download, 'downloadBlob').mockImplementation(() => undefined);
     const env = editorWrapper(
       deckOf({
         name: 'Pics',
@@ -43,14 +44,14 @@ describe('useExportDeck (055)', () => {
     await waitFor(() => {
       expect(spy).toHaveBeenCalled();
     });
-    const [name, text] = spy.mock.calls[0] ?? [];
+    const { name, text } = await savedFile(spy, 0);
     expect(name).toBe('Pics.sododeck');
-    const file = JSON.parse(text ?? '{}') as ReturnType<typeof toJSON>;
+    const file = JSON.parse(text) as ReturnType<typeof toJSON>;
     expect(file.assets?.[id]?.data?.length).toBeGreaterThan(10);
   });
 
   it('exports a deck without images exactly as before', async () => {
-    const spy = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const spy = vi.spyOn(download, 'downloadBlob').mockImplementation(() => undefined);
     const env = editorWrapper(deckOf({ name: 'Plain' }));
     const { result } = renderHook(() => useExportDeck(), { wrapper: env.wrapper });
     act(() => {
@@ -59,6 +60,6 @@ describe('useExportDeck (055)', () => {
     await waitFor(() => {
       expect(spy).toHaveBeenCalled();
     });
-    expect(spy.mock.calls[0]?.[1]).not.toContain('"assets"');
+    expect((await savedFile(spy, 0)).text).not.toContain('"assets"');
   });
 });

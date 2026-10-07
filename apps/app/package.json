@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.embed.config.ts && node scripts/check-embed-bundle.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc",
@@ -17,6 +17,7 @@
     "@dbml/parse": "10.2.0",
     "@monaco-editor/react": "^4.7.0",
     "@sentry/react": "^11.0.0",
+    "@sododeck/host-protocol": "workspace:*",
     "@sododeck/model": "workspace:*",
     "@sododeck/schema": "workspace:*",
     "@sododeck/ui": "workspace:*",

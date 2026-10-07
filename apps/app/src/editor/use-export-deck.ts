@@ -5,7 +5,8 @@ import { readPictureBytes } from '../images/read-pictures';
 import { usePictureStore } from '../images/picture-store';
 import { readDeck } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
-import { deckFileName, downloadText } from '../storage/download';
+import { deckFileName } from '../storage/download';
+import { useSaveFile } from './embed-host-context';
 import { useSaveControls } from './save-context';
 
 /**
@@ -16,12 +17,17 @@ export function useExportDeck(): () => void {
   const editor = useEditor();
   const { markExported } = useSaveControls();
   const store = usePictureStore();
+  const saveFile = useSaveFile();
   return useCallback(() => {
+    if (saveFile === null) return;
     const file = readDeck(editor.doc);
     // The pictures its images use go into the file (055); a deck without images skips the read.
     void readPictureBytes(store, file).then((pictures) => {
-      downloadText(deckFileName(file.name ?? 'Untitled deck'), serializeDeck(file, pictures));
+      saveFile(
+        deckFileName(file.name ?? 'Untitled deck'),
+        new Blob([serializeDeck(file, pictures)], { type: 'application/json' }),
+      );
       markExported();
     });
-  }, [editor, markExported, store]);
+  }, [editor, markExported, saveFile, store]);
 }

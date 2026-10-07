@@ -1,0 +1,26 @@
+{
+  "name": "@sododeck/host-protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@sododeck/config": "workspace:*",
+    "@types/node": "^24.19.0",
+    "eslint": "^10.11.0",
+    "jsdom": "^30.1.1",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
+  }
+}

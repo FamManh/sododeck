@@ -12,8 +12,10 @@ import { DEFAULT_SQL_OPTIONS } from '../../db/export/types';
 import { copyItem, copyText } from '../../lib/clipboard';
 import type * as DownloadModule from '../../storage/download';
 import { openedFlow, useUiStore } from '../../state/ui-store';
-import { downloadBlob, downloadText } from '../../storage/download';
+import { downloadBlob } from '../../storage/download';
+import { savedFile } from '../../test/saved-file';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
+import { EmbedHostContext } from '../embed-host-context';
 import { SaveContext } from '../save-context';
 import { ExportDialog } from './export-dialog';
 import type * as JsonExportModule from './json-export';
@@ -140,6 +142,28 @@ function quietShop(): SododeckFile {
   return deck;
 }
 
+describe('ExportDialog without a way to save files (067)', () => {
+  it('has no Download action but keeps Copy', async () => {
+    const { wrapper } = editorWrapper(deck);
+    render(
+      <EmbedHostContext value={{ openLink: null, saveFile: null }}>
+        <SaveContext
+          value={{ mode: 'host', flush: () => Promise.resolve(), markExported: vi.fn() }}
+        >
+          <Harness />
+        </SaveContext>
+      </EmbedHostContext>,
+      { wrapper },
+    );
+    act(() => {
+      useUiStore.getState().openExport(null);
+    });
+    await footerName('logistics-delivery.sododeck');
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+  });
+});
+
 describe('ExportDialog: shell', () => {
   it('is named, described and lists three formats with subtitles', async () => {
     setup();
@@ -217,11 +241,11 @@ describe('ExportDialog: JSON (US1)', () => {
     const { user, markExported } = setup();
     await footerName('logistics-delivery.sododeck');
     await user.click(screen.getByRole('button', { name: 'Download' }));
-    expect(downloadText).toHaveBeenCalledWith(
-      'logistics-delivery.sododeck',
-      serializeDeck(deck),
-      'application/json',
-    );
+    expect(await savedFile(vi.mocked(downloadBlob))).toEqual({
+      name: 'logistics-delivery.sododeck',
+      text: serializeDeck(deck),
+      type: 'application/json',
+    });
     expect(markExported).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Downloaded logistics-delivery.sododeck')).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toBe('Downloaded logistics-delivery.sododeck');
@@ -342,11 +366,11 @@ describe('ExportDialog: images (US2)', () => {
     await user.click(screen.getByRole('button', { name: 'Copy' }));
     expect(copyText).toHaveBeenCalledWith(expect.stringContaining('<svg'));
     await user.click(screen.getByRole('button', { name: 'Download' }));
-    expect(downloadText).toHaveBeenCalledWith(
-      'logistics-delivery.svg',
-      expect.stringContaining('<svg'),
-      'image/svg+xml',
-    );
+    expect(await savedFile(vi.mocked(downloadBlob))).toMatchObject({
+      name: 'logistics-delivery.svg',
+      text: expect.stringContaining('<svg') as string,
+      type: 'image/svg+xml',
+    });
   });
 
   it('shows "Nothing to export yet" for images of an empty deck; JSON still works', async () => {
@@ -581,7 +605,11 @@ describe('ExportDialog: schema formats (045)', () => {
       dialect: null,
       sql: DEFAULT_SQL_OPTIONS,
     }).text;
-    expect(downloadText).toHaveBeenCalledWith('shop.sql', expected, 'text/plain');
+    expect(await savedFile(vi.mocked(downloadBlob))).toEqual({
+      name: 'shop.sql',
+      text: expected,
+      type: 'text/plain',
+    });
     await user.click(screen.getByRole('button', { name: 'Copy' }));
     expect(copyText).toHaveBeenCalledWith(expected);
   });
@@ -650,7 +678,11 @@ describe('ExportDialog: schema formats (045)', () => {
     expect(screen.queryByText('Postgres · deck dialect')).not.toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'IF NOT EXISTS' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Download' }));
-    expect(downloadText).toHaveBeenCalledWith(file, expect.stringContaining(text), 'text/plain');
+    expect(await savedFile(vi.mocked(downloadBlob))).toMatchObject({
+      name: file,
+      text: expect.stringContaining(text) as string,
+      type: 'text/plain',
+    });
   });
 
   it('works from the keyboard across both format groups', async () => {

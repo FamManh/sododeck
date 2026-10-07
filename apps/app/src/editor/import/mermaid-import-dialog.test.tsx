@@ -11,6 +11,7 @@ import { liveDecks } from '../../storage/library-db';
 import { setLibraryDbForTests } from '../../storage/library-db-instance';
 import { freshLibraryDb } from '../../test/library-fixtures';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
+import { WebDeckServicesProvider } from '../../test/web-deck-services-provider';
 import { MermaidImportDialog } from './mermaid-import-dialog';
 
 vi.mock('../../storage/library-client', (importOriginal) =>
@@ -55,7 +56,11 @@ const FLOWCHART = 'flowchart LR\n  W[Web app] -->|login| A(API)\n  A --> D{Valid
 
 function Harness() {
   const open = useUiStore((s) => s.mermaidDialog.open);
-  return open ? <MermaidImportDialog /> : null;
+  return open ? (
+    <WebDeckServicesProvider>
+      <MermaidImportDialog />
+    </WebDeckServicesProvider>
+  ) : null;
 }
 
 function setup(file: SododeckFile = START) {
@@ -78,6 +83,16 @@ async function paste(user: ReturnType<typeof userEvent.setup>, text: string) {
 }
 
 describe('MermaidImportDialog', () => {
+  it('offers no New deck without deck services (embed)', () => {
+    const { wrapper } = editorWrapper(START);
+    render(<MermaidImportDialog />, { wrapper });
+    act(() => {
+      useUiStore.getState().openMermaidImport(null);
+    });
+    expect(screen.queryByRole('radio', { name: 'New deck' })).not.toBeInTheDocument();
+    expect(within(dialog()).getByRole('button', { name: 'Import' })).toBeInTheDocument();
+  });
+
   it('imports into this deck by default, in one undo step, and round-trips', async () => {
     const { user, doc, editor } = setup();
     const before = toJSON(doc);

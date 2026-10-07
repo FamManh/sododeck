@@ -9,7 +9,14 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const ignores = {
-  ignores: ['**/dist/**', '**/.astro/**', '**/coverage/**', '**/src/generated/**', '**/*.d.ts'],
+  ignores: [
+    '**/dist/**',
+    '**/dist-embed/**',
+    '**/.astro/**',
+    '**/coverage/**',
+    '**/src/generated/**',
+    '**/*.d.ts',
+  ],
 };
 
 /** TypeScript base with type-aware rules. */

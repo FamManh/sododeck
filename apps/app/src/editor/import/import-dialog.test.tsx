@@ -9,6 +9,7 @@ import { CORPUS } from '../../db/fixtures/import/corpus';
 import { createInlineImportClient } from '../../db/import/import-client';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
+import { WebDeckServicesProvider } from '../../test/web-deck-services-provider';
 import { ImportDialog } from './import-dialog';
 import { setImportClientForTests } from './import-session';
 
@@ -34,7 +35,11 @@ vi.mock('react-router', async (importOriginal) => ({
 
 function Harness() {
   const open = useUiStore((s) => s.importDialog.open);
-  return open ? <ImportDialog /> : null;
+  return open ? (
+    <WebDeckServicesProvider>
+      <ImportDialog />
+    </WebDeckServicesProvider>
+  ) : null;
 }
 
 function setup(
@@ -169,6 +174,16 @@ describe('ImportDialog targets (044 T033)', () => {
     const tables = toJSON(editor().doc).nodes.filter((n) => n.type === 'db-table');
     expect(tables).toHaveLength(3);
     expect(tables.every((t) => t.parent === 'card.db')).toBe(true);
+  });
+
+  it('offers no New deck without deck services (embed)', () => {
+    const { wrapper } = editorWrapper(withCard);
+    render(<ImportDialog />, { wrapper });
+    act(() => {
+      useUiStore.getState().openImport(null);
+    });
+    expect(screen.getByRole('radio', { name: 'Import into this deck' })).toBeChecked();
+    expect(screen.queryByRole('radio', { name: 'New deck' })).not.toBeInTheDocument();
   });
 
   it('offers "Import into this deck" without a card in context, and New deck', () => {
