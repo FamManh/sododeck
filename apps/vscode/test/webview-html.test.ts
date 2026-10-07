@@ -23,6 +23,7 @@ const page = (nonce = 'n0nce') =>
     embedHtml: EMBED,
     toWebviewUri: (r) => `https://file%2B.vscode-resource.vscode-cdn.net/ext/media/embed/${r}`,
     shimUri: 'https://file%2B.vscode-resource.vscode-cdn.net/ext/media/webview-shim.js',
+    workersUri: 'https://file%2B.vscode-resource.vscode-cdn.net/ext/media/workers.js',
     cspSource: 'https://*.vscode-cdn.net',
     nonce,
   });
@@ -42,9 +43,10 @@ describe('buildWebviewPage', () => {
   it('puts the nonce on every script and loads the shim first', () => {
     const html = page();
     const scripts = html.match(/<script\b[^>]*>/g) ?? [];
-    expect(scripts).toHaveLength(2);
+    expect(scripts).toHaveLength(3);
     for (const tag of scripts) expect(tag).toContain('nonce="n0nce"');
     expect(scripts[0]).toContain('webview-shim.js');
+    expect(scripts[1]).toContain('workers.js');
     expect(html.indexOf('webview-shim.js')).toBeLessThan(html.indexOf('assets/embed.js'));
   });
 
@@ -144,25 +146,12 @@ describe('webview-shim.js worker loader', () => {
     'utf8',
   );
 
-  function setup(responses: Record<string, string>) {
+  function setup(sources: Record<string, string>) {
     const created: { url: string; options: unknown }[] = [];
     const blobs: string[] = [];
     class FakeWorker {
       constructor(url: string, options: unknown) {
         created.push({ url, options });
-      }
-    }
-    class FakeXhr {
-      status = 0;
-      responseText = '';
-      private url = '';
-      open(_m: string, url: string) {
-        this.url = url;
-      }
-      send() {
-        const text = responses[this.url];
-        this.status = text === undefined ? 404 : 200;
-        this.responseText = text ?? '';
       }
     }
     class FakeBlob {
@@ -174,8 +163,8 @@ describe('webview-shim.js worker loader', () => {
       addEventListener: () => {},
       dispatchEvent: () => true,
       Worker: FakeWorker,
-      XMLHttpRequest: FakeXhr,
       Blob: FakeBlob,
+      __sododeckWorkers: sources,
       URL: Object.assign(URL, { createObjectURL: () => 'blob:made' }),
       location: {
         href: 'vscode-webview://abc/index.html',
@@ -189,13 +178,14 @@ describe('webview-shim.js worker loader', () => {
       () => ({ postMessage: () => {} }),
       class {},
     );
-    return { win, created, blobs, Worker: win.Worker as new (u: string, o?: unknown) => unknown };
+    return { created, blobs, Worker: win.Worker as new (u: string, o?: unknown) => unknown };
   }
 
-  const REMOTE = 'https://file+.vscode-resource.vscode-cdn.net/ext/media/embed/assets/a.worker.js';
+  const BASE = 'https://file+.vscode-resource.vscode-cdn.net/ext/media/embed/assets/';
+  const REMOTE = `${BASE}a.worker-1.js`;
 
-  it('runs a worker from the resource origin as a blob, keeping its options', () => {
-    const { Worker, created, blobs } = setup({ [REMOTE]: 'self.onmessage = () => {};' });
+  it('runs a worker from the resource origin as a blob made from its source, keeping options', () => {
+    const { Worker, created, blobs } = setup({ 'a.worker-1.js': 'self.onmessage = () => {};' });
     new Worker(REMOTE, { type: 'module' });
     expect(created).toEqual([{ url: 'blob:made', options: { type: 'module' } }]);
     expect(blobs[0]).toContain('self.onmessage = () => {};');
@@ -203,17 +193,24 @@ describe('webview-shim.js worker loader', () => {
 
   it('gives the script its real location in place of import.meta.url', () => {
     const { Worker, blobs } = setup({
-      [REMOTE]: 'const u = new URL("elk.js", import.meta.url).href;',
+      'a.worker-1.js': 'const u = new URL("elk.js", import.meta.url).href;',
     });
     new Worker(REMOTE);
     expect(blobs[0]).toContain(`new URL("elk.js", ${JSON.stringify(REMOTE)}).href`);
     expect(blobs[0]).not.toContain('new URL("elk.js", import.meta.url)');
   });
 
-  it('puts the loader in front of the script so nested workers work too', () => {
-    const { Worker, blobs } = setup({ [REMOTE]: 'new Worker("x");' });
+  it('puts the loader and the sources the worker may start in front of it', () => {
+    const { Worker, blobs } = setup({
+      'a.worker-1.js': 'new Worker(new URL("elk-1.js", base))',
+      'elk-1.js': 'ELK',
+      'other.worker-2.js': 'OTHER',
+    });
     new Worker(REMOTE);
     expect(blobs[0]).toMatch(/^\(function installWorkerLoader\(scope\)/);
+    expect(blobs[0]).toContain('"elk-1.js":"ELK"');
+    expect(blobs[0]).not.toContain('OTHER');
+    expect(blobs[0]).not.toContain('"a.worker-1.js":');
   });
 
   it('starts blob and same-origin workers as they are', () => {
@@ -223,8 +220,8 @@ describe('webview-shim.js worker loader', () => {
     expect(created.map((c) => c.url)).toEqual(['blob:abc', 'vscode-webview://abc/w.js']);
   });
 
-  it('fails clearly when the script cannot be read', () => {
+  it('fails clearly when the source is not in the bundle', () => {
     const { Worker } = setup({});
-    expect(() => new Worker(REMOTE)).toThrow(/Could not load the worker script/);
+    expect(() => new Worker(REMOTE)).toThrow(/Could not find the worker script a.worker-1.js/);
   });
 });

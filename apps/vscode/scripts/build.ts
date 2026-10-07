@@ -3,7 +3,7 @@
  * app's embed build into `media/embed/` and the webview shim next to it, then runs the bundle
  * guard. Needs `apps/app` built first (Turborepo orders that through the dev dependency).
  */
-import { cp, mkdir, readdir, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,6 +34,20 @@ await rm(join(root, 'media'), { recursive: true, force: true });
 await mkdir(join(root, 'media'), { recursive: true });
 await cp(embedSource, join(root, 'media/embed'), { recursive: true });
 await cp(join(root, 'src/webview-shim.js'), join(root, 'media/webview-shim.js'));
+
+// A webview can neither start a worker from a file nor read the file at run time, so every worker
+// script goes into one classic script, by file name; the shim starts workers from it (R5, G2).
+const assets = join(root, 'media/embed/assets');
+const sources: Record<string, string> = {};
+for (const name of await readdir(assets)) {
+  if (/worker/i.test(name) && name.endsWith('.js')) {
+    sources[name] = await readFile(join(assets, name), 'utf8');
+  }
+}
+await writeFile(
+  join(root, 'media/workers.js'),
+  `window.__sododeckWorkers = ${JSON.stringify(sources)};\n`,
+);
 
 await build({
   entryPoints: [join(root, 'src/extension.ts')],

@@ -111,6 +111,7 @@ export class DeckEditorProvider implements vscode.CustomEditorProvider<DeckHandl
       toWebviewUri: (rel) =>
         webview.asWebviewUri(vscode.Uri.joinPath(embedFolder, ...rel.split('/'))).toString(),
       shimUri: webview.asWebviewUri(vscode.Uri.joinPath(media, 'webview-shim.js')).toString(),
+      workersUri: webview.asWebviewUri(vscode.Uri.joinPath(media, 'workers.js')).toString(),
       cspSource: webview.cspSource,
       nonce: makeNonce(),
     });

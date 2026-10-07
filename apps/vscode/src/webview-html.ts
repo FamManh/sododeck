@@ -11,6 +11,8 @@ export interface PageInput {
   toWebviewUri: (relative: string) => string;
   /** URI of `media/webview-shim.js`. */
   shimUri: string;
+  /** URI of `media/workers.js`, the worker sources the shim starts workers from. */
+  workersUri: string;
   /** `webview.cspSource`. */
   cspSource: string;
   nonce: string;
@@ -41,7 +43,7 @@ function relativeOf(url: string): string | null {
 }
 
 export function buildWebviewPage(input: PageInput): string {
-  const { embedHtml, toWebviewUri, shimUri, cspSource, nonce } = input;
+  const { embedHtml, toWebviewUri, shimUri, workersUri, cspSource, nonce } = input;
   let html = embedHtml.replace(
     /\b(src|href)="([^"]*)"/g,
     (whole: string, attribute: string, url: string) => {
@@ -52,7 +54,8 @@ export function buildWebviewPage(input: PageInput): string {
   html = html.replace(/<script\b/g, `<script nonce="${nonce}"`);
   const head =
     `<meta http-equiv="Content-Security-Policy" content="${contentSecurityPolicy(cspSource, nonce)}">` +
-    `<script nonce="${nonce}" src="${shimUri}"></script>`;
+    `<script nonce="${nonce}" src="${shimUri}"></script>` +
+    `<script nonce="${nonce}" src="${workersUri}"></script>`;
   return html.replace(/<head>/i, `<head>${head}`);
 }
 
