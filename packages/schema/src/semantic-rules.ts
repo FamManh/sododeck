@@ -37,6 +37,7 @@
  * - S15 (step touches, 049): no two touches of one step share the same table and column (a table
  *   entry and the entries of its own columns may coexist). `uniqueItems` compares whole objects,
  *   so it would miss two entries that differ only in `access`.
+ * - I8, I9 (068): a picture has exactly one of `data` / `path`, and `path` follows `checkPicturePath`.
  * - I1–I6 (images, 055): `images[].asset` has an `assets` entry (I1); an `assets` key is a 64-hex
  *   picture id and `data` decodes to exactly `bytes` bytes (I4: the type allow-list and the 5 MiB
  *   cap are `enum` / `maximum` in v1.json); `images[].group` names a group of the file (I3); an
@@ -51,6 +52,7 @@
  */
 import type { SododeckFile } from './generated/types';
 import type { FormatRuleCode, IssueCode } from './issue-codes';
+import { checkPicturePath, PATH_VIOLATION_TEXT } from './picture-path';
 import { toPointer } from './pointer';
 
 /** One reason a file is refused (062, ADR 0039). Public: copied for the user's AI. */
@@ -466,8 +468,39 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
         key,
       );
     }
-    const decoded = base64Length(asset.data);
-    if (decoded === undefined) {
+    if (asset.data !== undefined && asset.path !== undefined) {
+      report(
+        issues,
+        'image-asset-source',
+        path,
+        `Picture "${key}" needs exactly one of "data" or "path"; this one has both.`,
+        key,
+      );
+    } else if (asset.data === undefined && asset.path === undefined) {
+      report(
+        issues,
+        'image-asset-source',
+        path,
+        `Picture "${key}" needs exactly one of "data" or "path"; this one has neither.`,
+        key,
+      );
+    }
+    if (asset.path !== undefined) {
+      const violation = checkPicturePath(asset.path);
+      if (violation !== null) {
+        report(
+          issues,
+          'image-asset-path',
+          [...path, 'path'],
+          `The picture path "${asset.path}" ${PATH_VIOLATION_TEXT[violation]}`,
+          key,
+        );
+      }
+    }
+    const decoded = asset.data === undefined ? undefined : base64Length(asset.data);
+    if (asset.data === undefined) {
+      // A pointed-at picture: its bytes are in the file, not here.
+    } else if (decoded === undefined) {
       report(
         issues,
         'asset-data',

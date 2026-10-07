@@ -16,6 +16,7 @@ export {
   type LoadIssueCode,
   type SchemaIssueCode,
 } from './issue-codes';
+export { checkPicturePath, PATH_VIOLATION_TEXT, type PathViolation } from './picture-path';
 export { comparePointers, fromPointer, toPointer } from './pointer';
 export { EVIDENCE_MAX, evidenceOf, subjectAt, toIssues, valueAt } from './zod-issues';
 
