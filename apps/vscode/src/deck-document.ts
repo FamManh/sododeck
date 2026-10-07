@@ -60,6 +60,13 @@ export class DeckDocument {
     this.lastWritten = text;
   }
 
+  /** Revert: the disk text becomes both the text and the saved text, even when equal to ours. */
+  revertTo(diskText: string): void {
+    this.text = diskText;
+    this.savedText = diskText;
+    this.missing = false;
+  }
+
   /**
    * The disk now holds `diskText`. False when it is nothing new (it equals what the canvas has,
    * what we last read, or what we last wrote); true when it replaced the document. A replaced

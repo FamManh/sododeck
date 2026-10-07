@@ -34,6 +34,9 @@ export class FakeEditor {
     this.editor = pair.editor;
     this.editor.listen((message) => {
       this.log.push(message);
+      if (message.type === 'init' || message.type === 'external-change') {
+        this.canvasText = message.text;
+      }
       if (message.type === 'flush' && this.autoFlush) this.answerFlush(message.requestId);
     });
   }
