@@ -14,7 +14,7 @@ The plugin makes no network requests of any kind and reads and writes only files
 
 ## Bring a deck in
 
-Export from the Sododeck web app (**Export .sododeck.md**) and drop the file into your vault, or run the command **New Sododeck deck** (also in the folder menu of the file list).
+Export from the Sododeck web app (**Export .sododeck.md**) and drop the file into your vault, or run the command **New Sododeck** (also in the folder menu of the file list).
 
 ## Edit the text
 

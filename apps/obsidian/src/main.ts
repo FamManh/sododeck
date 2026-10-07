@@ -24,7 +24,7 @@ export default class SododeckPlugin extends Plugin {
 
     this.addCommand({
       id: 'new-deck',
-      name: 'New Sododeck deck',
+      name: 'New Sododeck',
       callback: () => {
         const active = this.app.workspace.getActiveFile();
         void this.newDeck(active?.parent?.path === '/' ? '' : (active?.parent?.path ?? ''));
@@ -35,7 +35,7 @@ export default class SododeckPlugin extends Plugin {
         if (!(file instanceof TFolder)) return;
         menu.addItem((item) => {
           item
-            .setTitle('New Sododeck deck')
+            .setTitle('New Sododeck')
             .setIcon('layout-dashboard')
             .onClick(() => {
               void this.newDeck(file.isRoot() ? '' : file.path);

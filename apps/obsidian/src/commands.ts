@@ -1,8 +1,8 @@
 /**
- * "New Sododeck deck" (070 R11, US6): the pure part creates the file; the glue in `main.ts` wires
+ * "New Sododeck" (070 R11, US6): the pure part creates the file; the glue in `main.ts` wires
  * the palette command and the folder menu to it.
  */
-import { emptyDeckText, toMarkdown } from '@sododeck/model';
+import { emptyDeckText } from '@sododeck/model';
 
 export interface NewDeckVault {
   exists(path: string): boolean;
@@ -10,27 +10,42 @@ export interface NewDeckVault {
   createText(path: string, text: string): Promise<void>;
 }
 
-const BASE = 'Untitled deck';
-const EXTENSION = '.sododeck.md';
+const EXTENSION = '.sododeck';
 
-/** `<folder>/Untitled deck.sododeck.md`, numbered `Untitled deck 1…` while the name is taken. */
-export function newDeckPath(folder: string, taken: (path: string) => boolean): string {
+/**
+ * `Sodo deck <ISO time>.sododeck`. The time is the ISO string with `:` and `.` turned into `-`
+ * (a colon is not allowed in a file name on every system), so names sort by creation time. A name
+ * that is somehow taken gets ` 1`, ` 2`…, never overwritten.
+ */
+export function newDeckPath(
+  folder: string,
+  taken: (path: string) => boolean,
+  now: Date = new Date(),
+): string {
+  const stamp = now
+    .toISOString()
+    .replace(/\.\d+Z$/, '')
+    .replace(/[:.]/g, '-');
   const at = (name: string): string => (folder === '' ? name : `${folder}/${name}`);
   for (let n = 0; n < 10_000; n++) {
-    const path = at(n === 0 ? `${BASE}${EXTENSION}` : `${BASE} ${String(n)}${EXTENSION}`);
+    const path = at(`Sodo deck ${stamp}${n === 0 ? '' : ` ${String(n)}`}${EXTENSION}`);
     if (!taken(path)) return path;
   }
   throw new Error('No free name for a new deck.');
 }
 
-/** A valid, empty deck note: it opens as a deck and is not rewritten until the first edit. */
+/** An empty deck as a plain `.sododeck` file: valid, and not rewritten until the first edit. */
 export function newDeckText(): string {
-  return toMarkdown(emptyDeckText());
+  return emptyDeckText();
 }
 
 /** Creates the file and returns its path. Never overwrites. */
-export async function createNewDeck(vault: NewDeckVault, folder: string): Promise<string> {
-  const path = newDeckPath(folder, (p) => vault.exists(p));
+export async function createNewDeck(
+  vault: NewDeckVault,
+  folder: string,
+  now: Date = new Date(),
+): Promise<string> {
+  const path = newDeckPath(folder, (p) => vault.exists(p), now);
   await vault.createText(path, newDeckText());
   return path;
 }

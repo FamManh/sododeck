@@ -303,7 +303,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   - Pictures: new ones go to the vault's attachment location (the app's own setting) and are linked
     from the note by a link the app rewrites on move or rename; one setting keeps them embedded.
     Plain `.sododeck` keeps pictures embedded. Refuse picture paths outside the vault (068 FR-014).
-  - Theme follows the app's light / dark class; "New Sododeck deck" command and folder-menu entry.
+  - Theme follows the app's light / dark class; "New Sododeck" command and folder-menu entry.
   - Release through the community plugin list (manifest, versions file, three release assets).
 - **Out of scope:** `.sododeck.json` in Obsidian, conversion commands (the web app converts),
   clicking a `[[link]]` from a card to open a note, a deck preview inside a note, "Open in
