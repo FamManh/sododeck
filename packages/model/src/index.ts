@@ -27,6 +27,8 @@ export {
   type AssetMeta,
   type AssetProblem,
   type AssetProblemReason,
+  type PictureFileRef,
+  repairAssets,
 } from './assets';
 export {
   ARRAY_COLLECTIONS,
@@ -148,6 +150,7 @@ export {
 export { inspectDeckText, type DeckTextResult } from './import-check';
 export {
   issueEntry,
+  fileRefEntry,
   pictureEntry,
   problemEntries,
   problemEntry,

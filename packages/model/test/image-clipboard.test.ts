@@ -1,3 +1,4 @@
+import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -5,6 +6,7 @@ import {
   fragmentOrigin,
   fromJSON,
   parseFragment,
+  serializeDeck,
   serializeFragment,
   stackOrder,
   toFragment,
@@ -152,5 +154,24 @@ describe('copy and paste of images (055)', () => {
       flipY: true,
     });
     expectValid(doc);
+  });
+});
+
+describe('copy and paste of a picture that points at a file (068)', () => {
+  it('carries the path in the fragment and reuses the entry on paste', () => {
+    const p = picture(1);
+    const { doc, editor } = setupDeck({
+      images: [{ id: 'i', asset: p.id, position: { x: 0, y: 0 }, size: { width: 40, height: 40 } }],
+      assets: { [p.id]: { ...p.meta, path: 'assets/login.png' } },
+    });
+    const fragment = toFragment(toJSON(doc), { nodes: [], groups: [], images: ['i'] });
+    expect(fragment.assets?.[p.id]).toEqual({ ...p.meta, path: 'assets/login.png' });
+    const pasted = editor.pasteFragment(parseFragment(serializeFragment(fragment)) ?? fragment, {
+      offset: { x: 100, y: 0 },
+    });
+    expect(pasted.images).toHaveLength(1);
+    const out = JSON.parse(serializeDeck(doc)) as SododeckFile;
+    expect(out.images).toHaveLength(2);
+    expect(out.assets).toEqual({ [p.id]: { ...p.meta, path: 'assets/login.png' } });
   });
 });

@@ -51,6 +51,8 @@ Rules of the format that the JSON Schema cannot express. The file is refused.
 | `column-default` | error | Two column defaults | Keep either "default" or "defaultExpr" on the column, not both. |
 | `step-touch-repeat` | error | Repeated step touch | Keep one touch per table and column in the step. |
 | `image-asset-missing` | error | Image without its picture | Add the picture to "assets", or point "asset" to a picture that is there. |
+| `image-asset-source` | error | Picture with no single source | Give the picture either "data" (base64) or "path" (a file next to the deck), not both and not neither. |
+| `image-asset-path` | error | Picture path is not valid | Write the path relative to the deck file, with "/" between folders, and no drive letter, URL or "." folder. |
 | `asset-id` | error | Picture key is not a picture id | Use the picture's SHA-256 as the key: 64 lowercase hex characters. |
 | `asset-data` | error | Picture data and size differ | Make "bytes" the decoded length of "data", and pad the base64 to a multiple of 4. |
 | `image-group-missing` | error | Image in a missing group | Point "group" to a group in this file, or remove it. |
@@ -66,6 +68,7 @@ Identity checks on a structurally valid file (refused), and damaged pictures (th
 | `duplicate-id` | error | Duplicate id | Give one of these objects a new, unique id and update references to it. |
 | `ambiguous-end` | error | Ambiguous connector end | Give the node, group or sticky its own id and update the connectors that name it. |
 | `picture-damaged` | warning | Damaged picture | Export the picture again, or put the base64 of the original file in "data" with its SHA-256 as the key. |
+| `picture-file-ref` | warning | Picture saved as a separate file | Open the deck in an editor that keeps it in its folder, or put the picture's base64 in "data" instead of "path". |
 | `crop-trimmed` | warning | Image crop past the picture | Keep "x" + "width" and "y" + "height" of the crop at most 1; the deck shows it cut back to the picture edge. |
 
 ## Deck problems
