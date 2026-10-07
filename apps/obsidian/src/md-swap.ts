@@ -5,7 +5,7 @@
  * purpose (`sododeckSource`) is left alone; removing the marker returns the leaf to Markdown.
  */
 import { isDeckMarkdown } from '@sododeck/model';
-import type { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { WorkspaceLeaf, type Plugin, type TFile, type ViewState } from 'obsidian';
 
 import { DeckView, SOURCE_STATE_KEY, VIEW_TYPE } from './deck-view';
 
@@ -34,6 +34,22 @@ export function shouldSwapBack(
   return f.viewType === VIEW_TYPE && f.extension === 'md' && !f.hasMarker;
 }
 
+/**
+ * The view state to open instead of `state` (pure): a Markdown view of a deck note becomes the deck
+ * view *before* the leaf is created, so the Markdown view is never drawn (no flash).
+ */
+export function redirectViewState(
+  state: ViewState,
+  hasMarker: (path: string) => boolean,
+): ViewState {
+  if (state.type !== 'markdown') return state;
+  const inner = sourceFlag(state.state);
+  const file = inner.file;
+  if (typeof file !== 'string' || !file.toLowerCase().endsWith('.md')) return state;
+  if (inner[SOURCE_STATE_KEY] === true || !hasMarker(file)) return state;
+  return { ...state, type: VIEW_TYPE };
+}
+
 export function sourceFlag(state: unknown): Record<string, unknown> {
   return typeof state === 'object' && state !== null ? (state as Record<string, unknown>) : {};
 }
@@ -45,8 +61,29 @@ async function hasMarker(plugin: Plugin, file: TFile): Promise<boolean> {
   return isDeckMarkdown(await plugin.app.vault.cachedRead(file));
 }
 
+/** Wraps `WorkspaceLeaf.setViewState` so deck notes open straight in the deck view; undone on unload. */
+function patchSetViewState(plugin: Plugin): void {
+  const proto = WorkspaceLeaf.prototype;
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- called back with the leaf as `this`
+  const original = proto.setViewState;
+  const hasMarkerSync = (path: string): boolean => {
+    const file = plugin.app.vault.getFileByPath(path);
+    if (file === null) return false;
+    return (
+      plugin.app.metadataCache.getFileCache(file)?.frontmatter?.['sododeck-plugin'] === 'parsed'
+    );
+  };
+  proto.setViewState = function (this: WorkspaceLeaf, state: ViewState, eState?: unknown) {
+    return original.call(this, redirectViewState(state, hasMarkerSync), eState);
+  };
+  plugin.register(() => {
+    proto.setViewState = original;
+  });
+}
+
 export function registerSwap(plugin: Plugin): void {
   const { workspace } = plugin.app;
+  patchSetViewState(plugin);
 
   const check = async (leaf: WorkspaceLeaf): Promise<void> => {
     const view = leaf.view;

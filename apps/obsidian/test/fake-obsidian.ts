@@ -21,6 +21,12 @@ export class TFile {
   }
 }
 
+export class WorkspaceLeaf {
+  setViewState(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 export class TFolder {
   constructor(public path: string) {}
   isRoot(): boolean {

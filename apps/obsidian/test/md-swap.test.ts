@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { shouldSwap, shouldSwapBack } from '../src/md-swap';
+import { redirectViewState, shouldSwap, shouldSwapBack } from '../src/md-swap';
 
 const base = { viewType: 'markdown', extension: 'md', hasMarker: true, leafState: {} };
 
@@ -29,5 +29,27 @@ describe('shouldSwapBack', () => {
       false,
     );
     expect(shouldSwapBack({ viewType: 'markdown', extension: 'md', hasMarker: false })).toBe(false);
+  });
+});
+
+describe('redirectViewState (no flash)', () => {
+  const marked = (p: string) => p === 'deck.md';
+  it('opens a deck note straight in the deck view', () => {
+    expect(
+      redirectViewState({ type: 'markdown', state: { file: 'deck.md', mode: 'source' } }, marked),
+    ).toEqual({
+      type: 'sododeck',
+      state: { file: 'deck.md', mode: 'source' },
+    });
+  });
+  it('leaves other notes, other views and the opt-out alone', () => {
+    const plain = { type: 'markdown', state: { file: 'note.md' } };
+    expect(redirectViewState(plain, marked)).toBe(plain);
+    const other = { type: 'canvas', state: { file: 'deck.md' } };
+    expect(redirectViewState(other, marked)).toBe(other);
+    const source = { type: 'markdown', state: { file: 'deck.md', sododeckSource: true } };
+    expect(redirectViewState(source, marked)).toBe(source);
+    const none = { type: 'markdown' };
+    expect(redirectViewState(none, marked)).toBe(none);
   });
 });
