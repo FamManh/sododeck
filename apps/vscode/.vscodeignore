@@ -2,6 +2,7 @@
 !dist/extension.cjs
 !media/**
 !README.md
+!LICENSE
 !CHANGELOG.md
 !icon.png
 !package.json

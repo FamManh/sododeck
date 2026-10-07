@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "publisher": "Sododeck",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "icon": "icon.png",
   "categories": [
     "Visualization",
