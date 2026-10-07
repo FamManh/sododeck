@@ -119,6 +119,10 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 066-model-apply-file
 
+- **Status:** implemented (2026-10-07) — see [`spec.md`](../specs/066-model-apply-file/spec.md),
+  [`tasks.md`](../specs/066-model-apply-file/tasks.md) and
+  [ADR 0047](decisions/0047-apply-file-merge.md). The clarified spec replaces the draft below where
+  they differ: the applied change is not undoable (untracked origin), `diffDecks` stays in the skill.
 - **Milestone:** after 036 · **Depends on:** none · **Estimate:** 2 d
 - **Goal:** A deck file changed outside the editor merges into the open document without losing
   selection, viewport or undo history, and the outside change can be undone in one step.

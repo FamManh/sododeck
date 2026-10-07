@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyFile,
   buildSearchIndex,
   checkDeck,
   checkIntegrity,
@@ -31,6 +32,9 @@ const BIG_EDIT_BUDGET_MS = 1 * SLACK;
 const BIG_MOVE_BUDGET_MS = 10 * SLACK;
 // 040 SC-005: a 150-table schema (12 columns each, 200 relationships) loads and saves in < 1 s.
 const SCHEMA_LOAD_BUDGET_MS = 1000 * SLACK;
+// 066 SC-003: applying a changed file, validation included.
+const APPLY_ONE_BUDGET_MS = 50 * SLACK;
+const APPLY_ALL_BUDGET_MS = 1000 * SLACK;
 
 function cpuMs(run: () => void): number {
   const start = process.cpuUsage();
@@ -233,5 +237,46 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
     times.sort((a, b) => a - b);
     timings['schema lint'] = times[2] ?? Infinity;
     expect(timings['schema lint']).toBeLessThan(CHECK_DECK_BUDGET_MS);
+  });
+});
+
+describe('applying a changed file to the large deck (066 SC-003)', () => {
+  const origin = { test: 'perf' };
+  /** The large deck with one node title, or every node, edge and step, marked `tag`. */
+  function variant(tag: string, everything: boolean): typeof file {
+    const copy = structuredClone(file);
+    for (const [i, node] of copy.nodes.entries()) {
+      if (everything || i === 499) node.title = `${node.title} ${tag}`;
+    }
+    if (everything) {
+      for (const edge of copy.edges) edge.label = `${edge.id} ${tag}`;
+      for (const flow of copy.flows) {
+        for (const step of flow.steps) step.description = `${step.id} ${tag}`;
+      }
+    }
+    return copy;
+  }
+
+  it(`applies one changed title in < ${String(APPLY_ONE_BUDGET_MS)} ms and every changed object in < ${String(APPLY_ALL_BUDGET_MS)} ms`, () => {
+    const target = fromJSON(file);
+    const one = [variant('a', false), variant('b', false)];
+    const all = [variant('a', true), variant('b', true)];
+    let i = 0;
+    timings['apply one field'] = median(() => {
+      applyFile(target, one[i++ % 2] ?? file, origin);
+    });
+    timings['apply every object'] = median(() => {
+      applyFile(target, all[i++ % 2] ?? file, origin);
+    });
+    timings['apply equal file'] = median(() => {
+      applyFile(target, toJSON(target), origin);
+    });
+    console.info('apply perf (median ms):', {
+      one: Number(timings['apply one field'].toFixed(2)),
+      all: Number(timings['apply every object'].toFixed(2)),
+      equal: Number(timings['apply equal file'].toFixed(2)),
+    });
+    expect(timings['apply one field']).toBeLessThan(APPLY_ONE_BUDGET_MS);
+    expect(timings['apply every object']).toBeLessThan(APPLY_ALL_BUDGET_MS);
   });
 });

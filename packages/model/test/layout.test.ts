@@ -40,7 +40,8 @@ describe('appends inside one transaction (036 R3, cached last key)', () => {
     });
     const titles = toJSON(doc).nodes.map((n) => n.title);
     expect(titles).toEqual(Array.from({ length: 10_000 }, (_, i) => String(i)));
-  });
+    // About 0.8 s alone; the default 5 s is too tight when every package's tests share the CPU.
+  }, 20_000);
 });
 
 describe('tagColorsMap (033, R2)', () => {
