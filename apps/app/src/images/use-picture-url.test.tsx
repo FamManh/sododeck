@@ -41,6 +41,14 @@ function wrapperFor(store: PictureStore | null) {
 }
 
 describe('usePictureUrl (055)', () => {
+  it('is missing at once, with no lookup, when given no id (068)', () => {
+    const store = memoryPictureStore();
+    const get = vi.spyOn(store, 'get');
+    const { result } = renderHook(() => usePictureUrl(undefined), { wrapper: wrapperFor(store) });
+    expect(result.current).toEqual({ status: 'missing' });
+    expect(get).not.toHaveBeenCalled();
+  });
+
   it('is loading, then ready with an object URL for a stored picture', async () => {
     const store = memoryPictureStore();
     await store.put('p1', { type: 'image/png', bytes: PNG_1X1 });

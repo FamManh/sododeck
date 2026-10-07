@@ -95,6 +95,7 @@ export type Code =
   | 'invalid-json'
   | 'unsupported-version'
   | 'picture-damaged'
+  | 'picture-file-ref'
   | 'crop-trimmed'
   | ProblemKind
   | 'orphan'
@@ -232,6 +233,14 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
     'Image without its picture',
     'Add the picture to "assets", or point "asset" to a picture that is there.',
   ),
+  'image-asset-source': rule(
+    'Picture with no single source',
+    'Give the picture either "data" (base64) or "path" (a file next to the deck), not both and not neither.',
+  ),
+  'image-asset-path': rule(
+    'Picture path is not valid',
+    'Write the path relative to the deck file, with "/" between folders, and no drive letter, URL or "." folder.',
+  ),
   'asset-id': rule(
     'Picture key is not a picture id',
     "Use the picture's SHA-256 as the key: 64 lowercase hex characters.",
@@ -268,6 +277,12 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
     severity: 'warning',
     title: 'Damaged picture',
     fix: 'Export the picture again, or put the base64 of the original file in "data" with its SHA-256 as the key.',
+  },
+  'picture-file-ref': {
+    family: 'load',
+    severity: 'warning',
+    title: 'Picture saved as a separate file',
+    fix: 'Open the deck in an editor that keeps it in its folder, or put the picture\'s base64 in "data" instead of "path".',
   },
   'crop-trimmed': {
     family: 'load',

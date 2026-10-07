@@ -1,7 +1,8 @@
+import { sniffType } from '@sododeck/model';
+
 import { chooseSmaller, fitWithin, type PixelSize } from './fit-within';
 import { IMAGE_TYPES, MAX_INPUT_BYTES, MAX_STORED_BYTES, type ImageType } from './limits';
 import { sanitizeSvg } from './sanitize-svg';
-import { sniffType } from './sniff-type';
 
 /**
  * The import pipeline for one picture (055 R5, R6): sniff, check limits, sanitise or decode,

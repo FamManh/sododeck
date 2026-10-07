@@ -12,7 +12,13 @@
  * The hash is a small synchronous SHA-256 here so the model stays free of platform crypto (the
  * app hashes in a worker with `crypto.subtle`; both give the same id).
  */
-import type { Asset, AssetType, Id, SododeckFile } from '@sododeck/schema';
+import {
+  checkPicturePath,
+  type Asset,
+  type AssetType,
+  type Id,
+  type SododeckFile,
+} from '@sododeck/schema';
 
 import { isRecord } from './convert';
 
@@ -24,6 +30,14 @@ export type AssetMeta = Omit<Asset, 'data'>;
 
 /** Picture bytes by picture id: what the blob store holds for one deck. */
 export type AssetBytes = ReadonlyMap<AssetId, Uint8Array>;
+
+/** A picture the deck points at instead of embedding (068): a file next to the deck file. */
+export interface PictureFileRef {
+  id: AssetId;
+  name: string;
+  /** Relative to the deck file's folder, `/` between folders (rule I9). */
+  path: string;
+}
 
 /** Most bytes a stored picture may hold (the schema's `maximum`). */
 export const MAX_ASSET_BYTES = 5_242_880;
@@ -184,7 +198,7 @@ export function decodeBase64(text: string): Uint8Array | undefined {
   return out;
 }
 
-/** The part of an asset the document stores (no `data`). */
+/** The part of an asset the document stores (no `data`; `path` is a fact, not bytes: 068). */
 export function metaOf(asset: Asset | AssetMeta): AssetMeta {
   return {
     type: asset.type,
@@ -192,6 +206,7 @@ export function metaOf(asset: Asset | AssetMeta): AssetMeta {
     width: asset.width,
     height: asset.height,
     name: asset.name,
+    ...(asset.path === undefined ? {} : { path: asset.path }),
   };
 }
 
@@ -229,14 +244,33 @@ export function repairAssets(input: unknown): {
   bytes: Map<AssetId, Uint8Array>;
   metas: Map<AssetId, AssetMeta>;
   problems: AssetProblem[];
+  fileRefs: PictureFileRef[];
 } {
   const bytes = new Map<AssetId, Uint8Array>();
   const metas = new Map<AssetId, AssetMeta>();
   const problems: AssetProblem[] = [];
-  if (!isRecord(input) || !isRecord(input.assets)) return { input, bytes, metas, problems };
+  const fileRefs: PictureFileRef[] = [];
+  if (!isRecord(input) || !isRecord(input.assets)) {
+    return { input, bytes, metas, problems, fileRefs };
+  }
 
   const assets: Record<string, unknown> = {};
   for (const [id, entry] of Object.entries(input.assets)) {
+    // A picture that points at a file has no bytes to check (068). One that also has `data`, or
+    // whose path is malformed, goes to validation unchanged (rules I8, I9).
+    if (isRecord(entry) && entry.path !== undefined) {
+      assets[id] = entry;
+      if (
+        entry.data === undefined &&
+        typeof entry.path === 'string' &&
+        checkPicturePath(entry.path) === null &&
+        isSoundMeta(entry)
+      ) {
+        metas.set(id, metaOf(entry as unknown as Asset));
+        fileRefs.push({ id, name: entry.name as string, path: entry.path });
+      }
+      continue;
+    }
     if (!isRecord(entry) || typeof entry.data !== 'string') {
       assets[id] = entry;
       continue;
@@ -276,7 +310,8 @@ export function repairAssets(input: unknown): {
     metas.set(id, stub);
     assets[id] = { ...stub, data: MISSING_DATA };
   }
-  return { input: { ...input, assets }, bytes, metas, problems };
+  fileRefs.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return { input: { ...input, assets }, bytes, metas, problems, fileRefs };
 }
 
 /** Picture ids that the file's images use. */
@@ -298,9 +333,13 @@ export function attachAssets(file: SododeckFile, bytes?: AssetBytes): SododeckFi
     const meta = stored?.[id];
     if (meta === undefined) continue;
     const picture = bytes?.get(id);
-    if (picture !== undefined) {
+    if (meta.path !== undefined) {
+      // A reference stays a reference, even when the host holds the bytes it read (068).
+      const { data: _data, ...pointed } = meta;
+      assets[id] = pointed;
+    } else if (picture !== undefined) {
       assets[id] = { ...metaOf(meta), bytes: picture.length, data: encodeBase64(picture) };
-    } else if (meta.data !== '') {
+    } else if (meta.data !== '' && meta.data !== undefined) {
       assets[id] = meta;
     } else {
       assets[id] = { ...metaOf(meta), bytes: 1, data: MISSING_DATA };

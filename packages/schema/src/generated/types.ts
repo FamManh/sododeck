@@ -1238,7 +1238,7 @@ export interface Crop {
   height: number;
 }
 /**
- * A stored picture: what it is, and its bytes as base64 (at most 5 MiB decoded). The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.
+ * A stored picture: what it is, and its bytes as base64 in `data` (at most 5 MiB decoded), or a `path` to the file. The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Asset".
@@ -1264,5 +1264,9 @@ export interface Asset {
   /**
    * The picture bytes, base64 without a `data:` prefix.
    */
-  data: string;
+  data?: string;
+  /**
+   * Where the picture file is, relative to the deck file's folder, with / between folders. Leading ../ may leave the folder; a host only reads files inside its workspace or vault. Use either data or path, never both.
+   */
+  path?: string;
 }

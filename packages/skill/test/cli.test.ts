@@ -1,7 +1,8 @@
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { assetId } from '@sododeck/model';
 import { describe, expect, it } from 'vitest';
 
 import { main, type Command } from '../src/cli/main';
@@ -116,5 +117,83 @@ describe('skill command line (027 contracts/scripts-cli.md)', () => {
     expect(err).toMatch(/Delivered/);
     expect(readFileSync(target, 'utf8')).toBe(exampleText('platform.sododeck'));
     expect(existsSync(draft)).toBe(false);
+  });
+});
+
+describe('picture command (068)', () => {
+  // A 1 × 1 PNG, so no binary is committed.
+  const PNG = Uint8Array.from(
+    atob(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+    ),
+    (c) => c.charCodeAt(0),
+  );
+
+  it('prints a complete entry with the path from the deck folder', async () => {
+    const dir = tempDir();
+    mkdirSync(join(dir, 'assets'));
+    writeFileSync(join(dir, 'assets', 'login.png'), PNG);
+    const { code, out, err } = await run(
+      'picture',
+      join(dir, 'assets', 'login.png'),
+      '--deck',
+      join(dir, 'checkout.sododeck'),
+    );
+    expect(err).toBe('');
+    expect(code).toBe(0);
+    expect(JSON.parse(out)).toEqual({
+      [assetId(PNG)]: {
+        type: 'image/png',
+        bytes: PNG.length,
+        width: 1,
+        height: 1,
+        name: 'login.png',
+        path: 'assets/login.png',
+      },
+    });
+  });
+
+  it('writes ../ for a picture in a folder above the deck', async () => {
+    const dir = tempDir();
+    mkdirSync(join(dir, 'docs'));
+    mkdirSync(join(dir, 'Attachments'));
+    writeFileSync(join(dir, 'Attachments', 'x.png'), PNG);
+    const { code, out } = await run(
+      'picture',
+      join(dir, 'Attachments', 'x.png'),
+      '--deck',
+      join(dir, 'docs', 'deck.sododeck'),
+    );
+    expect(code).toBe(0);
+    expect((Object.values(JSON.parse(out) as object)[0] as { path: string }).path).toBe(
+      '../Attachments/x.png',
+    );
+  });
+
+  it('refuses a BMP, a file over 5 MiB and a path that breaks a rule, with one line and no output', async () => {
+    const dir = tempDir();
+    const deck = join(dir, 'deck.sododeck');
+    writeFileSync(join(dir, 'a.bmp'), new TextEncoder().encode('BM\u0000\u0000\u0000\u0000'));
+    const big = new Uint8Array(5 * 1024 * 1024 + 1);
+    big.set(PNG);
+    writeFileSync(join(dir, 'big.png'), big);
+    writeFileSync(join(dir, 'a:b.png'), PNG);
+    for (const [file, pattern] of [
+      ['a.bmp', /is not a PNG, JPEG/],
+      ['big.png', /larger than 5 MiB/],
+      ['a:b.png', /contains ":"/],
+    ] as const) {
+      const { code, out, err } = await run('picture', join(dir, file), '--deck', deck);
+      expect(code).toBe(1);
+      expect(out).toBe('');
+      expect(err.trim().split('\n')).toHaveLength(1);
+      expect(err).toMatch(pattern);
+    }
+  });
+
+  it('exits 2 for missing arguments or an unreadable image', async () => {
+    expect((await run('picture')).code).toBe(2);
+    expect((await run('picture', 'a.png')).err).toMatch(/--deck/);
+    expect((await run('picture', '/nope/a.png', '--deck', 'd.sododeck')).code).toBe(2);
   });
 });

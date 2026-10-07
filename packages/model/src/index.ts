@@ -27,7 +27,15 @@ export {
   type AssetMeta,
   type AssetProblem,
   type AssetProblemReason,
+  type PictureFileRef,
+  repairAssets,
 } from './assets';
+export {
+  pictureFileEntry,
+  pictureSize,
+  sniffType,
+  type PictureFileEntryRefusal,
+} from './picture-facts';
 export {
   ARRAY_COLLECTIONS,
   COLLECTIONS,
@@ -148,6 +156,7 @@ export {
 export { inspectDeckText, type DeckTextResult } from './import-check';
 export {
   issueEntry,
+  fileRefEntry,
   pictureEntry,
   problemEntries,
   problemEntry,

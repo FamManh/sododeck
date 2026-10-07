@@ -2,7 +2,7 @@
  * Result types of applying a deck file to an open deck (066, contract `model-api.md`), and the
  * small counter that builds the change summary while the diff runs (research R9).
  */
-import type { AssetId, AssetProblem } from './assets';
+import type { AssetId, AssetProblem, PictureFileRef } from './assets';
 import type { Scope } from './layout';
 import type { TrimmedCrop } from './load-checks';
 import type { ProblemEntry } from './report-json';
@@ -30,6 +30,8 @@ export type ApplyResult =
       /** Damaged pictures, applied as missing (never a refusal). */
       problems: AssetProblem[];
       trimmedCrops: TrimmedCrop[];
+      /** Pictures that point at a file next to the deck (068); kept as they are. */
+      fileRefs: PictureFileRef[];
     };
 
 /** Counts objects per scope; a child edit counts its owner as changed (R9). */

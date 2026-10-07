@@ -10,13 +10,14 @@ const MISSING: PictureState = { status: 'missing' };
 /**
  * The object URL of a picture of the open deck: `loading`, then `ready` with the URL, or `missing`
  * when the store has no row for it (055). The share of the picture is taken on subscribe and
- * released on unmount.
+ * released on unmount. With no id (a picture saved as a file next to the deck, 068) nothing is
+ * looked up: it is `missing` at once.
  */
-export function usePictureUrl(asset: string): PictureState {
+export function usePictureUrl(asset: string | undefined): PictureState {
   const store = usePictureStore();
   const subscribe = useCallback(
     (notify: () => void) => {
-      if (store === null) return () => undefined;
+      if (store === null || asset === undefined) return () => undefined;
       const handle = acquirePicture(store, asset);
       const unsubscribe = handle.subscribe(notify);
       return () => {
@@ -27,7 +28,7 @@ export function usePictureUrl(asset: string): PictureState {
     [store, asset],
   );
   const snapshot = useCallback(
-    () => (store === null ? MISSING : peekPicture(store, asset)),
+    () => (store === null || asset === undefined ? MISSING : peekPicture(store, asset)),
     [store, asset],
   );
   return useSyncExternalStore(subscribe, snapshot, snapshot);

@@ -1934,6 +1934,17 @@ describe('images in the stack (055)', () => {
     expect(edges.map((edge) => [edge.source, edge.target])).toEqual([['c0', 'image:i']]);
   });
 
+  it('carries the path of a picture saved as a file in the image node data (068)', () => {
+    const file = {
+      ...withImages([image('i', 5)]),
+      assets: { [asset]: { ...facts, path: 'assets/p.png' } },
+    };
+    expect(toImageNodes(file, EMPTY_SELECTION)[0]?.data.filePath).toBe('assets/p.png');
+    expect(toImageNodes(withImages([image('i', 5)]), EMPTY_SELECTION)[0]?.data.filePath).toBe(
+      undefined,
+    );
+  });
+
   it('puts an image below every card under the connectors (negative z-index)', () => {
     const file = withImages([image('i', -1)]);
     expect(draw(file)).toEqual(['image:i', 'c0', 'c1']);

@@ -338,6 +338,8 @@ export interface ImageNodeData extends Record<string, unknown> {
   caption: string | undefined;
   /** The picture's original file name, from `meta.assets`; empty when its facts are gone. */
   fileName: string;
+  /** Where the picture file is next to the deck file (068); the app never reads it. */
+  filePath: string | undefined;
   /** False when the deck has no stored facts for the picture: it shows as missing at once. */
   known: boolean;
   size: Size;
@@ -1196,6 +1198,7 @@ export function toImageNodes(
   return images.map((image) => {
     const facts = deck.assets?.[image.asset];
     const fileName = facts?.name ?? '';
+    const filePath = facts?.path;
     const known = facts !== undefined;
     const locked = image.locked === true;
     const draggable = !flowMode && !locked;
@@ -1205,6 +1208,7 @@ export function toImageNodes(
     if (
       cached?.selected === isSelected &&
       cached.data.fileName === fileName &&
+      cached.data.filePath === filePath &&
       cached.data.known === known &&
       cached.data.locked === locked &&
       cached.draggable === draggable &&
@@ -1229,6 +1233,7 @@ export function toImageNodes(
         alt: image.alt,
         caption: image.caption,
         fileName,
+        filePath,
         known,
         size: image.size,
         locked,

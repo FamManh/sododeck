@@ -162,6 +162,37 @@ describe('inspectDeckText: decks that open (062 US2)', () => {
     expect(located(opened(broken(file)))).toEqual([[code, path]]);
   });
 
+  it('warns once per picture saved as a separate file (068)', () => {
+    const id = 'b'.repeat(64);
+    const named = {
+      ...emptySododeckFile(),
+      images: [{ id: 'i', asset: id, position: { x: 0, y: 0 }, size: { width: 40, height: 40 } }],
+      assets: {
+        [id]: {
+          type: 'image/png',
+          bytes: 10,
+          width: 4,
+          height: 4,
+          name: 'login.png',
+          path: 'assets/login.png',
+        },
+      },
+    };
+    const entries = opened(JSON.stringify(named));
+    expect(entries).toEqual([
+      expect.objectContaining({
+        code: 'picture-file-ref',
+        severity: 'warning',
+        path: `/assets/${id}/path`,
+        subject: id,
+        message:
+          'Picture "login.png" is saved as a separate file (assets/login.png) and cannot be shown here.',
+      }),
+    ]);
+    const unnamed = { ...named, assets: { [id]: { ...named.assets[id], name: '' } } };
+    expect(opened(JSON.stringify(unnamed))[0]?.message).toContain(`Picture ${id} is saved`);
+  });
+
   it('opens a clean deck with no entries', () => {
     const result = inspectDeckText(JSON.stringify(emptySododeckFile()));
     expect(result.ok).toBe(true);

@@ -68,12 +68,17 @@ describe('images (055)', () => {
     expect(new Set(Object.values(full.assets ?? {}).map((a) => a.type)).size).toBe(6);
     const { doc, bytes, problems } = loadDeck(full);
     expect(problems).toEqual([]);
+    // Six embedded pictures; the seventh is a file next to the deck (068).
     expect(bytes.size).toBe(6);
     expect(serializeDeck(doc, bytes)).toBe(serializeDeck(full));
     expect(reopen(full)).toEqual(full);
     // The document itself holds no picture bytes.
     expect(JSON.stringify(toJSON(doc).assets)).not.toContain('iVBOR');
-    for (const asset of Object.values(toJSON(doc).assets ?? {})) expect(asset.data).toBe('');
+    for (const asset of Object.values(toJSON(doc).assets ?? {})) {
+      // The one pointed-at picture (068) has a path and no data.
+      if (asset.path === undefined) expect(asset.data).toBe('');
+      else expect(asset).not.toHaveProperty('data');
+    }
   });
 
   it('moves, resizes and edits text in one undo step each', () => {

@@ -41,6 +41,8 @@ export const FORMAT_RULE_CODES = [
   'image-group-missing', // I3
   'image-id-clash', // I5
   'image-too-small', // I6
+  'image-asset-source', // I8
+  'image-asset-path', // I9
 ] as const;
 export type FormatRuleCode = (typeof FORMAT_RULE_CODES)[number];
 

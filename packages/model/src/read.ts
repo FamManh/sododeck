@@ -85,7 +85,9 @@ export function readAssets(
     const map = stored.get(id);
     if (map === undefined || !used.has(id)) continue;
     const plain = fromY(map) as Record<string, unknown>;
-    out[id] = { ...plain, data: '' } as unknown as NonNullable<SododeckFile['assets']>[string];
+    // A picture that points at a file carries `path` and no bytes (068).
+    const entry = plain.path === undefined ? { ...plain, data: '' } : plain;
+    out[id] = entry as unknown as NonNullable<SododeckFile['assets']>[string];
   }
   return Object.keys(out).length === 0 ? undefined : out;
 }

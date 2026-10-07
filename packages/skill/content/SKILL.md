@@ -76,6 +76,7 @@ and read only the files you name. `references/scripts.md` lists every option and
 | a deck from Mermaid, C4 text or OpenAPI                         | `text`           | `references/from-text-formats.md`                                                                |
 | a deck from a whiteboard file, screenshot or photo of a diagram | `text`           | `references/from-diagrams.md` (run `outline.mjs` on `.excalidraw` files instead of reading them) |
 | database tables and relationships                               | `new` / `update` | `references/database.md`                                                                         |
+| a picture or screenshot that sits in a file next to the deck    | `new` / `update` | `references/pictures.md` (run `picture.mjs` for the entry)                                       |
 
 Always also read `references/layout.md` (placing cards) and, once per new deck,
 `references/taste.md`. Pass the mode to lint (`--mode update`, `--mode codebase`).
