@@ -17,7 +17,7 @@ import {
   type SododeckFile,
 } from '@sododeck/schema';
 
-import type { AssetProblem, AssetProblemReason } from './assets';
+import type { AssetProblem, AssetProblemReason, PictureFileRef } from './assets';
 import type { TrimmedCrop } from './load-checks';
 import { CATALOGUE, isCode } from './problem-codes';
 import { problemLocator, type Problem, type ProblemLocation } from './problems';
@@ -101,6 +101,20 @@ export function pictureEntry(problem: AssetProblem): ProblemEntry {
     message: `Picture ${name} is damaged: ${PICTURE_REASON[problem.reason]}.`,
     evidence: problem.reason,
     fix: defaultFix('picture-damaged'),
+  };
+}
+
+/** A picture saved as a file next to the deck (068): this app cannot show it, and keeps it. */
+export function fileRefEntry(ref: PictureFileRef): ProblemEntry {
+  const name = ref.name === '' ? ref.id : `"${ref.name}"`;
+  return {
+    code: 'picture-file-ref',
+    severity: 'warning',
+    path: toPointer(['assets', ref.id, 'path']),
+    subject: ref.id,
+    message: `Picture ${name} is saved as a separate file (${ref.path}) and cannot be shown here.`,
+    evidence: ref.path,
+    fix: defaultFix('picture-file-ref'),
   };
 }
 

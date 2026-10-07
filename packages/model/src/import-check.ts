@@ -13,6 +13,7 @@ import { CATALOGUE } from './problem-codes';
 import {
   cropEntry,
   issueEntry,
+  fileRefEntry,
   pictureEntry,
   problemEntries,
   sortEntries,
@@ -146,6 +147,7 @@ export function inspectDeckText(text: string): DeckTextResult {
     loaded,
     entries: sortEntries([
       ...loaded.problems.map(pictureEntry),
+      ...loaded.fileRefs.map(fileRefEntry),
       ...loaded.trimmedCrops.map(cropEntry),
       ...problemEntries(checkDeck(file).list, file),
     ]),

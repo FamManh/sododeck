@@ -8,8 +8,8 @@ cannot be loaded · `2` wrong arguments or a file that cannot be read (message o
 
 ## Contents
 
-1. validate · 2. lint · 3. summary · 4. diff · 5. deliver · 6. outline · 7. Reading a problem ·
-2. Problem codes
+1. validate · 2. lint · 3. summary · 4. diff · 5. deliver · 6. outline · 7. picture ·
+2. Reading a problem · 9. Problem codes
 
 ## 1. validate
 
@@ -50,7 +50,15 @@ diagram), every labelled shape (labels bound to a shape or written on top of it)
 40 px was taken), and the free text by size. `--board` keeps one board (title match, any case).
 See `from-diagrams.md`.
 
-## 7. Reading a problem
+## 7. picture
+
+`picture.mjs <image-file> --deck <deck>`: the `assets` entry for an image file that stays next to
+the deck: type by content, size from the file header, id = SHA-256, name and the relative `path`
+from the deck's folder. Prints JSON; exits `1` with one line on stderr when the type is not
+allowed, the file is over 5 MiB, the size cannot be read or the path breaks a rule. It does not
+edit the deck. See `pictures.md`.
+
+## 8. Reading a problem
 
 ```json
 {
@@ -69,7 +77,7 @@ problem points at the exact key, such as `/nodes/3/title`); `subject` is the id 
 `line` and `column` instead of `path`. The same report comes out of Sododeck's **Copy problems**,
 so a user can paste the app's problems to you and you fix them the same way.
 
-## 8. Problem codes
+## 9. Problem codes
 
 Errors make the app refuse a file or mark a deck problem; warnings are advice. Format and identity
 codes (`schema-*`, `invalid-json`, `duplicate-id`, …) come from validate.

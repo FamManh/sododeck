@@ -7,9 +7,10 @@
  */
 import { randomBytes } from 'node:crypto';
 import { readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, relative, sep } from 'node:path';
 
-import { stringifyReport, type ProblemReport } from '@sododeck/model';
+import { pictureFileEntry, stringifyReport, type ProblemReport } from '@sododeck/model';
+import { PATH_VIOLATION_TEXT } from '@sododeck/schema';
 
 import { DETAILS, MODES, type AuthoringOptions, type Detail, type Mode } from '../authoring';
 import { diffDecks } from '../diff';
@@ -18,7 +19,15 @@ import { hasErrors, lintText, validateText } from '../lint';
 import { summarizeDeck } from '../summary';
 import { diffText, reportText, summaryText } from '../text';
 
-export const COMMANDS = ['validate', 'lint', 'summary', 'diff', 'deliver', 'outline'] as const;
+export const COMMANDS = [
+  'validate',
+  'lint',
+  'summary',
+  'diff',
+  'deliver',
+  'outline',
+  'picture',
+] as const;
 export type Command = (typeof COMMANDS)[number];
 
 /** Set by the build (esbuild `define`); `dev` when the sources run directly (tests). */
@@ -40,6 +49,7 @@ const USAGE: Record<Command, string> = {
   diff: 'diff <old.sododeck> <new.sododeck> [--format json|text]',
   deliver: 'deliver <draft.sododeck> <target.sododeck> [--detail …] [--mode …]',
   outline: 'outline <board.excalidraw> [--board "title"] [--min-text 13] [--format text|json]',
+  picture: 'picture <image-file> --deck <deck.sododeck>',
 };
 
 interface Parsed {
@@ -48,6 +58,7 @@ interface Parsed {
   options: AuthoringOptions;
   board?: string;
   minText?: number;
+  deck?: string;
   help: boolean;
 }
 
@@ -57,6 +68,7 @@ function parseArgs(command: Command, argv: readonly string[]): Parsed {
   const options: AuthoringOptions = {};
   let board: string | undefined;
   let minText: number | undefined;
+  let deck: string | undefined;
   let help = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? '';
@@ -83,6 +95,7 @@ function parseArgs(command: Command, argv: readonly string[]): Parsed {
         throw new UsageError(`--mode must be one of ${MODES.join(', ')}.`);
       options.mode = v as Mode;
     } else if (arg === '--board') board = value();
+    else if (arg === '--deck') deck = value();
     else if (arg === '--min-text') {
       const v = Number(value());
       if (!Number.isFinite(v) || v <= 0)
@@ -95,12 +108,16 @@ function parseArgs(command: Command, argv: readonly string[]): Parsed {
   if (!help && files.length !== wanted) {
     throw new UsageError(`Expected ${String(wanted)} file${wanted === 1 ? '' : 's'}.`);
   }
+  if (!help && command === 'picture' && deck === undefined) {
+    throw new UsageError('--deck <deck.sododeck> is required.');
+  }
   return {
     files,
     format,
     options,
     ...(board === undefined ? {} : { board }),
     ...(minText === undefined ? {} : { minText }),
+    ...(deck === undefined ? {} : { deck }),
     help,
   };
 }
@@ -129,6 +146,17 @@ async function replaceAtomically(target: string, text: string): Promise<void> {
     const reason = error instanceof Error ? error.message : String(error);
     throw new UsageError(`Cannot write ${target}: ${reason}`);
   }
+}
+
+const REFUSAL_TEXT: Record<'bad-type' | 'too-large' | 'no-size', string> = {
+  'bad-type': 'is not a PNG, JPEG, WebP, GIF, SVG or AVIF picture.',
+  'too-large': 'is larger than 5 MiB; resize it or embed a smaller copy.',
+  'no-size': 'has a header the script cannot read a size from.',
+};
+
+/** The path from the deck's folder to the image, with `/` between folders (rule I9). */
+function pathFromDeck(deck: string, image: string): string {
+  return relative(dirname(deck), image).split(sep).join('/');
 }
 
 async function run(command: Command, parsed: Parsed, io: Io): Promise<number> {
@@ -183,6 +211,28 @@ async function run(command: Command, parsed: Parsed, io: Io): Promise<number> {
         ...(parsed.minText === undefined ? {} : { minTextSize: parsed.minText }),
       });
       io.out(parsed.format === 'json' ? JSON.stringify(outline, null, 2) : outlineText(outline));
+      return 0;
+    }
+    case 'picture': {
+      let bytes: Uint8Array;
+      try {
+        bytes = await readFile(first);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new UsageError(`Cannot read ${first}: ${reason}`);
+      }
+      const path = pathFromDeck(parsed.deck ?? '', first);
+      const result = pictureFileEntry(bytes, basename(first), path);
+      if (!result.ok) {
+        const reason = result.reason;
+        const text =
+          reason === 'bad-type' || reason === 'too-large' || reason === 'no-size'
+            ? `${first} ${REFUSAL_TEXT[reason]}`
+            : `The path "${path}" ${PATH_VIOLATION_TEXT[reason]}`;
+        io.err(`Not a usable picture: ${text}`);
+        return 1;
+      }
+      io.out(JSON.stringify({ [result.id]: result.entry }, null, 2));
       return 0;
     }
     case 'deliver': {

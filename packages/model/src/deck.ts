@@ -69,6 +69,7 @@ import {
   attachAssets,
   metaOf,
   repairAssets,
+  type PictureFileRef,
   type AssetBytes,
   type AssetId,
   type AssetMeta,
@@ -107,6 +108,8 @@ export interface LoadedDeck {
   problems: AssetProblem[];
   /** Images whose crop ran past the picture edge and was cut back (057): reported once. */
   trimmedCrops: TrimmedCrop[];
+  /** Pictures that point at a file next to the deck (068), sorted by id. Never read here. */
+  fileRefs: PictureFileRef[];
 }
 
 /** Brand of a `PreparedDeck`: recognised by this mark, never by its shape (066 contract). */
@@ -126,6 +129,7 @@ export interface PreparedDeck {
   readonly bytes: Map<AssetId, Uint8Array>;
   readonly problems: AssetProblem[];
   readonly trimmedCrops: TrimmedCrop[];
+  readonly fileRefs: PictureFileRef[];
 }
 
 /** True for a value made by `prepareDeck` (the brand, not the shape). */
@@ -151,6 +155,7 @@ export function prepareDeck(input: unknown): PreparedDeck {
     bytes: repaired.bytes,
     problems: repaired.problems,
     trimmedCrops: crops.trimmed,
+    fileRefs: repaired.fileRefs,
   };
 }
 
@@ -170,6 +175,7 @@ export function loadDeck(input: unknown): LoadedDeck {
     bytes: prepared.bytes,
     problems: prepared.problems,
     trimmedCrops: prepared.trimmedCrops,
+    fileRefs: prepared.fileRefs,
   };
 }
 

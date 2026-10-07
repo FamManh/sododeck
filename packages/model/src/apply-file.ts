@@ -393,6 +393,7 @@ export function applyFile(doc: DeckDoc, input: unknown, origin: object): ApplyRe
     bytes: prepared.bytes,
     problems: prepared.problems,
     trimmedCrops: prepared.trimmedCrops,
+    fileRefs: prepared.fileRefs,
   };
   const target = toJSON(buildDoc(prepared));
   const current = toJSON(doc);

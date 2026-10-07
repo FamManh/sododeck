@@ -75,7 +75,8 @@ export const ImageNode = memo(function ImageNode({
 }: NodeProps<ImageFlowNode>) {
   const editor = useEditor();
   const { getZoom } = useReactFlow();
-  const picture = usePictureUrl(data.asset);
+  // A picture saved as a file next to the deck is never read or looked up here (068).
+  const picture = usePictureUrl(data.filePath === undefined ? data.asset : undefined);
   const editable = useUiStore((state) => !isFlowMode(state) && state.flowSession === null);
   const openConnectPopover = useUiStore((state) => state.openConnectPopover);
   // A dragged connector end would land on this picture: it is the hot target.
@@ -96,7 +97,7 @@ export const ImageNode = memo(function ImageNode({
     },
     [editor],
   );
-  const missing = !data.known || picture.status === 'missing';
+  const missing = !data.known || data.filePath !== undefined || picture.status === 'missing';
   // Crop mode (057): the overlay replaces the picture and the chrome until it is closed.
   const cropOpen = useUiStore((state) => state.cropSession?.imageId === data.imageId);
   const cropping = cropOpen && !missing && data.natural !== undefined;
@@ -182,6 +183,14 @@ export const ImageNode = memo(function ImageNode({
         >
           <ImageOff aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5 shrink-0" />
           <span className="text-caption font-medium">Picture missing</span>
+          {data.filePath !== undefined && (
+            <>
+              <span className="text-caption">Saved as a separate file</span>
+              <span className="max-w-full truncate text-caption" title={data.filePath}>
+                {data.filePath}
+              </span>
+            </>
+          )}
           {data.fileName !== '' && (
             <span className="max-w-full truncate text-caption">{data.fileName}</span>
           )}

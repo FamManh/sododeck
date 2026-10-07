@@ -34,6 +34,8 @@ here runs in the app; the app never sends deck content anywhere (constitution IV
 - `scripts/build.ts` (esbuild bundle → `scripts/sododeck.mjs`, entry files).
 - `evals/evals.json`: acceptance prompts for agent runs; not shipped.
 
+**Pictures (068):** the `picture` command (`picture.mjs <image> --deck <deck>`) prints the `assets` entry for an image that stays next to the deck, through the model's `pictureFileEntry`; `content/references/pictures.md` teaches when to use it. It reads only the named image and never edits the deck.
+
 **Commands:** `pnpm --filter @sododeck/skill build` (→ `dist/sododeck-diagram/`; `--out <dir>`
 builds into `<dir>/sododeck-diagram/`), `test` (includes a full build in a temp folder: drift, no
 network modules, byte-identical bundle).

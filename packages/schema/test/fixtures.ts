@@ -78,6 +78,8 @@ const IMAGE = 'images.0';
 const PNG_ID =
   (full as { images: { asset: string }[] }).images[0]?.asset ?? 'missing-from-the-full-example';
 const ASSET_PNG = `assets.${PNG_ID}`;
+const FILE_ID = 'f3a9c1d5e7b20486a1c3e5d7f9b1a3c5e7d9f1b3a5c7e9d1f3b5a7c9e1d3f5b7';
+const FILE_ASSET = `assets.${FILE_ID}`;
 
 export const invalidFixtures: InvalidFixture[] = [
   // Envelope
@@ -1400,10 +1402,41 @@ export const invalidFixtures: InvalidFixture[] = [
     code: 'schema-range',
   },
   {
-    name: 'asset without data',
+    name: 'asset with neither data nor path (I8)',
     input: remove(`${ASSET_PNG}.data`),
-    path: `${ASSET_PNG}.data`,
-    code: 'schema-required',
+    path: ASSET_PNG,
+    code: 'image-asset-source',
+  },
+  {
+    name: 'asset with both data and path (I8)',
+    input: set(`${ASSET_PNG}.path`, 'assets/x.png'),
+    path: ASSET_PNG,
+    code: 'image-asset-source',
+  },
+  ...(
+    [
+      ['', 'an empty path'],
+      ['a\\b.png', 'a backslash'],
+      ['/x.png', 'a leading slash'],
+      ['C:/x.png', 'a drive letter'],
+      ['a//b.png', 'an empty segment'],
+      ['./x.png', 'a dot segment'],
+      ['a/../x.png', 'an inner parent'],
+      ['..', 'no file name'],
+      ['a\u0001.png', 'a control character'],
+    ] as const
+  ).map(([value, label]) => ({
+    name: `pointed-at picture with ${label} (I9)`,
+    input: set(`${FILE_ASSET}.path`, value),
+    // An empty string is a structural problem (minLength 1); the rest are rule I9.
+    path: `${FILE_ASSET}.path`,
+    code: value === '' ? ('schema-range' as const) : ('image-asset-path' as const),
+  })),
+  {
+    name: 'pointed-at picture with a path over 1,024 characters',
+    input: set(`${FILE_ASSET}.path`, 'a'.repeat(1025)),
+    path: `${FILE_ASSET}.path`,
+    code: 'schema-range',
   },
   {
     name: 'unknown key on asset',
@@ -1453,6 +1486,20 @@ export const validFixtures: { name: string; input: unknown }[] = [
       flipX: true,
       flipY: true,
     }),
+  },
+  // 068: pictures that point at a file.
+  { name: 'pointed-at picture, sub-folder', input: set(`${FILE_ASSET}.path`, 'assets/x.png') },
+  {
+    name: 'pointed-at picture, shared folder above the deck',
+    input: set(`${FILE_ASSET}.path`, '../../Attachments/x.png'),
+  },
+  {
+    name: 'pointed-at picture, spaces and non-Latin letters',
+    input: set(`${FILE_ASSET}.path`, 'ảnh chụp/Ảnh chụp 1.png'),
+  },
+  {
+    name: 'one embedded and one pointed-at picture',
+    input: set(`${ASSET_PNG}.name`, 'checkout.png'),
   },
   { name: 'whole-picture crop', input: set(`${IMAGE}.crop`, { x: 0, y: 0, width: 1, height: 1 }) },
   // 053: a sticky with every new field, a locked connector, and a connector that ends on a sticky.

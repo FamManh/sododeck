@@ -1,4 +1,4 @@
-import { assetId, createEditor, fromJSON, toJSON } from '@sododeck/model';
+import { assetId, createEditor, fromJSON, serializeDeck, toJSON } from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -37,6 +37,17 @@ function setup(overrides: Partial<AddImagesInput> = {}) {
 }
 
 describe('addImages (055)', () => {
+  it('always embeds a new picture: its entry has data and no path (068)', async () => {
+    const { doc, input } = setup();
+    await addImages(input, [file('a.png', PNG_1X1)]);
+    const out = JSON.parse(serializeDeck(doc, new Map([[assetId(PNG_1X1), PNG_1X1]]))) as {
+      assets: Record<string, { data?: string; path?: string }>;
+    };
+    const [entry] = Object.values(out.assets);
+    expect(entry?.data?.length).toBeGreaterThan(10);
+    expect(entry).not.toHaveProperty('path');
+  });
+
   it('writes the pictures to the store before the model add, in one undo step', async () => {
     const store = memoryPictureStore();
     const order: string[] = [];

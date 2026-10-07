@@ -46,7 +46,7 @@ describe('useExportDeck (055)', () => {
     const [name, text] = spy.mock.calls[0] ?? [];
     expect(name).toBe('Pics.sododeck');
     const file = JSON.parse(text ?? '{}') as ReturnType<typeof toJSON>;
-    expect(file.assets?.[id]?.data.length).toBeGreaterThan(10);
+    expect(file.assets?.[id]?.data?.length).toBeGreaterThan(10);
   });
 
   it('exports a deck without images exactly as before', async () => {

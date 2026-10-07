@@ -1,7 +1,7 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { applyFile, loadDeck, prepareDeck, serializeDeck, type DeckDoc } from '../src';
+import { applyFile, loadDeck, prepareDeck, serializeDeck, toJSON, type DeckDoc } from '../src';
 import { COLLECTIONS } from '../src/layout';
 import { largeDeck, perTypeDecks, readExample, shopDeck } from './helpers';
 import { picture } from './image-helpers';
@@ -241,5 +241,17 @@ describe('applyFile on generated edits (066 SC-001)', () => {
       applied++;
     }
     expect(applied).toBeGreaterThan(150);
+  });
+});
+
+describe('applyFile with a picture saved as a file (068)', () => {
+  it('applies the file, keeps path and reports it in fileRefs', async () => {
+    const full = await readExample('full.sododeck.json');
+    const doc = loadDeck(emptySododeckFile()).doc;
+    const result = applyFile(doc, full, origin);
+    expect(result.status).toBe('applied');
+    if (result.status !== 'applied') return;
+    expect(result.fileRefs.map((ref) => ref.path)).toEqual(['assets/login.png']);
+    expect(toJSON(doc).assets).toEqual(toJSON(loadDeck(full).doc).assets);
   });
 });

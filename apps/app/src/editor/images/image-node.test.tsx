@@ -113,6 +113,37 @@ describe('ImageNode (055)', () => {
     expect(screen.getByRole('button', { name: 'Unlock image' })).toBeInTheDocument();
   });
 
+  it('shows a picture saved as a file as missing, with the reason and path, and never looks it up (068)', () => {
+    const lookups: string[] = [];
+    const store = memoryPictureStore();
+    const get = store.get.bind(store);
+    store.get = (id) => {
+      lookups.push(id);
+      return get(id);
+    };
+    const file = deckOf({
+      images: [
+        { id: 'f', asset: ASSET, position: { x: 0, y: 0 }, size: { width: 120, height: 80 } },
+      ],
+      assets: { [ASSET]: { ...meta('login.png'), path: 'assets/login.png' } },
+    });
+    renderWithEditor(
+      <PictureStoreContext value={store}>
+        <ImageNode {...props(file, 'f')} />
+      </PictureStoreContext>,
+      file,
+    );
+    expect(screen.getByText('Picture missing')).toBeInTheDocument();
+    expect(screen.getByText('Saved as a separate file')).toBeInTheDocument();
+    expect(screen.getByText('assets/login.png')).toBeInTheDocument();
+    expect(
+      screen.getByRole('group', {
+        name: 'Image: login.png, picture missing, saved as a separate file: assets/login.png',
+      }),
+    ).toBeInTheDocument();
+    expect(lookups).toEqual([]);
+  });
+
   it('shows "Picture missing" at once when the deck has no facts for the picture', () => {
     // Not loadable (rule I1), but a live document can lose the facts, e.g. through a late undo.
     const file = deckOf({

@@ -184,6 +184,26 @@ describe('ImportProblemsDialog: opened deck (062 US2)', () => {
     expect(within(dialog).getByRole('img', { name: 'Warning' })).toBeInTheDocument();
   });
 
+  it('lists a picture saved as a separate file as a warning (068)', () => {
+    const id = 'b'.repeat(64);
+    const fileRef: ProblemEntry = {
+      code: 'picture-file-ref',
+      severity: 'warning',
+      path: `/assets/${id}/path`,
+      subject: id,
+      message:
+        'Picture "login.png" is saved as a separate file (assets/login.png) and cannot be shown here.',
+      evidence: 'assets/login.png',
+      fix: 'Open the deck in an editor that keeps it in its folder.',
+    };
+    setup({ ...opened, report: report([fileRef], 'opened') });
+    const dialog = screen.getByRole('dialog', { name: '"Checkout" opened with problems' });
+    expect(
+      within(dialog).getByText(/Picture "login\.png" is saved as a separate file/),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('img', { name: 'Warning' })).toBeInTheDocument();
+  });
+
   it('starts on Open deck, which opens the deck', async () => {
     const { user, onOpenDeck } = setup(opened);
     const open = screen.getByRole('button', { name: 'Open deck' });

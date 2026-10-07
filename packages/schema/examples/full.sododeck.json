@@ -826,6 +826,13 @@
         "height": 96
       },
       "z": 6
+    },
+    {
+      "id": "img-login-shot",
+      "asset": "f3a9c1d5e7b20486a1c3e5d7f9b1a3c5e7d9f1b3a5c7e9d1f3b5a7c9e1d3f5b7",
+      "position": { "x": 1620, "y": 400 },
+      "size": { "width": 160, "height": 100 },
+      "z": 8
     }
   ],
   "assets": {
@@ -876,6 +883,14 @@
       "height": 1,
       "name": "spinner.gif",
       "data": "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    },
+    "f3a9c1d5e7b20486a1c3e5d7f9b1a3c5e7d9f1b3a5c7e9d1f3b5a7c9e1d3f5b7": {
+      "type": "image/png",
+      "bytes": 48213,
+      "width": 1280,
+      "height": 720,
+      "name": "login.png",
+      "path": "assets/login.png"
     }
   }
 }

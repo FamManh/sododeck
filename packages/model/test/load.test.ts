@@ -399,7 +399,8 @@ describe('prepareDeck (066 R6)', () => {
     expect(prepared.file.nodes).toHaveLength(full.nodes.length);
     expect(prepared.problems).toEqual([]);
     expect(prepared.trimmedCrops).toEqual([]);
-    expect(prepared.bytes.size).toBe(prepared.metas.size);
+    // Every picture has bytes except the ones that point at a file (068).
+    expect(prepared.bytes.size + prepared.fileRefs.length).toBe(prepared.metas.size);
   });
 
   it('frees a legacy anchored note in the prepared file', () => {

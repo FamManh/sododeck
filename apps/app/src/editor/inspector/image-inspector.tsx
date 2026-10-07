@@ -80,7 +80,14 @@ export function ImageInspector({ deck, image }: { deck: SododeckFile; image: Ima
               facts === undefined ? 'Unknown' : `${String(facts.width)} × ${String(facts.height)}`
             }
           />
+          {facts?.path !== undefined && <Fact label="Picture file" value={facts.path} />}
         </PanelSection>
+        {facts?.path !== undefined && (
+          <p className="text-caption text-ink-secondary">
+            This app can&apos;t read files next to the deck. Open the deck in an editor that keeps
+            it in its folder, or replace the picture.
+          </p>
+        )}
       </div>
     </InspectorFrame>
   );
