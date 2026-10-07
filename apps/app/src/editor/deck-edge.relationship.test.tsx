@@ -2,7 +2,10 @@ import { render, screen } from '@testing-library/react';
 import type * as XYFlow from '@xyflow/react';
 import { Position, type EdgeProps } from '@xyflow/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { EMPTY_SELECTION, useUiStore } from '../state/ui-store';
+import { encodeWaypoint } from './routing/connector-geometry';
 
 import { DeckEdge } from './deck-edge';
 import type { DeckEdgeData, DeckFlowEdge, RelationshipData } from './deck-to-flow';
@@ -13,7 +16,30 @@ vi.mock('@xyflow/react', async (importOriginal) => {
 });
 vi.mock('./routing/label-handle', () => ({ LabelHandle: () => null }));
 vi.mock('./routing/route-handles', () => ({
-  RouteHandles: () => <div data-testid="route-handles" />,
+  RouteHandles: ({
+    context,
+    segment,
+    anchors,
+    ends,
+  }: {
+    context: unknown;
+    segment?: unknown;
+    anchors?: unknown;
+    ends?: unknown;
+  }) => (
+    <div
+      data-testid="route-handles"
+      data-context={JSON.stringify(context)}
+      data-segment={segment === undefined ? undefined : JSON.stringify(segment)}
+      data-anchors={String(anchors !== undefined || ends !== undefined)}
+    />
+  ),
+  RelationshipEndHandles: () => (
+    <>
+      <div data-testid="relationship-end-from" />
+      <div data-testid="relationship-end-to" />
+    </>
+  ),
 }));
 
 const SIZE = { width: 240, height: 200 };
@@ -32,7 +58,11 @@ const rel = (over: Partial<RelationshipData> = {}): RelationshipData => ({
 });
 
 /** `orders` at (0, 0), `customers` at (400, 100): handles at the side midpoints. */
-function renderRel(data: Partial<DeckEdgeData>, geometry: Partial<EdgeProps> = {}) {
+function renderRel(
+  data: Partial<DeckEdgeData>,
+  geometry: Partial<EdgeProps> = {},
+  selected = false,
+) {
   const props = {
     id: 'r1',
     source: 'orders',
@@ -44,7 +74,7 @@ function renderRel(data: Partial<DeckEdgeData>, geometry: Partial<EdgeProps> = {
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
     ...geometry,
-    selected: false,
+    selected,
     data: {
       label: undefined,
       direction: 'forward',
@@ -222,5 +252,112 @@ describe('DeckEdge relationship problems (047 US1)', () => {
     const { container } = renderRel({});
     expect(line(container)).not.toHaveStyle({ strokeDasharray: '6 4' });
     expect(screen.queryByTestId('problem-short')).toBeNull();
+  });
+});
+
+describe('DeckEdge relationship reshaping (064 US3)', () => {
+  const select = () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['r1'] } });
+  };
+  afterEach(() => {
+    useUiStore.setState({ selection: EMPTY_SELECTION, bendPreview: null });
+  });
+  const handles = () => screen.queryByTestId('route-handles');
+  const json = (name: string) => {
+    const raw = handles()?.getAttribute(name);
+    return raw === null || raw === undefined ? null : (JSON.parse(raw) as Record<string, unknown>);
+  };
+
+  it('gives a selected elbow relationship path handles between its stub tips, ends kept', () => {
+    select();
+    renderRel({ shape: 'elbow', routable: true }, {}, true);
+    expect(json('data-context')).toMatchObject({
+      edgeId: 'r1',
+      start: { x: 264, y: 94 },
+      end: { x: 376, y: 182 },
+      bends: [],
+      fromCentre: { x: 120, y: 100 },
+      toCentre: { x: 520, y: 200 },
+    });
+    expect(json('data-segment')).toMatchObject({
+      mode: 'relationship',
+      fromSide: 'right',
+      toSide: 'left',
+    });
+    // No anchor handles: the row ends are the relationship end handles.
+    expect(handles()).toHaveAttribute('data-anchors', 'false');
+    expect(screen.getByTestId('relationship-end-from')).toBeInTheDocument();
+    expect(screen.getByTestId('relationship-end-to')).toBeInTheDocument();
+  });
+
+  it('gives a curved relationship bend handles without segments', () => {
+    select();
+    renderRel({ shape: 'curved', routable: true }, {}, true);
+    expect(handles()).toBeInTheDocument();
+    expect(json('data-segment')).toBeNull();
+  });
+
+  it('shows no path handles on a straight relationship, a loop, or below the row zoom', () => {
+    select();
+    const straight = renderRel({ shape: 'straight', routable: true }, {}, true);
+    expect(handles()).toBeNull();
+    straight.unmount();
+    const loop = renderRel(
+      { shape: 'elbow', routable: true, rel: rel({ self: true }) },
+      { targetX: 240, targetY: 100, targetPosition: Position.Right },
+      true,
+    );
+    expect(handles()).toBeNull();
+    loop.unmount();
+    renderRel({ shape: 'elbow', routable: true, rel: rel({ rows: false }) }, {}, true);
+    expect(handles()).toBeNull();
+  });
+
+  it('reshapes a composite relationship too', () => {
+    select();
+    renderRel(
+      {
+        shape: 'elbow',
+        routable: true,
+        rel: rel({
+          ends: {
+            from: { offsets: [82, 106], kind: 'row', mark: 'zero-many' },
+            to: { offsets: [82], kind: 'row', mark: 'one' },
+          },
+          columns: { from: ['a', 'b'], to: ['customers.id'] },
+        }),
+      },
+      {},
+      true,
+    );
+    expect(json('data-context')).toMatchObject({ start: { x: 270, y: 94 } });
+  });
+
+  it('draws stored bends and keeps them relative when a table moves', () => {
+    select();
+    const waypoints = [
+      encodeWaypoint({ x: 330, y: 94 }, { x: 120, y: 100 }, { x: 520, y: 200 }),
+      encodeWaypoint({ x: 330, y: 182 }, { x: 120, y: 100 }, { x: 520, y: 200 }),
+    ];
+    const first = renderRel({ shape: 'elbow', routable: true, route: { waypoints } }, {}, true);
+    const bends = (json('data-context')?.bends ?? []) as { x: number; y: number }[];
+    expect(bends.map((p) => Math.round(p.x))).toEqual([330, 330]);
+    expect(linePath(first.container)).toContain('330');
+    first.unmount();
+    // `customers` moved 100 px right: the bends follow the centres (FR-017).
+    renderRel(
+      { shape: 'elbow', routable: true, route: { waypoints } },
+      { targetX: 500, targetY: 200 },
+      true,
+    );
+    const moved = (json('data-context')?.bends ?? []) as { x: number; y: number }[];
+    // x is stored as a fraction of the centre span: 120 + 0.525 × 500.
+    expect(moved.map((p) => Math.round(p.x))).toEqual([383, 383]);
+  });
+
+  it('draws a straight relationship without its stored bends', () => {
+    const waypoints = [{ x: 0.5, dy: -80 }];
+    const { container } = renderRel({ shape: 'straight', route: { waypoints } });
+    expect(linePath(container)).toBe('M 240 94 L 400 182');
   });
 });

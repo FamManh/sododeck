@@ -5,6 +5,7 @@
  */
 import { useUiStore, type EnumPopover } from '../../state/ui-store';
 import { GRACE_MS, REST_MS } from '../hover-focus/use-hover-focus';
+import { cancelDbHover } from './db-hover';
 
 let rest: ReturnType<typeof globalThis.setTimeout> | null = null;
 let grace: ReturnType<typeof globalThis.setTimeout> | null = null;
@@ -19,6 +20,8 @@ function clear(): void {
 /** The pointer entered a chip: open its values after the rest delay. */
 export function enterChip(target: Omit<EnumPopover, 'source'>): void {
   clear();
+  // The chip's values, never the column popover with them (064 FR-011).
+  cancelDbHover();
   const open = useUiStore.getState().enumPopover;
   if (open?.nodeId === target.nodeId && open.columnId === target.columnId) return;
   rest = globalThis.setTimeout(() => {

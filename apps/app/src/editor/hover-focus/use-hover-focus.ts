@@ -4,6 +4,10 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { useUiStore, type HoverFocus, type UiState } from '../../state/ui-store';
 import { focusTargetId } from '../focus-target';
+import { setDbHoverConnecting } from '../table/db-hover';
+import { rowsSuspendedBy } from './row-suspension';
+
+export { dbHoverSuspended } from './row-suspension';
 import { useConnecting } from '../use-connection-role';
 
 /** The pointer must rest this long on a card before its connections light up (034 R3). */
@@ -33,23 +37,6 @@ function suspendedBy(s: UiState): boolean {
     s.flowSession !== null ||
     s.canvasGesture !== null ||
     s.endpointPreview !== null ||
-    s.tool === 'hand' ||
-    s.popover !== null ||
-    s.contextMenu !== null ||
-    s.toolbarField !== null
-  );
-}
-
-/**
- * Column and relationship highlights (042 FR-024) stay on in focus mode and flows, where they add
- * only the row highlight; gestures, menus and drags still turn them off.
- */
-function rowsSuspendedBy(s: UiState): boolean {
-  return (
-    s.flowSession !== null ||
-    s.canvasGesture !== null ||
-    s.endpointPreview !== null ||
-    s.columnConnect !== null ||
     s.tool === 'hand' ||
     s.popover !== null ||
     s.contextMenu !== null ||
@@ -104,6 +91,11 @@ export function useHoverFocus(): HoverFocusHandlers {
 
   // A suspension (a drag, a menu, pinned focus…) ends any hover at once; column and
   // relationship highlights only end with the narrower one (FR-024).
+  // Note popovers (064) read the connection state, which only React Flow's hooks know.
+  useEffect(() => {
+    setDbHoverConnecting(connecting);
+  }, [connecting]);
+
   useEffect(() => {
     suspendedRef.current = suspended;
     rowsSuspendedRef.current = rowsSuspended;

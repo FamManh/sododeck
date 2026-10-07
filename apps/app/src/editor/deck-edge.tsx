@@ -342,6 +342,39 @@ export const DeckEdge = memo(function DeckEdge({
           toAt: liveRoute?.toAt ?? 0.5,
         }
       : undefined;
+  // A relationship drawn on its rows (064 US3) is reshaped between its two stub tips like a card
+  // connector: bends and midpoints on a curve, segment handles on an elbow. Its ends stay on their
+  // rows (the end handles below move them to another row), so there are no anchor handles; a
+  // straight line or a self-reference loop has nothing to reshape.
+  const relStubs = relGeometry?.stubs;
+  const relSides = relGeometry?.sides;
+  const relContext: BendContext | null =
+    rel?.rows === true && !rel.self && relStubs !== undefined && sized
+      ? {
+          edgeId: id,
+          fromCentre: cardCentre(fromBox),
+          toCentre: cardCentre(toBox),
+          start: relStubs.from,
+          end: relStubs.to,
+          bends:
+            route?.waypoints === undefined
+              ? []
+              : decodeWaypoints(route.waypoints, cardCentre(fromBox), cardCentre(toBox)),
+        }
+      : null;
+  const relSegment: SegmentContext | undefined =
+    relContext !== null && relSides !== undefined && shape === 'elbow'
+      ? {
+          ...relContext,
+          mode: 'relationship',
+          fromBox,
+          toBox,
+          fromSide: relSides.from,
+          toSide: relSides.to,
+          fromAt: 0.5,
+          toAt: 0.5,
+        }
+      : undefined;
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   // A hover-only relationship label (042 R10): drawn, but hidden by CSS until the line is lit.
@@ -674,6 +707,12 @@ export const DeckEdge = memo(function DeckEdge({
             }}
           />
         )}
+      {showHandle && data?.routable === true && relContext !== null && (
+        <RouteHandles
+          context={relContext}
+          {...(relSegment === undefined ? {} : { segment: relSegment })}
+        />
+      )}
       {showHandle && data?.routable === true && rel === undefined && (
         <RouteHandles
           context={bendContext}

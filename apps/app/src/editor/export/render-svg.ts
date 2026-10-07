@@ -576,16 +576,16 @@ function fieldsBlock(
 }
 
 /**
- * A table card's note and column body (041 R11), from the canvas's `tableLayout`: the hairline,
- * one 24 px row per column (glyph paths, name, type or enum chip, "?"), the "+n columns" pill and
- * the footer. Every text stays `<text>`. `top` is the bottom of the title line.
+ * A table card's column body (041 R11), from the canvas's `tableLayout`: the hairline, one 24 px
+ * row per column (glyph paths, name and its note icon, type or enum chip, "?"), the "+n columns"
+ * pill and the footer. Every text stays `<text>`. `top` is the bottom of the title line. The
+ * table note itself is never drawn (064), as on the canvas.
  */
 function tableBody(
   table: TableLayout,
   left: number,
   titleBottom: number,
   inner: number,
-  noteInk: string,
   ink: string,
   custom: boolean,
   palette: ExportPalette,
@@ -594,21 +594,6 @@ function tableBody(
   const t = TABLE_CARD;
   const out: string[] = [];
   let top = titleBottom;
-  if (table.noteLines.length > 0) {
-    top += t.gap;
-    for (const [index, line] of table.noteLines.entries()) {
-      out.push(
-        text(
-          'd',
-          left,
-          baseline(top + index * t.noteLineHeight, t.noteLineHeight, 12),
-          noteInk,
-          line,
-        ),
-      );
-    }
-    top += table.noteLines.length * t.noteLineHeight;
-  }
   if (!table.hasBody) return out.join('');
   top += t.bodyGap;
   // Type text reads Secondary on a coloured card (§g-90); the export has no hover.
@@ -645,15 +630,17 @@ function tableBody(
       }
     }
     const isPk = row.glyphs.includes('pk');
+    const nameX = left + table.keySlot + t.keyGap;
     parts.push(
-      text(
-        isPk ? 'ck' : 'cn',
-        left + table.keySlot + t.keyGap,
-        baseline(rowTop, t.rowHeight, 12),
-        ink,
-        row.nameText,
-      ),
+      text(isPk ? 'ck' : 'cn', nameX, baseline(rowTop, t.rowHeight, 12), ink, row.nameText),
     );
+    if (row.hasNote) {
+      const font = isPk ? t.keyNameFont : t.nameFont;
+      const iconX = nameX + measure(row.nameText, font) + t.noteIconGap;
+      parts.push(
+        `<g data-part="note-icon">${icon(chromeIcon('note'), iconX, middle - t.noteIcon / 2, t.noteIcon, muted)}</g>`,
+      );
+    }
     if (row.enum !== undefined) {
       const colours =
         row.enum.color === undefined
@@ -814,7 +801,16 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
   top += item.titleLines.length * c.titleLineHeight;
 
   if (item.table !== undefined) {
-    out.push(tableBody(item.table, left, top, inner, bodyInk, ink, custom, palette, measure));
+    const titleLine = item.titleLines[0];
+    if (item.table.hasNote && titleLine !== undefined) {
+      const iconX = left + measure(titleLine, TABLE_CARD.titleFont) + 4;
+      const iconTop = top - c.titleLineHeight / 2 - 7;
+      const noteInk = custom ? ink : palette.inkMuted;
+      out.push(
+        `<g data-part="note-icon">${icon(chromeIcon('note'), iconX, iconTop, 14, noteInk)}</g>`,
+      );
+    }
+    out.push(tableBody(item.table, left, top, inner, ink, custom, palette, measure));
     out.push('</g>');
     return out.join('');
   }

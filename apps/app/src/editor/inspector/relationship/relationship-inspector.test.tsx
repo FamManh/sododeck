@@ -200,15 +200,75 @@ describe('RelationshipInspector (052 US2)', () => {
     expect(edgeOf(doc)?.label).toBe('fk_orders_customer');
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Line type' })).getByRole('radio', {
-        name: 'Elbow',
+        name: 'Straight',
       }),
     );
-    expect(edgeOf(doc)?.style?.shape).toBe('elbow');
+    expect(edgeOf(doc)?.style?.shape).toBe('straight');
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Colour' })).getByRole('radio', {
         name: 'Green',
       }),
     );
     expect(edgeOf(doc)?.style?.color).toBe('green');
+  });
+});
+
+describe('RelationshipInspector line type and route (064 US3)', () => {
+  const lineType = () => screen.getByRole('radiogroup', { name: 'Line type' });
+  const radio = (name: string) => within(lineType()).getByRole('radio', { name });
+  const bent = deckOf({
+    ...deck,
+    edges: deck.edges.map((e) =>
+      e.id === 'rel' ? { ...e, route: { waypoints: [{ x: 0.5, dy: -40 }] } } : e,
+    ),
+  });
+
+  it('shows Elbow for a relationship whose shape was never set', () => {
+    setup();
+    expect(radio('Elbow')).toBeChecked();
+  });
+
+  it('stores Curved, and Elbow back removes it, touching nothing else (FR-018)', async () => {
+    const { user, doc } = setup();
+    const before = edgeOf(doc);
+    await user.click(radio('Curved'));
+    expect(edgeOf(doc)?.style).toEqual({ shape: 'curved' });
+    expect(radio('Curved')).toBeChecked();
+    const after = edgeOf(doc);
+    expect(after?.fromColumns).toEqual(before?.fromColumns);
+    expect(after?.toColumns).toEqual(before?.toColumns);
+    expect(after?.cardinality).toBe(before?.cardinality);
+    expect(after?.label).toBe(before?.label);
+    await user.click(radio('Elbow'));
+    expect(edgeOf(doc)).not.toHaveProperty('style');
+  });
+
+  it('keeps the bends when switched to straight and back (scenario 9)', async () => {
+    const { user, doc } = renderInspector(bent, { edges: ['rel'] });
+    await user.click(radio('Straight'));
+    expect(edgeOf(doc)?.route?.waypoints).toHaveLength(1);
+    await user.click(radio('Elbow'));
+    expect(edgeOf(doc)?.route?.waypoints).toHaveLength(1);
+  });
+
+  it('resets the route in one undo step, and is disabled without one', async () => {
+    const { user, doc, editor } = renderInspector(bent, { edges: ['rel'] });
+    await user.click(screen.getByRole('button', { name: 'Reset route' }));
+    expect(edgeOf(doc)).not.toHaveProperty('route');
+    expect(screen.getByRole('button', { name: 'Reset route' })).toBeDisabled();
+    act(() => {
+      editor().undo();
+    });
+    expect(edgeOf(doc)?.route?.waypoints).toHaveLength(1);
+  });
+
+  it('refuses a reset on a locked relationship', async () => {
+    const locked = deckOf({
+      ...bent,
+      edges: bent.edges.map((e) => (e.id === 'rel' ? { ...e, locked: true } : e)),
+    });
+    const { user, doc } = renderInspector(locked, { edges: ['rel'] });
+    await user.click(screen.getByRole('button', { name: 'Reset route' }));
+    expect(edgeOf(doc)?.route?.waypoints).toHaveLength(1);
   });
 });

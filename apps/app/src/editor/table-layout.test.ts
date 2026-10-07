@@ -120,15 +120,63 @@ describe('tableLayout heights (041 FR-003, FR-016)', () => {
     expect(empty.height).toBe(TOP + 12);
   });
 
-  it('a note adds up to two lines, cut with an ellipsis', () => {
+  it('a table note never changes the height or the rows (064 FR-005a)', () => {
     const one = layout({ ...orders, description: 'One row per checkout.' });
-    expect(one.noteLines).toEqual(['One row per checkout.']);
-    expect(one.height).toBe(layout(orders).height + 8 + 17);
+    expect(one.height).toBe(layout(orders).height);
+    expect(one.rowsTop).toBe(layout(orders).rowsTop);
     const long = layout({ ...orders, description: 'word '.repeat(80) });
-    expect(long.noteLines).toHaveLength(2);
-    expect(long.noteCut).toBe(true);
-    expect(long.noteLines[1]?.endsWith('…')).toBe(true);
-    expect(long.height).toBe(layout(orders).height + 8 + 2 * TABLE_CARD.noteLineHeight);
+    expect(long.height).toBe(layout(orders).height);
+  });
+
+  it('flags a table note: noted always, hasNote only while note icons show', () => {
+    const noted = { ...orders, description: 'Placed orders' };
+    expect(layout(noted).noted).toBe(true);
+    expect(layout(noted).hasNote).toBe(true);
+    expect(layout(noted, context({ hideNotes: true })).noted).toBe(true);
+    expect(layout(noted, context({ hideNotes: true })).hasNote).toBe(false);
+    const blank = layout({ ...orders, description: '  ' });
+    expect(blank.noted).toBe(false);
+    expect(blank.hasNote).toBe(false);
+  });
+
+  it('flags rows with a note or with information the row cannot show (064 R1)', () => {
+    const table: TableNode = {
+      ...orders,
+      columns: [
+        col('id', { pk: true }),
+        col('email', { type: 'text', note: 'Used for sign-in' }),
+        col('blank_note', { type: 'text', note: ' ' }),
+        col('a_very_long_column_name_that_cannot_fit_on_the_row', { type: 'text' }),
+        col('kind', { type: 'character varying', size: '255, 12345678901234' }),
+        col('created_at', { type: 'timestamptz', default: 'now()' }),
+        col('total', { type: 'int', check: 'total > 0' }),
+        col('serial', { type: 'int', increment: true }),
+      ],
+    };
+    const rows = layout(table).rows;
+    const by = (id: string) => rows.find((r) => r.columnId === id);
+    expect(by('id')?.hidden).toBe(false);
+    expect(by('id')?.hasNote).toBe(false);
+    expect(by('email')?.hidden).toBe(true);
+    expect(by('email')?.hasNote).toBe(true);
+    expect(by('blank_note')?.hidden).toBe(false);
+    expect(by('a_very_long_column_name_that_cannot_fit_on_the_row')?.hidden).toBe(true);
+    expect(by('kind')?.typeCut).toBe(true);
+    expect(by('kind')?.hidden).toBe(true);
+    expect(by('created_at')?.hidden).toBe(true);
+    expect(by('total')?.hidden).toBe(true);
+    expect(by('serial')?.hidden).toBe(true);
+    const hiddenIcons = layout(table, context({ hideNotes: true })).rows;
+    expect(hiddenIcons.find((r) => r.columnId === 'email')?.hasNote).toBe(false);
+    expect(hiddenIcons.find((r) => r.columnId === 'email')?.hidden).toBe(true);
+  });
+
+  it('reserves room for the note icon in the name', () => {
+    const name = 'abcdefghijklmnopqrstu';
+    const plain = layout({ ...orders, columns: [col(name, { type: 'int' })] }).rows[0];
+    const noted = layout({ ...orders, columns: [col(name, { type: 'int', note: 'n' })] }).rows[0];
+    expect(plain?.nameCut).toBe(false);
+    expect(noted?.nameCut).toBe(true);
   });
 
   it('applies the four display toggles', () => {
@@ -239,9 +287,9 @@ describe('rowAnchorY and connected rows (042 R2, R15)', () => {
     expect(layout(plain, context({ detail: 'keys' })).pillTop).toBe(ROWS);
   });
 
-  it('moves the rows down by the note', () => {
+  it('keeps the rows where they are with a note', () => {
     const noted = layout({ ...orders, description: 'Placed orders' });
-    expect(noted.rowsTop).toBe(ROWS + 8 + 17);
+    expect(noted.rowsTop).toBe(ROWS);
   });
 
   it('returns the row centre at All and Keys', () => {

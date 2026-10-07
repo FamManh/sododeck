@@ -26,10 +26,15 @@ import { showsDatabaseSection } from './shows-database-section';
 
 type HideFlag = 'hideTypes' | 'hideNullable' | 'hideNotes' | 'hideIndexes';
 
-const TOGGLES: readonly { flag: HideFlag; label: string }[] = [
+const TOGGLES: readonly { flag: HideFlag; label: string; description?: string }[] = [
   { flag: 'hideTypes', label: 'Data types' },
   { flag: 'hideNullable', label: 'Nullable marker' },
-  { flag: 'hideNotes', label: 'Notes' },
+  // Notes are never drawn on a table (064): only their icons, which open the note popover.
+  {
+    flag: 'hideNotes',
+    label: 'Note icons',
+    description: 'Show a note icon on tables and columns that have a note',
+  },
   { flag: 'hideIndexes', label: 'Index footer' },
 ];
 
@@ -62,13 +67,21 @@ export function DatabaseSection({ deck }: { deck: SododeckFile }) {
         Show on tables
       </span>
       <ul aria-labelledby={`${id}-heading`} className="flex flex-col gap-1">
-        {TOGGLES.map(({ flag, label }) => (
-          <li key={flag} className="flex h-8 items-center justify-between gap-3">
-            <label htmlFor={`${id}-${flag}`} className="text-body-sm text-ink">
-              {label}
-            </label>
+        {TOGGLES.map(({ flag, label, description }) => (
+          <li key={flag} className="flex min-h-8 items-center justify-between gap-3">
+            <span className="flex flex-col">
+              <label htmlFor={`${id}-${flag}`} className="text-body-sm text-ink">
+                {label}
+              </label>
+              {description !== undefined && (
+                <span id={`${id}-${flag}-description`} className="text-caption text-ink-muted">
+                  {description}
+                </span>
+              )}
+            </span>
             <Switch
               id={`${id}-${flag}`}
+              aria-describedby={description === undefined ? undefined : `${id}-${flag}-description`}
               checked={!display[flag]}
               onCheckedChange={(checked) => {
                 const patch: Pick<TableDisplay, HideFlag> = { [flag]: !checked };

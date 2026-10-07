@@ -72,3 +72,25 @@ describe('relationshipGeometry (042)', () => {
     expect(geometry.marks[1]).toMatchObject({ u: { x: -1, y: -0 } });
   });
 });
+
+describe('relationship shapes and stubs (064)', () => {
+  it('keeps both end marks on all three shapes', () => {
+    for (const shape of ['curved', 'elbow', 'straight'] as const) {
+      expect(relationshipGeometry({ ...base, shape }).marks.map((m) => m.kind)).toEqual([
+        'crow',
+        'crow',
+      ]);
+    }
+  });
+
+  it('hands over the stub tips on curved and elbow lines only', () => {
+    expect(relationshipGeometry(base).stubs).toEqual({
+      from: { x: 264, y: 82 },
+      to: { x: 376, y: 182 },
+    });
+    expect(relationshipGeometry({ ...base, shape: 'straight' }).stubs).toBeUndefined();
+    expect(
+      relationshipGeometry({ ...base, self: true, toBox: base.fromBox }).stubs,
+    ).toBeUndefined();
+  });
+});

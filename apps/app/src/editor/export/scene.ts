@@ -323,9 +323,13 @@ function tableCard(
     icon: iconOf(node),
     typeName: table.typeName,
     title: node.title,
-    titleLines: [truncate(node.title, TABLE_CARD.titleFont, inner, textMeasurer())],
-    description: table.noteLines.length === 0 ? null : table.noteLines.join(' '),
-    descriptionLines: table.noteLines,
+    // The title leaves room for its note icon (064), as the canvas title row does.
+    titleLines: [
+      truncate(node.title, TABLE_CARD.titleFont, inner - (table.hasNote ? 18 : 0), textMeasurer()),
+    ],
+    // The table note is never drawn on the card (064): the canvas shows it in a popover.
+    description: null,
+    descriptionLines: [],
     tags: [],
     tagChips: [],
     fields: sceneFields(EMPTY_FIELD_VIEW, layout.width, inner, textMeasurer()),

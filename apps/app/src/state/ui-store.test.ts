@@ -51,6 +51,49 @@ describe('ui store', () => {
     });
   });
 
+  describe('database popover (064)', () => {
+    const column = {
+      kind: 'column' as const,
+      nodeId: 'users',
+      columnId: 'email',
+      source: 'hover' as const,
+    };
+
+    it('opens one popover at a time and closes the enum popover', () => {
+      state().openEnumPopover({ nodeId: 'users', columnId: 'role', source: 'hover' });
+      state().openDbPopover(column);
+      expect(state().dbPopover).toEqual(column);
+      expect(state().enumPopover).toBeNull();
+      state().closeDbPopover();
+      expect(state().dbPopover).toBeNull();
+    });
+
+    it('is closed by the enum popover (FR-011)', () => {
+      state().openDbPopover(column);
+      state().openEnumPopover({ nodeId: 'users', columnId: 'role', source: 'hover' });
+      expect(state().dbPopover).toBeNull();
+    });
+
+    it('keeps the same object for the same target and source', () => {
+      state().openDbPopover(column);
+      const open = state().dbPopover;
+      state().openDbPopover({ ...column });
+      expect(state().dbPopover).toBe(open);
+      state().openDbPopover({ ...column, source: 'click' });
+      expect(state().dbPopover).not.toBe(open);
+    });
+
+    it('clears on a flow open and a deck switch', () => {
+      state().openDbPopover(column);
+      state().openFlow('f1');
+      expect(state().dbPopover).toBeNull();
+      state().exitFlow();
+      state().openDbPopover({ kind: 'table', nodeId: 'users', source: 'click' });
+      state().resetForDeck('other');
+      expect(state().dbPopover).toBeNull();
+    });
+  });
+
   describe('schema editing (043)', () => {
     it('opens and closes the column line editor, closing the menu', () => {
       state().openContextMenu({

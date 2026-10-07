@@ -805,6 +805,31 @@ describe('renderSvg: table cards (041 US5)', () => {
     expect(all).toContain('+1 columns');
     expect(doc.querySelectorAll('[data-part="hairline"]')).toHaveLength(2);
   });
+
+  it('never draws the table note, only note icons on the title and noted rows (064)', () => {
+    const [orders, keys] = shop.nodes;
+    if (orders === undefined || keys === undefined) throw new Error('fixture');
+    const columns = (orders.columns ?? []).map((c) =>
+      c.id === 'o-n' ? { ...c, note: 'Shown to customers' } : c,
+    );
+    const noted = {
+      ...shop,
+      nodes: [{ ...orders, description: 'One row per checkout.', columns }, keys],
+    };
+    const svg = svgOf(noted);
+    expect(svg).not.toContain('One row per checkout.');
+    expect(svg).not.toContain('Shown to customers');
+    const doc = parse(svg);
+    expect(doc.querySelectorAll('[data-part="note-icon"]')).toHaveLength(2);
+    const row = doc.querySelector('[data-part="row"][data-column="o-n"]');
+    expect(row?.querySelector('[data-part="note-icon"]')).not.toBeNull();
+    const hidden = parse(svgOf({ ...noted, tableDisplay: { hideNotes: true } }));
+    expect(hidden.querySelectorAll('[data-part="note-icon"]')).toHaveLength(0);
+    // The note changes nothing in the card's height.
+    const heightOf = (d: Document) =>
+      d.querySelector('[data-id="orders"] [data-part="body"]')?.getAttribute('d');
+    expect(heightOf(doc)).toBe(heightOf(parse(svgOf(shop))));
+  });
 });
 
 describe('renderSvg: row limit (048)', () => {
