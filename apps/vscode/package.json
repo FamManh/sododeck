@@ -1,7 +1,7 @@
 {
   "name": "sododeck",
   "displayName": "Sododeck",
-  "description": "Open .sododeck files as an architecture and flow canvas, right in VS Code. Local only: no network, no telemetry.",
+  "description": "Architecture and flow diagrams as .sododeck files: open them as a canvas in VS Code, save with the normal save, and keep them in your repo. Local only: no network, no telemetry.",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,6 +12,31 @@
     "Visualization",
     "Other"
   ],
+  "keywords": [
+    "diagram",
+    "architecture",
+    "flowchart",
+    "sododeck",
+    "system design",
+    "data flow",
+    "sequence",
+    "c4",
+    "canvas",
+    "custom editor"
+  ],
+  "homepage": "https://sododeck.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FamManh/sododeck.git",
+    "directory": "apps/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/FamManh/sododeck/issues"
+  },
+  "galleryBanner": {
+    "color": "#1c1c1a",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
