@@ -16,6 +16,14 @@ Today the only way to take in a file is to load it as a new document. That throw
 
 This feature is the foundation for 067 (the host protocol): a document-level operation that takes the new file and changes only what differs. It has no user interface of its own; its users are the editor surfaces and, through them, the person looking at the deck.
 
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: When the user is mid-gesture (dragging, resizing, drafting a note) and the file changes outside, is the change applied at once or held until the gesture ends? → A: Applied at once; the gesture continues on the updated deck and stays one undo step. Holding changes back is the host's choice (067), not the model's.
+- Q: Does an outside change apply to locked objects (edit, move, remove)? → A: Yes. The lock guards against accidental user edits, not against the file; the file can also lock or unlock objects.
+- Q: When the user is typing in a text field that the file also changed, is the field overwritten with the file's whole value or merged character by character? → A: Overwritten with the file's whole value; only text fields that actually differ are written.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - An outside change appears in place (Priority: P1)
@@ -91,7 +99,7 @@ An outside change adds a picture (an image object with its embedded bytes) or re
 
 - **Deck meta and settings change** (title, packs, dialect, grouping mode, canvas background): applied field by field like any object; unchanged settings report no change.
 - **An object the user has selected is removed by the file**: it is removed; keeping the selection valid is the surfaces' job (they already drop ids that no longer exist).
-- **The user is in the middle of a gesture** (dragging, resizing, drafting a note) when a file is applied: the change is applied at once; the gesture continues on the updated deck and stays one undo step. Deciding whether to delay an outside change until the gesture ends is the host's choice (067).
+- **The user is in the middle of a gesture** (dragging, resizing, drafting a note) when a file is applied: the change is applied at once; the model never queues or refuses it. The gesture continues on the updated deck and stays one undo step. Deciding whether to delay an outside change until the gesture ends is the host's choice (067).
 - **The file changes saved views** (positions, collapsed groups, focus): applied like other data. Positions live in views, so a moved card moves. The live viewport (scroll and zoom) is not in the file and is untouched.
 - **An object changes kind** (a removed id reused for a different object in another collection): treated as a removal from one collection and an addition to the other; ids are unique per collection, so this is allowed.
 - **Locked objects**: the lock is a user rule against accidental edits, not against the file; an applied change can move, edit or remove a locked object, and can lock or unlock it.
@@ -120,6 +128,8 @@ An outside change adds a picture (an image object with its embedded bytes) or re
 - **FR-014**: Writing the open deck out after applying file B MUST produce B, byte for byte in canonical form, for every deck in the test corpus applied over every other deck.
 - **FR-015**: Ids MUST be preserved: no object that is in both the open deck and the file gets a new id, and no id is derived from content.
 - **FR-016**: The operation MUST work without a user interface and without the app (it belongs to the deck model, usable from a worker or a test).
+- **FR-017**: The operation MUST apply changes to locked objects (edit, move, remove, lock and unlock) like any other; the lock rule applies to user edits only.
+- **FR-018**: A text field whose value differs MUST be written as the file's whole value (no character-level merge); a text field whose value is equal MUST NOT be written, even while the user is editing it.
 
 ### Key Entities
 
@@ -141,7 +151,7 @@ An outside change adds a picture (an image object with its embedded bytes) or re
 ## Assumptions
 
 - **No three-way merge.** The incoming file wins field by field over the open deck. Unsaved edits the user made to a field the file also changed are overwritten by the file's value. Preventing that (dirty state, conflict prompts) is the host's job in 067–069.
-- **Field granularity.** A changed text field is written as a whole new value; character-level merging of a text the user is typing at the same moment is not required.
+- **Field granularity.** A changed text field is written as the file's whole new value, even while the user is typing in it; no character-level merge. Avoiding that clash (dirty state, prompts) is the host's job (067–069).
 - **Selection and viewport live outside the deck** (in the editor's UI state), so keeping ids stable and not reloading the document is what keeps them. This feature changes no surface; 067 wires surfaces to it.
 - **Origin reporting.** Observers already distinguish local edits, undo, redo and anything else; an applied file is reported as "not a local edit" through the caller's origin. Whether the model adds a dedicated origin kind is a planning decision.
 - **View repair.** After an applied change the existing repair of view entries that name nothing runs as for any change that is not the editor's own, untracked, and the result still equals the file (the file itself is validated, so it has no such entries).
