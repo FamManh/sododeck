@@ -203,6 +203,36 @@ describe('jsonExport keeps connector style compatible (022 SC-004, SC-005)', () 
   });
 });
 
+describe('jsonExport with a picture saved as a file (068)', () => {
+  const id = assetId(PNG_1X1);
+  const pointed = (): SododeckFile => ({
+    ...emptySododeckFile(),
+    nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+    images: [{ id: 'i', asset: id, position: { x: 0, y: 0 }, size: { width: 64, height: 64 } }],
+    assets: {
+      [id]: {
+        type: 'image/png',
+        bytes: 48213,
+        width: 1280,
+        height: 720,
+        name: 'login.png',
+        path: 'assets/login.png',
+      },
+    },
+  });
+
+  it('keeps the reference after the image moves, with or without bytes for the picture', () => {
+    const doc = fromJSON(pointed());
+    createEditor(doc).moveImage('i', { x: 40, y: 40 });
+    for (const bytes of [new Map<string, Uint8Array>(), new Map([[id, PNG_1X1]])]) {
+      const { text } = jsonExport(toJSON(doc), { includeKnowledge: true, pretty: true }, bytes);
+      const file = JSON.parse(text) as SododeckFile;
+      expect(file.assets?.[id]).toEqual(pointed().assets?.[id]);
+      expect(parseSododeckFile(file).success).toBe(true);
+    }
+  });
+});
+
 describe('jsonExport with pictures (055)', () => {
   const id = assetId(PNG_1X1);
   const pictures = new Map([[id, PNG_1X1]]);
@@ -224,7 +254,7 @@ describe('jsonExport with pictures (055)', () => {
     for (const includeKnowledge of [true, false]) {
       const { text } = jsonExport(withPicture(), { includeKnowledge, pretty: true }, pictures);
       const file = JSON.parse(text) as SododeckFile;
-      expect(file.assets?.[id]?.data.length).toBeGreaterThan(10);
+      expect(file.assets?.[id]?.data?.length).toBeGreaterThan(10);
       expect(file.images).toHaveLength(1);
       expect(parseSododeckFile(file).success).toBe(true);
     }

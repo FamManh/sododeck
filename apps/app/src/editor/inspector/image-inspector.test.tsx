@@ -38,9 +38,9 @@ const deck = deckOf({
   },
 });
 
-function setup(imageId: string) {
+function setup(imageId: string, file = deck) {
   const user = userEvent.setup();
-  const view = renderWithEditor(<InspectorView />, deck);
+  const view = renderWithEditor(<InspectorView />, file);
   act(() => {
     useUiStore.getState().select({ images: [imageId] });
   });
@@ -90,5 +90,35 @@ describe('ImageInspector (055)', () => {
     const { user } = setup('i1');
     await user.click(screen.getByRole('button', { name: 'Delete image' }));
     expect(useUiStore.getState().pendingDelete).not.toBeNull();
+  });
+
+  it('shows the path of a picture saved as a file, read-only, with help (068)', () => {
+    const pointed = deckOf({
+      images: [
+        { id: 'p', asset: ASSET, position: { x: 0, y: 0 }, size: { width: 120, height: 80 } },
+      ],
+      assets: {
+        [ASSET]: {
+          type: 'image/png',
+          bytes: 2048,
+          width: 640,
+          height: 480,
+          name: 'login.png',
+          path: 'assets/login.png',
+        },
+      },
+    });
+    setup('p', pointed);
+    expect(screen.getByText('Picture file')).toBeInTheDocument();
+    expect(screen.getByText('assets/login.png')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Picture file' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/This app can.t read files next to the deck\. Open the deck in an editor/),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no Picture file row for an embedded picture', () => {
+    setup('i1');
+    expect(screen.queryByText('Picture file')).not.toBeInTheDocument();
   });
 });
