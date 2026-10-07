@@ -4,6 +4,8 @@ Draw architecture and flow diagrams in VS Code. Open a `.sododeck` file and it b
 
 Sododeck is local-first: the extension makes **no network requests, sends no telemetry and uploads nothing**.
 
+![A deck open as a canvas, dark theme](images/canvas-dark.jpg)
+
 ## Getting started
 
 1. Run **Sododeck: New Sododeck deck** from the Command Palette (or right-click a folder in the Explorer).
@@ -29,6 +31,8 @@ By default pictures are stored inside the deck file. Switch the setting to save 
 ### Light and dark
 
 The canvas follows your VS Code color theme and switches live.
+
+![The same canvas in the light theme](images/canvas-light.jpg)
 
 ### Private by design
 
