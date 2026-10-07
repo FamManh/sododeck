@@ -329,6 +329,44 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ---
 
+## 071-shared-vault-decks
+
+- **Status:** not started (added 2026-10-07, founder request).
+- **Milestone:** after 070 · **Depends on:** 069 (VS Code extension), 070 (the `.sododeck.md` form
+  and the Obsidian plugin) · **Estimate:** 2–3 d
+- **Goal:** one folder of decks that opens as a canvas in both Obsidian and VS Code, with the
+  Obsidian-only gains (search by card text, backlinks, pictures that follow moves) kept.
+- **In scope (two parts, both built):**
+  1. **Cross-tool plain file.** `.sododeck` is the format that already opens in both hosts. Say so
+     where users look (the READMEs of both hosts, the web app's export help, `docs/`), and give
+     a one-step way to bring `.sododeck.json` files in (rename; a command in each host that
+     copies a `.sododeck.json` to a `.sododeck`). No code change to the formats.
+  2. **`.sododeck.md` in VS Code.** The extension also opens `*.sododeck.md` as the canvas, when
+     the front matter carries the marker (an ordinary Markdown file stays in the text editor, and
+     "Open as text" keeps working). Reads through `fromMarkdown`, saves through
+     `toMarkdown(deckText, previous)` so text the user wrote outside the owned region survives;
+     the readable part is regenerated on save. Pictures: the VS Code host keeps its own picture
+     rules (sibling folder, 069); a note's `[[link]]` list is written for Obsidian only when the
+     picture is a plain relative path (decision needed, see questions).
+- **Out of scope:** the skill (027) writing or checking `.sododeck.md`; Obsidian-style link
+  rewriting in VS Code.
+- **Acceptance criteria:**
+  - Given one folder, When it is opened as an Obsidian vault and as a VS Code workspace, Then a
+    `.sododeck` file opens as the canvas in both and an edit in one shows in the other within a second
+    (VS Code saves on its normal save).
+  - Given a `.sododeck.md` note, When it is opened in VS Code, Then it shows the canvas; When the
+    user types a paragraph after the generated region and edits on the canvas, Then the paragraph
+    is still there and Obsidian still opens the note as a deck.
+  - Given a Markdown file without the marker, When it is opened in VS Code, Then it stays a text file.
+  - Given a card title edited as text in the note, When the note is open in VS Code, Then the canvas
+    shows it in place.
+- **Questions for the founder:** how a picture added in VS Code is stored for a `.sododeck.md`
+  (sibling file with a plain relative path that Obsidian resolves, or embedded); whether the new-deck
+  command in VS Code creates `.sododeck` or `.sododeck.md`.
+- **Spec Kit:** `/speckit.specify` with this section.
+
+---
+
 ## Later (not scheduled)
 
 - **Three-way merge for outside changes** (deferred from 066, founder 2026-10-07: editing the
@@ -337,7 +375,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   user's unsaved edits; an object removed by one side and edited by the other is kept with the
   edit. Do it when users report lost edits, or when 065 needs whole-deck `edit_deck` with
   `baseRevision`.
-- **`.sododeck.md` in other hosts and tools:** the code-editor extension (069) and the skill (027) open and validate the Markdown form too. (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
+- **`.sododeck.md` in other hosts and tools:** the code-editor extension (069, now 071) and the skill (027) open and validate the Markdown form too. (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
 - **`.sododeck.svg`** / **`.sododeck.png`**: an image file that also carries the deck, so it renders
   on code hosts and in Markdown previews and still opens for editing.
 - **Links to notes and code:** a card or note links to a vault note or a workspace file and the
