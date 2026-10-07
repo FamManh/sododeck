@@ -90,9 +90,9 @@ Both packs solve "the agent and the canvas edit the same deck":
 the editor hides what the host cannot do, as `features.ts` does for browser APIs. A mismatched
 `protocolVersion` shows a clear "update the extension" message instead of failing silently.
 
-### Founder decisions needed (before 067)
+### Founder decisions (decided 2026-10-07: all three as recommended)
 
-| #   | Question                                   | Recommendation                                                                                                                                                                                         |
+| #   | Question                                   | Decision                                                                                                                                                                                               |
 | --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | H1  | How the editor runs inside a host          | **An iframe in every host.** VS Code requires a webview (an iframe). In Obsidian, mounting React into its DOM would leak Tailwind's preflight and `:root` tokens and Radix portals into the host's UI. |
 | H2  | Where pictures live when a file is on disk | **Host decides; file can reference.** Make `assets[id].data` optional and add a relative `path` (068), so a host can keep pictures as sibling files or vault attachments.                              |
@@ -204,8 +204,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 - **Goal:** A picture in a deck file can point at a file next to it instead of embedding base64, so
   hosts with a folder (workspace, vault) keep decks small and diffable.
 - **In scope:**
-  - Schema: `Asset.data` optional; new optional `path` (relative, forward slashes, no `..` outside
-    the deck's folder); exactly one of `data` / `path`. ADR for the format change; Ajv/Zod parity.
+  - Schema: `Asset.data` optional; new optional `path` (relative to the deck, forward slashes; leading `..` allowed, founder 2026-10-07; hosts refuse paths outside their workspace or vault); exactly one of `data` / `path`. ADR for the format change; Ajv/Zod parity.
   - The web app keeps embedding (`data`); importing a file with `path` pictures shows them as
     missing with a clear reason, never fails the import.
   - Model and skill validator accept both forms; the id rule (SHA-256 of the bytes) is unchanged.
@@ -299,7 +298,11 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   edit. Do it when users report lost edits, or when 065 needs whole-deck `edit_deck` with
   `baseRevision`.
 - **`.sododeck.md`** for Obsidian: titles, notes and rules written as readable Markdown (search,
-  backlinks, block references) with the full JSON in a fenced block.
+  backlinks, block references) with the full JSON in a fenced block. Estimate 2–4 d (founder asked,
+  2026-10-07): Obsidian picks a view by the last extension only, so `x.sododeck.md` is a Markdown
+  file and the plugin has to detect it (frontmatter) and swap the Markdown view for the canvas; plus
+  a second file format in the model (write the readable part, read the JSON block, decide what
+  happens to hand edits of the readable part) and web import / export. Do it after 070.
 - **`.sododeck.svg`** / **`.sododeck.png`**: an image file that also carries the deck, so it renders
   on code hosts and in Markdown previews and still opens for editing.
 - **Links to notes and code:** a card or note links to a vault note or a workspace file and the
