@@ -12,8 +12,12 @@ export interface Disposable {
 }
 
 export interface FilePort {
+  /** True when paths differ only by letter case on this system (macOS, Windows defaults). */
+  readonly caseInsensitive: boolean;
   /** Rejects when the file does not exist or cannot be read. */
   read(loc: Loc): Promise<Uint8Array>;
+  /** Size in bytes; rejects when missing. */
+  size(loc: Loc): Promise<number>;
   write(loc: Loc, bytes: Uint8Array): Promise<void>;
   /** Creates the folder and any missing parents; fine when it exists. */
   mkdir(loc: Loc): Promise<void>;

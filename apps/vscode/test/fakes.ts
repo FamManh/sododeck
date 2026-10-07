@@ -48,12 +48,19 @@ export class FakeFiles implements FilePort {
     return bytes === undefined ? undefined : text(bytes);
   }
 
+  /** The location with links followed on every folder level. */
   private resolve(loc: Loc): Loc {
-    let current = normalize(loc);
-    for (let i = 0; i < 20; i++) {
-      const target = this.links.get(current);
-      if (target === undefined) return current;
-      current = normalize(target);
+    const match = /^([a-z][a-z0-9+.-]*:\/\/)(.*)$/i.exec(normalize(loc));
+    const prefix = match?.[1] ?? '';
+    const parts = (match?.[2] ?? loc).split('/');
+    let current = prefix;
+    for (const [i, part] of parts.entries()) {
+      current = i === 0 ? prefix + part : `${current}/${part}`;
+      for (let hops = 0; hops < 20; hops++) {
+        const target = this.links.get(current);
+        if (target === undefined) break;
+        current = normalize(target);
+      }
     }
     return current;
   }
@@ -62,6 +69,12 @@ export class FakeFiles implements FilePort {
     const bytes = this.data.get(this.resolve(loc));
     if (bytes === undefined) throw new Error(`ENOENT ${loc}`);
     return bytes.slice();
+  }
+
+  async size(loc: Loc): Promise<number> {
+    const bytes = this.data.get(this.resolve(loc));
+    if (bytes === undefined) throw new Error(`ENOENT ${loc}`);
+    return bytes.length;
   }
 
   async write(loc: Loc, bytes: Uint8Array): Promise<void> {
@@ -79,7 +92,8 @@ export class FakeFiles implements FilePort {
 
   async exists(loc: Loc): Promise<boolean> {
     const target = this.resolve(loc);
-    return this.data.has(target) || this.folders.has(target);
+    if (this.data.has(target) || this.folders.has(target)) return true;
+    return [...this.data.keys(), ...this.folders].some((key) => key.startsWith(`${target}/`));
   }
 
   async rename(from: Loc, to: Loc): Promise<void> {
@@ -100,17 +114,8 @@ export class FakeFiles implements FilePort {
   }
 
   async realpath(loc: Loc): Promise<Loc> {
-    // Follow a link on any folder level, as the real file system does.
-    const match = /^([a-z][a-z0-9+.-]*:\/\/)(.*)$/i.exec(normalize(loc));
-    const prefix = match?.[1] ?? '';
-    const parts = (match?.[2] ?? loc).split('/');
-    let current = prefix;
-    for (const [i, part] of parts.entries()) {
-      current = i === 0 ? prefix + part : `${current}/${part}`;
-      const target = this.links.get(current);
-      if (target !== undefined) current = normalize(target);
-    }
-    return this.caseInsensitive ? current.toLowerCase() : current;
+    const real = this.resolve(loc);
+    return this.caseInsensitive ? real.toLowerCase() : real;
   }
 
   scheme(loc: Loc): string {

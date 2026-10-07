@@ -15,6 +15,8 @@ export class DeckDocument {
   lastWritten: string | null = null;
   /** Highest `change.seq` seen; a stale or repeated one is ignored. */
   lastSeq = -1;
+  /** The file was deleted on disk; the document stays and counts as changed so save is offered. */
+  missing = false;
 
   private constructor(loc: Loc, text: string, savedText: string) {
     this.loc = loc;
@@ -33,7 +35,7 @@ export class DeckDocument {
   }
 
   get dirty(): boolean {
-    return this.text !== this.savedText;
+    return this.text !== this.savedText || this.missing;
   }
 
   /**
@@ -47,7 +49,13 @@ export class DeckDocument {
     return { accepted: true, dirty: this.dirty };
   }
 
+  /** A new webview starts its `seq` at 0 again. */
+  resetSeq(): void {
+    this.lastSeq = -1;
+  }
+
   markSaved(text: string = this.text): void {
+    this.missing = false;
     this.savedText = text;
     this.lastWritten = text;
   }
@@ -63,6 +71,7 @@ export class DeckDocument {
     }
     this.text = diskText;
     this.savedText = diskText;
+    this.missing = false;
     return true;
   }
 }
