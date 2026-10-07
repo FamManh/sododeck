@@ -18,6 +18,8 @@ import type {
   TableDisplay,
   TypeId,
 } from '@sododeck/schema';
+
+import type { AssetId } from './assets';
 import * as Y from 'yjs';
 
 import type {
@@ -120,6 +122,7 @@ import {
   addImages,
   moveImage,
   setImageCrop,
+  setPicturePath,
   setImageFlip,
   setImageGroup,
   setImageSize,
@@ -336,6 +339,13 @@ export interface DeckEditor {
    * or under 32 canvas px a side; `missing-reference` when the picture's size is not stored.
    */
   setImageCrop(id: Id, crop: CropRect | null): void;
+  /**
+   * Records where the host stored a picture (067): `path` goes into `meta.assets[id]` (and the
+   * file then writes the path instead of the data); `null` removes it. Untracked: saved and
+   * synced, never an undo step. `invalid` for a path `checkPicturePath` refuses, `not-found` for
+   * an unknown picture; nothing is written when the value is equal.
+   */
+  setPicturePath(id: AssetId, path: string | null): void;
   /**
    * Mirrors every listed image on `axis` (`on`) or puts it back (057), in one undo step; unflipping
    * removes the key. `locked` when any is locked, `not-found` for an unknown id, nothing written.
@@ -912,6 +922,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setImageCrop: (id, crop) => {
       setImageCrop(ctx, id, crop);
+    },
+    setPicturePath: (id, path) => {
+      setPicturePath(ctx, id, path);
     },
     setImageFlip: (ids, axis, on) => {
       setImageFlip(ctx, ids, axis, on);

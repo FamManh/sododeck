@@ -3,10 +3,10 @@ import type { DeckDoc } from '@sododeck/model';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 
-import { memoryPictureStore, type PictureStore } from '../images/picture-store';
 import { blockEditingInput } from './block-input';
 import { EmbedDeck } from './embed-deck';
 import { EmbedNotices } from './embed-notices';
+import type { EmbedPictures } from './embed-pictures';
 import { createEmbedSession } from './embed-session';
 import { useEmbedStore } from './embed-store';
 
@@ -27,14 +27,13 @@ export interface EmbedAppProps {
  * is on screen (R6): nothing can be edited until a valid one arrives.
  */
 export function EmbedApp({ transport, waitMs }: EmbedAppProps) {
-  const [open, setOpen] = useState<{ doc: DeckDoc; pictures: PictureStore } | null>(null);
+  const [open, setOpen] = useState<{ doc: DeckDoc; pictures: EmbedPictures } | null>(null);
   const phase = useEmbedStore((s) => s.phase);
   const session = useMemo(
     () =>
       createEmbedSession(transport, {
-        // One picture store per open deck; the host-backed one replaces it for the pictures ability.
-        onOpen: (doc) => {
-          setOpen({ doc, pictures: memoryPictureStore() });
+        onOpen: (doc, pictures) => {
+          setOpen({ doc, pictures });
         },
         ...(waitMs === undefined ? {} : { waitMs }),
       }),
@@ -51,7 +50,9 @@ export function EmbedApp({ transport, waitMs }: EmbedAppProps) {
             [
               {
                 path: '/deck/:deckId',
-                element: <EmbedDeck doc={open.doc} session={session} pictures={open.pictures} />,
+                element: (
+                  <EmbedDeck doc={open.doc} session={session} pictures={open.pictures.store} />
+                ),
                 children: [
                   {
                     path: 'rules/:ruleId?',

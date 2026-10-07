@@ -6,10 +6,11 @@ import { EditorShell } from '../editor/editor-shell';
 import type { EmbedHostValue } from '../editor/embed-host-context';
 import type { SaveControls } from '../editor/save-context';
 import { readPictureBytes } from '../images/read-pictures';
-import type { PictureStore } from '../images/picture-store';
 import { parseLinkInput } from '../lib/links';
 import { readDeck } from '../model/use-deck-snapshot';
+import { EmbedToasts } from './embed-toasts';
 import { useEmbedStore } from './embed-store';
+import type { HostPictureStore } from './host-picture-store';
 import type { EmbedSession } from './embed-session';
 import { attachHostPersistence } from './host-persistence';
 
@@ -25,7 +26,7 @@ export function EmbedDeck({
 }: {
   doc: DeckDoc;
   session: EmbedSession;
-  pictures: PictureStore;
+  pictures: HostPictureStore;
 }) {
   const capabilities = useEmbedStore((s) => s.capabilities);
 
@@ -87,6 +88,7 @@ export function EmbedDeck({
       services={null}
       host={host}
       deckKey={null}
+      extras={<EmbedToasts />}
     />
   );
 }

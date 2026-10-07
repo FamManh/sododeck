@@ -7,6 +7,8 @@ import type { LibraryDb } from '../storage/library-db';
 export interface StoredPicture {
   type: string;
   bytes: Uint8Array;
+  /** The file name the picture came with, when the store hands it on (a host names its file). */
+  name?: string;
 }
 
 /**
@@ -26,6 +28,13 @@ export interface PictureStore {
   getBytes(id: string): Promise<StoredPicture | null>;
   /** Every stored picture id of the deck. */
   ids(): Promise<string[]>;
+  /**
+   * The store can fetch a picture the deck saved as a file next to it (068), by its id: the
+   * embed's host-backed store. Absent: such a picture is shown as missing.
+   */
+  readonly readsFilePaths?: boolean;
+  /** Why a picture is missing, when the store knows (the host's own words). */
+  missingReason?(id: string): string | undefined;
 }
 
 export function dbPictureStore(db: LibraryDb, deckId: string): PictureStore {

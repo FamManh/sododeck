@@ -21,6 +21,8 @@ interface EmbedState {
   capabilities: Capabilities;
   /** The host refused or never answered a `change`; cleared by the next ok. */
   hostError: string | null;
+  /** The host did not keep a picture; shown once as a toast. `n` makes each notice new. */
+  pictureNotice: { reason: string; n: number } | null;
   reset: () => void;
   /** No `init` after the waiting time. Only changes `waiting`. */
   slow: () => void;
@@ -32,6 +34,7 @@ interface EmbedState {
   blocked: (problems: ProblemEntry[]) => void;
   setCapabilities: (capabilities: Capabilities) => void;
   setHostError: (reason: string | null) => void;
+  noticePictureKept: (reason: string) => void;
 }
 
 export const useEmbedStore = create<EmbedState>()((set) => ({
@@ -40,6 +43,7 @@ export const useEmbedStore = create<EmbedState>()((set) => ({
   problems: [],
   capabilities: NO_CAPABILITIES,
   hostError: null,
+  pictureNotice: null,
   reset: () => {
     set({
       phase: 'waiting',
@@ -47,6 +51,7 @@ export const useEmbedStore = create<EmbedState>()((set) => ({
       problems: [],
       capabilities: NO_CAPABILITIES,
       hostError: null,
+      pictureNotice: null,
     });
   },
   slow: () => {
@@ -66,5 +71,8 @@ export const useEmbedStore = create<EmbedState>()((set) => ({
   },
   setHostError: (hostError) => {
     set({ hostError });
+  },
+  noticePictureKept: (reason) => {
+    set((s) => ({ pictureNotice: { reason, n: (s.pictureNotice?.n ?? 0) + 1 } }));
   },
 }));
