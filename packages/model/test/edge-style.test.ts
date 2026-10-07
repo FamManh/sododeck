@@ -113,6 +113,49 @@ describe('setEdgeShape (029)', () => {
   });
 });
 
+describe('setEdgeShape on a relationship (064)', () => {
+  const tables: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      {
+        id: 'u',
+        type: 'db-table',
+        title: 'users',
+        columns: [{ id: 'u1', name: 'id', type: 'int' }],
+      },
+      {
+        id: 'o',
+        type: 'db-table',
+        title: 'orders',
+        columns: [{ id: 'o1', name: 'user_id', type: 'int' }],
+      },
+    ],
+    edges: [{ id: 'r', from: 'o', to: 'u', fromColumns: ['o1'], toColumns: ['u1'] }],
+  };
+
+  it('stores curved (absent reads as elbow) and removes elbow, its default', () => {
+    const doc = fromJSON(tables);
+    const editor = createEditor(doc, { newId: seqIds() });
+    editor.setEdgeShape(['r'], 'curved');
+    expect(edge(doc, 'r')?.style).toEqual({ shape: 'curved' });
+    expect(edgeShape(edge(doc, 'r') ?? {})).toBe('curved');
+    editor.setEdgeShape(['r'], 'elbow');
+    expect(edge(doc, 'r')).not.toHaveProperty('style');
+    expect(edgeShape(edge(doc, 'r') ?? {})).toBe('elbow');
+    editor.setEdgeShape(['r'], 'straight');
+    expect(edge(doc, 'r')?.style).toEqual({ shape: 'straight' });
+    expectValid(doc);
+  });
+
+  it('keeps card connectors as they were: elbow stays stored with an offset', () => {
+    const { doc, editor } = setup();
+    editor.setEdgeShape(['e2'], 'elbow');
+    expect(edge(doc, 'e2')?.style).toEqual({ shape: 'elbow' });
+    editor.setEdgeShape(['e1'], 'elbow');
+    expect(edge(doc, 'e1')?.style).toEqual({ shape: 'elbow' });
+  });
+});
+
 describe('setEdgeStyle (022)', () => {
   it('writes only the patched keys to every listed edge in one undo step', () => {
     const { doc, editor } = setup();

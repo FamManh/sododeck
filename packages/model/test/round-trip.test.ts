@@ -950,6 +950,48 @@ describe('connector line type (029)', () => {
   });
 });
 
+describe('relationship shape and bends (064)', () => {
+  it('round-trips a curved relationship with fractional and pixel bends', () => {
+    const file: SododeckFile = {
+      ...empty,
+      nodes: [
+        {
+          id: 'u',
+          type: 'db-table',
+          title: 'users',
+          columns: [{ id: 'u1', name: 'id', type: 'int' }],
+        },
+        {
+          id: 'o',
+          type: 'db-table',
+          title: 'orders',
+          columns: [{ id: 'o1', name: 'user_id', type: 'int' }],
+        },
+      ],
+      edges: [
+        {
+          id: 'r',
+          from: 'o',
+          to: 'u',
+          fromColumns: ['o1'],
+          toColumns: ['u1'],
+          cardinality: 'n-1',
+          route: {
+            waypoints: [
+              { x: 0.5, dy: -40 },
+              { dx: 12, y: 0.75 },
+            ],
+          },
+          style: { shape: 'curved' },
+        },
+      ],
+    };
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(serializeDeck(out)).toBe(serializeDeck(file));
+  });
+});
+
 describe('rename safety for flows, features and branches (006, constitution III)', () => {
   const file: SododeckFile = {
     ...empty,

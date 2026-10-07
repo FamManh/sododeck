@@ -8,6 +8,7 @@ import type { Edge, EdgeShape, EdgeStyle, Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { jsonEqual, type YObject, type YValue } from '../convert';
+import { edgeShape } from '../edge-shape';
 import { collectionMap } from '../layout';
 import { readObject } from '../read';
 import { assertValid, validateObject } from '../validate';
@@ -62,8 +63,10 @@ export function writeEdgeShape(edgeMap: YObject, shape: EdgeShape | null): void 
 
 /**
  * Applies `patch` to the style of every listed edge in one transaction (one undo step). Validates
- * all ids and values first. `curved` is stored only where leaving it absent would read as elbow
- * (an edge with a route offset); otherwise it removes the key.
+ * all ids and values first. A shape is removed only when it is what an absent key reads as and
+ * stays so without a route offset: `curved` on a card connector without an offset, `elbow` on a
+ * table relationship (064, whose default is elbow, so `curved` must be stored there). A shape that
+ * only matches because of a 017 offset is kept, since the first bend edit drops the offset.
  */
 export function setEdgeStyle(
   ctx: EditContext,
@@ -76,7 +79,9 @@ export function setEdgeStyle(
     const map = requireEntry(list, id, 'Edge');
     assertUnlocked(map, 'Connector', id, 'restyle it');
     const current = readObject('edges', id, map) as unknown as Edge;
-    const hasOffset = current.route?.offset !== undefined;
+    const unshaped = { ...current, style: { ...current.style, shape: undefined } };
+    const defaultShape = edgeShape(unshaped);
+    const plainDefault = edgeShape({ ...unshaped, route: undefined });
     const next = new Map<string, unknown>(Object.entries(current.style ?? {}));
     for (const key of STYLE_KEYS) {
       const value = patch[key];
@@ -84,7 +89,7 @@ export function setEdgeStyle(
       const remove =
         value === null ||
         isDefault(key, value) ||
-        (key === 'shape' && value === 'curved' && !hasOffset);
+        (key === 'shape' && value === defaultShape && value === plainDefault);
       if (remove) next.delete(key);
       else next.set(key, value);
     }

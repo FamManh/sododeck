@@ -1,10 +1,12 @@
+import { edgeShape } from '@sododeck/model';
 import type { Cardinality, DbAction, Edge, EdgeShape, SododeckFile } from '@sododeck/schema';
+import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { SwatchGrid, type SwatchOption } from '@sododeck/ui/components/swatch-grid';
 import { Switch } from '@sododeck/ui/components/switch';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
-import { Link2 } from 'lucide-react';
+import { Link2, RotateCcw } from 'lucide-react';
 import { useId } from 'react';
 
 import { useEditor } from '../../../model/use-editor';
@@ -16,6 +18,7 @@ import { applyLineType, LINE_TYPES } from '../../fields/line-type';
 import { oneStep } from '../../fields/one-step';
 import { PickField } from '../../fields/pick-field';
 import { applyLineStyle } from '../../line-style/apply-line-style';
+import { editableEdges } from '../../lock';
 import { CARD_COLORS, colourName } from '../../style/card-style';
 import { InspectorFrame } from '../inspector-frame';
 import { CardinalityChoice } from './cardinality-choice';
@@ -143,7 +146,8 @@ export function RelationshipInspector({ deck, edge }: { deck: SododeckFile; edge
           <FieldLabel id={`${base}-line`}>Line type</FieldLabel>
           <SegmentedControl
             aria-label="Line type"
-            value={edge.style?.shape ?? ''}
+            // The effective shape: a relationship without one is drawn as an elbow (064).
+            value={edgeShape(edge)}
             onValueChange={(value) => {
               if (value !== '') applyLineType(editor, [edge.id], value as EdgeShape);
             }}
@@ -156,6 +160,23 @@ export function RelationshipInspector({ deck, edge }: { deck: SododeckFile; edge
               </SegmentedControlItem>
             ))}
           </SegmentedControl>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            disabled={edge.route === undefined}
+            onClick={() => {
+              // A locked relationship refuses a reshape (053): nothing written, the hint shown.
+              if (editableEdges(editor, [edge.id]) === null) return;
+              oneStep(editor, () => {
+                editor.setEdgeRoute(edge.id, null);
+              });
+              announce('Route reset');
+            }}
+          >
+            <RotateCcw aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
+            Reset route
+          </Button>
           <FieldLabel id={`${base}-colour`}>Colour</FieldLabel>
           <SwatchGrid
             label="Colour"

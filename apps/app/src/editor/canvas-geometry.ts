@@ -236,7 +236,7 @@ function tableCardLayout(node: SizedNode, context: TableContext | undefined): Ca
     height: table.height,
     titleLines: 1,
     titleCut: table.titleCut,
-    descriptionLines: table.noteLines.length,
+    descriptionLines: 0,
     tagRows: 0,
     fieldsHeight: 0,
     hasChildrenRow: false,

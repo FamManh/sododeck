@@ -11,6 +11,10 @@
  *   there to the moved run (two new bends). A lone straight run jogs at both ends. Like an inner
  *   run, the vertices become stored bends and both sides are pinned.
  *
+ * A relationship (064) reshapes the part between its two 24 px stub tips the same way: its ends
+ * never leave their rows (042 FR-006), so the stub tips are the fixed ends and a drag writes only
+ * `waypoints` (no sides, no `at`).
+ *
  * Snapping: the neighbouring parallel runs' lines, then the 22 px grid, within 6 screen px; ⌘ off.
  * While the pointer is down the live line lives in the UI store (`bendPreview`); release writes
  * once, simplified (one undo step). Esc writes nothing.
@@ -27,6 +31,8 @@ import {
   snapBend,
 } from '../routing/connector-geometry';
 import type { Run } from '../routing/elbow-runs';
+import { relationshipMiddle } from '../routing/relationship-path';
+import type { RelSide } from '../relationships/relationship-ends';
 import { NORMAL, type Box, type Point } from '../routing/route-path';
 import { waypointsOf, type BendContext } from './bend-drag';
 import { setActiveGesture } from './drag-session';
@@ -54,8 +60,15 @@ export interface EndContext {
   toAt: number;
 }
 
-/** What a segment edit needs about one connector: `start` / `end` must be the anchor points. */
-export type SegmentContext = BendContext & EndContext;
+/**
+ * What a segment edit needs about one connector: `start` / `end` must be the anchor points, or
+ * for a relationship (`mode: 'relationship'`) its stub tips, with its two row sides.
+ */
+export type SegmentContext = BendContext &
+  EndContext & {
+    /** A relationship keeps its ends on their rows and stores only bends (064). */
+    mode?: 'connector' | 'relationship';
+  };
 
 /** What the run moves: two bends, one end, both ends (a lone straight run), or nothing. */
 type Mode = 'inner' | 'start' | 'end' | 'both' | 'none';
@@ -93,10 +106,44 @@ const samePoints = (a: readonly Point[], b: readonly Point[]): boolean =>
  * handle's run index means the same run here.
  */
 export function segmentVertices(ctx: SegmentContext): Point[] {
+  if (ctx.mode === 'relationship') {
+    return (
+      relationshipSegmentVertices(
+        ctx.start,
+        ctx.end,
+        relSide(ctx.fromSide),
+        relSide(ctx.toSide),
+        ctx.bends,
+      ) ?? [ctx.start, ctx.end]
+    );
+  }
   const end = NORMAL[ctx.toSide];
   return elbowVertices([ctx.start, ...ctx.bends, ctx.end], {
     start: NORMAL[ctx.fromSide],
     end: { x: -end.x, y: -end.y },
+  });
+}
+
+const relSide = (side: Side): RelSide => (side === 'left' ? 'left' : 'right');
+
+/**
+ * The vertices of a relationship's elbow between its stub tips `start` and `end` (064), as
+ * `relationshipPath` draws it: the same Z, or out to the farther stub first when both ends leave
+ * one side. A self-reference is a fixed loop with nothing to reshape: null.
+ */
+export function relationshipSegmentVertices(
+  start: Point,
+  end: Point,
+  fromSide: RelSide,
+  toSide: RelSide,
+  bends: readonly Point[],
+  self = false,
+): Point[] | null {
+  if (self) return null;
+  const middle = relationshipMiddle(start, end, fromSide, toSide, 'elbow', bends);
+  return elbowVertices([start, ...middle, end], {
+    start: NORMAL[fromSide],
+    end: { x: -NORMAL[toSide].x, y: 0 },
   });
 }
 
@@ -249,8 +296,10 @@ function patchOf(s: SegmentSession): EdgeRoutePatch | null {
   // A run dragged back where it was leaves only an empty jog, which simplifies away.
   if (samePoints(simplified, simplifyWaypoints(s.initial, SIMPLIFY_TOLERANCE))) return null;
   const kept = simplified.slice(1, -1);
+  const waypoints = kept.length === 0 ? null : waypointsOf(ctx, kept);
+  if (ctx.mode === 'relationship') return { waypoints };
   return {
-    waypoints: kept.length === 0 ? null : waypointsOf(ctx, kept),
+    waypoints,
     offset: null,
     fromSide: ctx.fromSide,
     toSide: ctx.toSide,
@@ -364,12 +413,12 @@ export function resetSegment(editor: DeckEditor, ctx: SegmentContext, run: Run):
     );
     if (kept.length === ctx.bends.length) return;
     patch.waypoints = kept.length === 0 ? null : waypointsOf(ctx, kept);
-    patch.offset = null;
-  } else {
+    if (ctx.mode !== 'relationship') patch.offset = null;
+  } else if (ctx.mode !== 'relationship') {
     if ((s.mode === 'start' || s.mode === 'both') && ctx.fromAt !== 0.5) patch.fromAt = null;
     if ((s.mode === 'end' || s.mode === 'both') && ctx.toAt !== 0.5) patch.toAt = null;
     if (Object.keys(patch).length === 0) return;
-  }
+  } else return;
   write(editor, ctx, patch);
   useUiStore.getState().announce('Segment reset');
 }

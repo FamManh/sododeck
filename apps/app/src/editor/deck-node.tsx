@@ -23,6 +23,8 @@ import { deckStateClasses } from './deck-states';
 import { rowsDrawn } from './levels';
 import { StepSticker } from './step-sticker';
 import { useUiStore } from '../state/ui-store';
+import { blurTarget, enterTarget } from './table/db-hover';
+import { NoteIcon } from './table/note-icon';
 import { TableBody } from './table/table-body';
 import { TableDetailToggle } from './table/table-detail-toggle';
 import { TableFilter } from './table/table-filter';
@@ -64,7 +66,7 @@ export const DeckNode = memo(function DeckNode({
   const name = [
     table === undefined
       ? `${typeName(data.kind)}: ${data.title}`
-      : `Table ${data.title}, ${String(table.columnCount)} columns`,
+      : `Table ${data.title}, ${String(table.columnCount)} columns${table.noted ? ', has note' : ''}`,
     data.touch === undefined ? null : `current step, ${ACCESS_TEXT[data.touch]}`,
     data.touchChip === undefined ? null : `current step ${data.touchChip.text}`,
     data.viewDimmed === true ? 'dimmed in this view' : null,
@@ -118,13 +120,21 @@ export const DeckNode = memo(function DeckNode({
   const titleText = (
     <span
       className={cn(
-        'text-[14px] leading-[1.28] font-semibold break-words',
+        'min-w-0 text-[14px] leading-[1.28] font-semibold break-words',
         textRoleClass ?? 'text-ink',
       )}
       style={clampStyle(layout.titleLines)}
     >
       {data.title}
     </span>
+  );
+  const shownTitle = layout.titleCut ? (
+    <Tooltip>
+      <TooltipTrigger asChild>{titleText}</TooltipTrigger>
+      <TooltipContent>{data.title}</TooltipContent>
+    </Tooltip>
+  ) : (
+    titleText
   );
   // The title edits in place, in its own type and over the same lines (founder, 2026-10-02).
   const titleInput =
@@ -177,6 +187,15 @@ export const DeckNode = memo(function DeckNode({
       data-step-state={data.step?.state}
       {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
       {...(customText === undefined ? {} : { 'data-text': customText })}
+      onFocus={(event) => {
+        // A table with a note shows it on keyboard focus rest (064 FR-009).
+        if (table?.noted === true && event.target === event.currentTarget) {
+          enterTarget({ kind: 'table', nodeId: id }, 'keyboard');
+        }
+      }}
+      onBlur={(event) => {
+        if (table !== undefined && event.target === event.currentTarget) blurTarget();
+      }}
       {...(showStroke ? { 'data-stroke': '' } : {})}
       {...(data.problems !== undefined && target !== 'ok' ? { 'data-problem': '' } : {})}
       tabIndex={tabIndex}
@@ -325,27 +344,27 @@ export const DeckNode = memo(function DeckNode({
             )}
           </div>
           {titleInput ??
-            (layout.titleCut ? (
-              <Tooltip>
-                <TooltipTrigger asChild>{titleText}</TooltipTrigger>
-                <TooltipContent>{data.title}</TooltipContent>
-              </Tooltip>
+            (table === undefined ? (
+              shownTitle
             ) : (
-              titleText
+              // The table's note is never drawn under the title (064 FR-005a): the title row
+              // carries a note icon and opens the table popover (hover delegated by the canvas).
+              <div
+                data-table-title=""
+                data-db-hover={table.noted ? '' : undefined}
+                className="flex min-w-0 shrink-0 items-center gap-1"
+              >
+                {shownTitle}
+                {table.hasNote && isContainer && (
+                  <NoteIcon
+                    target={{ kind: 'table', nodeId: id }}
+                    name={data.title}
+                    size={14}
+                    textClass={textRoleClass}
+                  />
+                )}
+              </div>
             ))}
-          {table !== undefined && isContainer && table.noteLines.length > 0 && (
-            <span
-              data-testid="table-note"
-              data-text={subtitleDataText}
-              className={cn(
-                'shrink-0 text-[12px] leading-[17px] break-words',
-                textRoleClass ?? 'text-ink-secondary',
-              )}
-              style={clampStyle(table.noteLines.length)}
-            >
-              {table.noteLines.join(' ')}
-            </span>
-          )}
           {table !== undefined && isContainer && (
             <TableBody
               nodeId={id}

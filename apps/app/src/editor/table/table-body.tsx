@@ -16,6 +16,8 @@ import { EnumChip } from './enum-chip';
 import { RowGrip } from './row-grip';
 import { ShowAllButton } from './show-all-button';
 import type { ProblemMark } from '../problems/problem-marks';
+import { blurTarget, enterTarget } from './db-hover';
+import { NoteIcon } from './note-icon';
 import { GLYPH_NAMES, rowLabel } from './table-text';
 
 /** The key glyphs (DESIGN.md "Glyphs"): distinct shapes, so they read without colour (FR-010). */
@@ -125,7 +127,9 @@ function RowPort({
 /**
  * A table card's column list (041, frame 156): the hairline, one fixed 24 px row per column, the
  * "+n columns" pill and the footer, exactly as `tableLayout` measured them. Rows are plain
- * elements with a CSS hover and a native `title` when cut (R8): no per-row component state.
+ * elements with a CSS hover: no per-row component state. A row with hidden information
+ * (`data-db-hover`, 064) opens the column popover on hover (delegated by the canvas) or focus
+ * rest; a row with a note shows the note icon after its name.
  *
  * Editing (043): the open line editor takes an edited row's place or the new-row slot the layout
  * reserved (`newRowIndex`); a row drag draws its drop line. Double-click edits a row, right-click opens the row menu.
@@ -216,17 +220,21 @@ export const TableBody = memo(function TableBody({
         data-touch-access={access}
         aria-posinset={index + 1}
         aria-setsize={count}
-        title={row.nameCut || row.typeCut ? rowLabel(row) : undefined}
         data-column-id={row.columnId}
+        data-db-hover={row.hidden ? '' : undefined}
         data-row={rowKey(nodeId, row.columnId)}
         data-match={layout.matchIds.has(row.columnId) ? 'true' : undefined}
         aria-current={filterIndex >= 0 && currentMatch === row.columnId ? 'true' : undefined}
         // Roving row focus (042 R9): ↓ / ↑ from the focused table, never a Tab stop.
         tabIndex={-1}
-        onFocus={() => {
+        onFocus={(event) => {
           useUiStore.getState().setFocusedRow({ tableId: nodeId, columnId: row.columnId });
+          if (row.hidden && event.target === event.currentTarget) {
+            enterTarget({ kind: 'column', nodeId, columnId: row.columnId }, 'keyboard');
+          }
         }}
         onBlur={(event) => {
+          blurTarget();
           const next = event.relatedTarget;
           if (next instanceof Element && next.closest('[data-row], [data-line-editor]') !== null)
             return;
@@ -280,14 +288,23 @@ export const TableBody = memo(function TableBody({
             <ProblemRowGlyph severity={severity} text={problems?.rowText.get(row.columnId)} />
           )}
         </span>
-        <span
-          className={cn(
-            'min-w-0 flex-1 truncate text-[12px] leading-6 text-ink',
-            row.glyphs.includes('pk') ? 'font-semibold' : 'font-medium',
-            layout.matchIds.has(row.columnId) && 'font-semibold text-deck-orange-ink',
+        <span className="flex min-w-0 flex-1 items-center gap-1">
+          <span
+            className={cn(
+              'min-w-0 truncate text-[12px] leading-6 text-ink',
+              row.glyphs.includes('pk') ? 'font-semibold' : 'font-medium',
+              layout.matchIds.has(row.columnId) && 'font-semibold text-deck-orange-ink',
+            )}
+          >
+            {row.name}
+          </span>
+          {row.hasNote && (
+            <NoteIcon
+              target={{ kind: 'column', nodeId, columnId: row.columnId }}
+              name={row.name}
+              size={12}
+            />
           )}
-        >
-          {row.name}
         </span>
         {row.enum !== undefined ? (
           <EnumChip

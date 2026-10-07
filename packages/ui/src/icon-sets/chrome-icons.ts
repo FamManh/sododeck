@@ -21,6 +21,8 @@ export const CHROME_ICONS = {
   'primary-key': 'key-round',
   'foreign-key': 'link-2',
   indexes: 'list-ordered',
+  // Note icon after a table or column name (064).
+  note: 'notebook-text',
 } as const;
 
 export type ChromeIconKey = keyof typeof CHROME_ICONS;

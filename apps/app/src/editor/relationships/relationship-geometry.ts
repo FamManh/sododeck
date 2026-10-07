@@ -45,6 +45,8 @@ export interface RelationshipGeometry {
   /** Where each end meets its card, for end handles. */
   start: Point;
   end: Point;
+  /** Row mode, curved or elbow, not a loop: the stub tips the path handles reshape between (064). */
+  stubs?: { from: Point; to: Point };
 }
 
 function endInput(box: Box, side: RelSide, end: RelationshipEnd): RelEndInput {
@@ -84,6 +86,7 @@ export function relationshipGeometry(input: RelationshipGeometryInput): Relation
       sides,
       start: { x: from.x, y: path.from.at.y },
       end: { x: to.x, y: path.to.at.y },
+      ...(path.stubs === undefined ? {} : { stubs: path.stubs }),
     };
   }
   // Below 90 % or without columns: an ordinary connector on the outline, marks kept (R6).
