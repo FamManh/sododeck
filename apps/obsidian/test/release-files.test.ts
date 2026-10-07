@@ -3,8 +3,9 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const read = (name: string): unknown =>
-  JSON.parse(readFileSync(fileURLToPath(new URL(`../${name}`, import.meta.url)), 'utf8'));
+const text = (name: string): string =>
+  readFileSync(fileURLToPath(new URL(`../${name}`, import.meta.url)), 'utf8');
+const read = (name: string): unknown => JSON.parse(text(name));
 
 interface Manifest {
   id: string;
@@ -47,5 +48,11 @@ describe('release files (US7, FR-039)', () => {
 
   it('claims no more than the API used needs (getAvailablePathForAttachment is 1.5.7)', () => {
     expect(manifest.minAppVersion).toBe('1.5.7');
+  });
+
+  it('the repository root carries identical copies for the community list', () => {
+    // The list reads manifest.json (and versions.json) at the root of the repository.
+    expect(text('../../manifest.json')).toBe(text('manifest.json'));
+    expect(text('../../versions.json')).toBe(text('versions.json'));
   });
 });
