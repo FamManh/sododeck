@@ -1,0 +1,147 @@
+{
+  "name": "sododeck",
+  "displayName": "Sododeck",
+  "description": "Architecture and flow diagrams as .sododeck files: open them as a canvas in VS Code, save with the normal save, and keep them in your repo. Local only: no network, no telemetry.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "publisher": "Sododeck",
+  "license": "MIT",
+  "icon": "icon.png",
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "diagram",
+    "architecture",
+    "flowchart",
+    "sododeck",
+    "system design",
+    "data flow",
+    "sequence",
+    "c4",
+    "canvas",
+    "custom editor"
+  ],
+  "homepage": "https://sododeck.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FamManh/sododeck.git",
+    "directory": "apps/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/FamManh/sododeck/issues"
+  },
+  "galleryBanner": {
+    "color": "#1c1c1a",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./dist/extension.cjs",
+  "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Picture files next to the deck are not read or written until the workspace is trusted."
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "sododeck.canvas",
+        "displayName": "Sododeck canvas",
+        "selector": [
+          {
+            "filenamePattern": "*.sododeck"
+          },
+          {
+            "filenamePattern": "*.sododeck.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "sododeck.newDeck",
+        "title": "New Sododeck deck",
+        "category": "Sododeck"
+      },
+      {
+        "command": "sododeck.openInWeb",
+        "title": "Open in Sododeck web",
+        "category": "Sododeck",
+        "enablement": "activeCustomEditorId == sododeck.canvas"
+      },
+      {
+        "command": "sododeck.openAsText",
+        "title": "Open as text",
+        "category": "Sododeck",
+        "enablement": "activeCustomEditorId == sododeck.canvas"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "sododeck.newDeck",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "sododeck.openAsText",
+          "when": "activeCustomEditorId == sododeck.canvas",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Sododeck",
+      "properties": {
+        "sododeck.pictures.storage": {
+          "type": "string",
+          "enum": [
+            "embed",
+            "file"
+          ],
+          "default": "embed",
+          "enumDescriptions": [
+            "Keep pictures inside the deck file.",
+            "Save new pictures as image files in a folder next to the deck."
+          ],
+          "markdownDescription": "Where new pictures are stored. Existing pictures stay as they are.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "package": "vsce package --no-dependencies --out dist/",
+    "lint": "eslint .",
+    "typecheck": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sododeck/host-protocol": "workspace:*",
+    "@sododeck/model": "workspace:*",
+    "@sododeck/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@sododeck/app": "workspace:*",
+    "@sododeck/config": "workspace:*",
+    "@types/node": "^24.19.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
+  }
+}
