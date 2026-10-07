@@ -97,7 +97,9 @@ describe('webview-shim.js', () => {
       data: unknown;
       origin: unknown;
       source: unknown;
-      constructor(_t: string, init: { data: unknown; origin: unknown; source: unknown }) {
+      constructor(_t: string, init: { data: unknown; origin: unknown; source?: unknown }) {
+        // Like the real constructor: a plain object as `source` is refused.
+        if (init.source !== undefined) throw new TypeError('source is not a MessageEventSource');
         Object.assign(this, init);
       }
     }

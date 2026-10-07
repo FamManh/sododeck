@@ -19,11 +19,9 @@
     function (event) {
       if (own.has(event)) return;
       event.stopImmediatePropagation();
-      const relayed = new MessageEvent('message', {
-        data: event.data,
-        origin: event.origin,
-        source: fakeParent,
-      });
+      // `source` only accepts a window or a port in the constructor, so it is set afterwards.
+      const relayed = new MessageEvent('message', { data: event.data, origin: event.origin });
+      Object.defineProperty(relayed, 'source', { value: fakeParent });
       own.add(relayed);
       window.dispatchEvent(relayed);
     },
