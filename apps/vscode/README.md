@@ -4,7 +4,15 @@ Draw architecture and flow diagrams in VS Code. Open a `.sododeck` file and it b
 
 Sododeck is local-first: the extension makes **no network requests, sends no telemetry and uploads nothing**.
 
-![A deck open as a canvas, dark theme](images/canvas-dark.jpg)
+![A deck open as a canvas, dark theme](https://raw.githubusercontent.com/FamManh/sododeck/main/apps/vscode/images/canvas-dark.jpg)
+
+## See it in action
+
+Play a flow step by step and watch the request move through the system.
+
+![Playing the "Place an order" flow of a food delivery deck](https://raw.githubusercontent.com/FamManh/sododeck/main/apps/vscode/images/flow-food-delivery.gif)
+
+![Playing the "Daily refresh" flow of an analytics pipeline deck](https://raw.githubusercontent.com/FamManh/sododeck/main/apps/vscode/images/flow-analytics-pipeline.gif)
 
 ## Getting started
 
@@ -32,7 +40,7 @@ By default pictures are stored inside the deck file. Switch the setting to save 
 
 The canvas follows your VS Code color theme and switches live.
 
-![The same canvas in the light theme](images/canvas-light.jpg)
+![The same canvas in the light theme](https://raw.githubusercontent.com/FamManh/sododeck/main/apps/vscode/images/canvas-light.jpg)
 
 ### Private by design
 
