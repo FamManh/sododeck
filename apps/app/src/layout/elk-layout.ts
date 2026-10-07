@@ -10,10 +10,23 @@ type Point = { x: number; y: number };
 export interface LayoutRequest {
   nodes: { id: string; width: number; height: number; parent?: string }[];
   groups: { id: string; parent?: string }[];
-  edges: { id: string; source: string; target: string }[];
+  edges: LayoutEdge[];
   pinned: Record<string, Point>;
   /** Layer direction; `RIGHT` when absent, so Tidy is unchanged (056: Mermaid import sets it). */
   direction?: 'RIGHT' | 'DOWN' | 'LEFT' | 'UP';
+}
+
+/**
+ * A connection that shapes the layers. A table relationship also gives the rows its ends sit on
+ * (`sourceY` / `targetY`, from the box's top): it then leaves the source's right side and enters
+ * the target's left side at those rows, so the layout orders tables by the rows they link.
+ */
+export interface LayoutEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceY?: number;
+  targetY?: number;
 }
 
 /** Top-left positions of every requested component, in canvas coordinates. */
@@ -79,10 +92,29 @@ export async function computeLayout(request: LayoutRequest, elk: ElkEngine): Pro
     if (compound !== undefined) childrenOf(parentOf(group.parent)).push(compound);
   }
   const nodeIds = new Set<string>();
+  const elkNodes = new Map<string, ElkNode>();
   for (const node of request.nodes) {
     nodeIds.add(node.id);
-    childrenOf(parentOf(node.parent)).push({ id: node.id, width: node.width, height: node.height });
+    const elkNode: ElkNode = { id: node.id, width: node.width, height: node.height };
+    elkNodes.set(node.id, elkNode);
+    childrenOf(parentOf(node.parent)).push(elkNode);
   }
+  // Row ports only make sense left to right: other directions lay out without them.
+  const rowPorts = (request.direction ?? 'RIGHT') === 'RIGHT';
+  const portOn = (nodeId: string, portId: string, y: number | undefined, side: 'EAST' | 'WEST') => {
+    const node = elkNodes.get(nodeId);
+    if (!rowPorts || y === undefined || node === undefined) return nodeId;
+    node.layoutOptions = { 'elk.portConstraints': 'FIXED_POS' };
+    (node.ports ??= []).push({
+      id: portId,
+      x: side === 'EAST' ? (node.width ?? 0) : 0,
+      y: Math.min(Math.max(y, 0), node.height ?? 0),
+      width: 0,
+      height: 0,
+      layoutOptions: { 'elk.port.side': side },
+    });
+    return portId;
+  };
   // An end may be a group's compound, `group:<id>` (050 R6). A connector between a group and
   // something inside it has no layer order to give, so it is left out.
   const nodeParent = new Map(request.nodes.map((n) => [n.id, parentOf(n.parent)]));
@@ -110,7 +142,11 @@ export async function computeLayout(request: LayoutRequest, elk: ElkEngine): Pro
         !inside(e.source, e.target) &&
         !inside(e.target, e.source),
     )
-    .map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] }));
+    .map((e) => ({
+      id: e.id,
+      sources: [portOn(e.source, `${e.id}:source`, e.sourceY, 'EAST')],
+      targets: [portOn(e.target, `${e.id}:target`, e.targetY, 'WEST')],
+    }));
 
   const graph = await elk.layout(root);
 

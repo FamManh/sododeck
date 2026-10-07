@@ -37,6 +37,13 @@ describe('edgeShape (029)', () => {
     expect(edgeShape({ style: { shape: 'straight' } })).toBe('straight');
     expect(edgeShape({ route: { offset: 4 }, style: { shape: 'curved' } })).toBe('curved');
     expect(edgeShape({ route: { offset: 4 } })).toBe('elbow');
+  });
+
+  it('defaults a table relationship to elbow, and a plain connector to curved', () => {
+    expect(edgeShape({})).toBe('curved');
+    expect(edgeShape({ cardinality: 'n-1' })).toBe('elbow');
+    expect(edgeShape({ fromColumns: ['c1'] })).toBe('elbow');
+    expect(edgeShape({ cardinality: 'n-1', style: { shape: 'curved' } })).toBe('curved');
     expect(edgeShape({ route: { fromSide: 'left' } })).toBe('curved');
     expect(edgeShape({})).toBe('curved');
   });

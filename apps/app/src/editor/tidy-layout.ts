@@ -22,6 +22,8 @@ import {
 } from './canvas-geometry';
 import { COLLAPSED_NODE_PREFIX } from './deck-to-flow';
 import { effectiveLevel, levelForZoom, type Level } from './levels';
+import { layoutEdgeOf } from './relationships/layout-edge';
+import { tableContextOf } from './table-keys';
 import { readViewState, useViewState } from './views/use-current-view';
 import { scopeOf, visibleGraph, type VisibleGraph } from './visible-graph';
 
@@ -89,10 +91,13 @@ export function buildLayoutRequest(
   const edgesById = new Map(deck.edges.map((e) => [e.id, e]));
   // A group end is drawn on its frame, `group:<id>`: the id ELK gives the group's compound (050).
   const drawnAs = (id: string) => graph.representative.get(id) ?? id;
+  const tables = tableContextOf(deck);
   for (const id of graph.edges) {
     const edge = edgesById.get(id);
     if (edge !== undefined)
-      request.edges.push({ id, source: drawnAs(edge.from), target: drawnAs(edge.to) });
+      request.edges.push(
+        layoutEdgeOf(edge, nodesById, tables, drawnAs(edge.from), drawnAs(edge.to)),
+      );
   }
   for (const merged of graph.merged) {
     request.edges.push({ id: merged.id, source: merged.a, target: merged.b });

@@ -20,10 +20,10 @@ import { DetailsButton } from './quick-edit/details-button';
 import { describeChannel } from './style/card-style';
 import type { DeckFlowNode } from './deck-to-flow';
 import { deckStateClasses } from './deck-states';
+import { rowsDrawn } from './levels';
 import { StepSticker } from './step-sticker';
 import { useUiStore } from '../state/ui-store';
 import { TableBody } from './table/table-body';
-import { TableCompact } from './table/table-compact';
 import { TableDetailToggle } from './table/table-detail-toggle';
 import { TableFilter } from './table/table-filter';
 import { DatabaseRow } from './database-row';
@@ -78,7 +78,11 @@ export const DeckNode = memo(function DeckNode({
   const isLandscape = data.level === 'landscape';
   // Component (zoomed in) reads like Container, at the same size (§g-58). The description and the
   // rules mark wait for Container; US4 refines what each level paints.
-  const isContainer = data.level === 'container' || data.level === 'component';
+  // A table keeps its rows down to System, so a zoomed-out schema still reads (rowsDrawn).
+  const isContainer =
+    table === undefined
+      ? data.level === 'container' || data.level === 'component'
+      : rowsDrawn(data.level);
   // The box and the lines each text gets come from one pure `cardLayout` (029 R7), already
   // clamped to a stored size; the full title stays reachable in a tooltip when it is cut.
   const layout = data.layout;
@@ -342,20 +346,17 @@ export const DeckNode = memo(function DeckNode({
               {table.noteLines.join(' ')}
             </span>
           )}
-          {table !== undefined &&
-            (isContainer ? (
-              <TableBody
-                nodeId={id}
-                layout={table}
-                focused={data.focused}
-                locked={data.locked === true}
-                tinted={look?.namedFill === true || customText !== undefined}
-                touched={data.touchedColumns}
-                problems={data.problems}
-              />
-            ) : (
-              <TableCompact layout={table} textClass={textRoleClass} />
-            ))}
+          {table !== undefined && isContainer && (
+            <TableBody
+              nodeId={id}
+              layout={table}
+              focused={data.focused}
+              locked={data.locked === true}
+              tinted={look?.namedFill === true || customText !== undefined}
+              touched={data.touchedColumns}
+              problems={data.problems}
+            />
+          )}
           {table === undefined &&
             isContainer &&
             data.subtitle?.trim() &&
