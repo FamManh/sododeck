@@ -26,7 +26,7 @@ forked.
 ## Architecture (proposed)
 
 ```
-packages/model/          + diffDecks, applyFile(doc, file, { base? }): merge a changed file into an open doc by id, three-way when a base is known (066)
+packages/model/          + diffDecks, applyFile(doc, file): merge a changed file into an open doc by id (066)
 packages/host-protocol/  new: messages between the editor and a host, typed + Zod, versioned (067)
 apps/app/                + "embed" build: the editor only, storage through the host (067)
 apps/vscode/             new: VS Code custom editor adapter (069)
@@ -44,13 +44,14 @@ site copies the skill archive.
   updates: hosts store text, and the file must stay readable and diffable.
 - **Changes from outside** (git pull, text edit, vault sync, an AI agent writing the file) arrive
   as a whole file and are merged by id into the open doc (066), so selection, viewport and undo
-  survive. The merge is **three-way**: the base is the last file the editor read from or wrote to
-  the host, so only what changed between that base and the incoming file is applied. Edits the
-  user made since (saved or not) are kept. The editor ignores an incoming file equal to the last
-  one it sent (echo).
+  survive. The merge is **two-way**: the incoming file wins field by field. Editing the same deck
+  in the file and on the canvas at the same moment is rare (founder, 2026-10-07); if it happens,
+  the user's edits are one undo away (next bullet). Three-way merge is in "Later". The editor
+  ignores an incoming file equal to the last one it sent (echo).
 - **Undo** stays in the editor (Yjs undo manager) in every host. An outside change is **one undo
   step** ("Changes from file"): the most common outside writer is the user's own AI agent, and its
-  change must be easy to take back. The user's own edits before and after stay separate steps.
+  change must be easy to take back. The user's own edits before and after stay separate steps, so
+  undoing an outside change that overwrote unsaved edits brings those edits back.
 
 ### Relation to 065 (local agent bridge)
 
@@ -63,8 +64,10 @@ Both packs solve "the agent and the canvas edit the same deck":
 | Agent sees the user's selection | No                                    | Yes                                                     |
 | Trust surface                   | None new (the host owns the file)     | Pairing, browser permission, Principle IV amendment     |
 
-- **One merge core.** 066 is the model feature both use: 065 drops its own `diffDecks` /
-  `mergeDeckEdit` (065 research R9) and depends on 066.
+- **One merge core.** 066 is the model feature both use: 065 drops its own `diffDecks` (065
+  research R9) and depends on 066. 065's whole-deck `edit_deck` with `baseRevision` needs the
+  three-way merge in "Later"; until then 065 offers change lists only (or a two-way whole-deck
+  write).
 - **One tool layer, several transports.** 065's agent tools (`get_deck`, `get_selection`,
   `edit_deck`, `check_deck`) are written once; the transport to the editor is either the loopback
   socket (browser, 065) or the host protocol (code editor, "Later: extension as agent bridge").
@@ -116,53 +119,41 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 066-model-apply-file
 
-- **Milestone:** after 036 · **Depends on:** none · **Estimate:** 3 d
+- **Milestone:** after 036 · **Depends on:** none · **Estimate:** 2 d
 - **Goal:** A deck file changed outside the editor merges into the open document without losing
-  selection, viewport, the user's unsaved edits or undo history, and the outside change can be
-  undone in one step.
+  selection, viewport or undo history, and the outside change can be undone in one step.
 - **In scope:**
   - `diffDecks(a, b)` in `@sododeck/model`: id-based diff with field values (moved from
     `packages/skill/src/diff.ts`; the skill re-exports it, its output unchanged).
-  - `applyFile(doc, file, { origin, base? })`: writes only the differences, matched by stable id
-    (added, removed and changed objects; changed fields inside an object; array order where order
-    is meaningful), in one transaction with the given origin.
-    - **With `base`** (three-way): applies only what changed from `base` to `file`; fields the
-      document changed since `base` and the incoming file did not touch are kept. When both
-      changed the same field, the incoming file wins. An object removed by one side and edited by
-      the other is kept with the edit (no silent loss).
-    - **Without `base`** (two-way): the incoming file wins field by field (first open, unknown
-      history).
+  - `applyFile(doc, file, origin)`: compares the open doc with an incoming `SododeckFile` and
+    writes only the differences, matched by stable id (added, removed and changed objects; changed
+    fields inside an object; array order where order is meaningful), in one transaction with the
+    given origin. Two-way: the incoming file wins field by field.
   - The applied change is **one undo step** in the editor's undo manager, labelled by the caller
     ("Changes from file"); undo restores the document as it was just before the change.
   - An incoming file that fails validation is refused with the problem list; the doc is unchanged.
-  - Skill guidance (027): "read the deck file again right before writing it, and prefer small
-    edits over rewriting the whole file", so an agent rarely writes from a stale copy.
-- **Out of scope:** conflict UI; hosts (067+); the agent bridge (065).
+  - Skill guidance (027): "read the deck file again right before writing it", so an agent rarely
+    writes from a stale copy.
+- **Out of scope:** three-way merge with a common base ("Later"); conflict UI; hosts (067+); the
+  agent bridge (065).
 - **Acceptance criteria (draft):**
   - Given an open deck and the same file with one node renamed, When applied, Then only that
     node's title changes, every id is the same and other objects emit no change.
-  - Given any fixture deck A and B, When B is applied to a doc of A without a base, Then
-    `toJSON(doc)` equals B (round-trip test over the fixture corpus).
-  - Given base B0, a doc where the user moved card X since B0, and an incoming file = B0 plus a new
-    flow, When applied with base B0, Then the flow is added and card X keeps the user's position.
+  - Given any fixture deck A and B, When B is applied to a doc of A, Then `toJSON(doc)` equals B
+    (round-trip test over the fixture corpus).
   - Given an applied change, When the user presses undo once, Then exactly that change is undone;
     the user's earlier edit is still there and undoes on the next press.
-  - Given an incoming file that removes card X which the user edited since the base, When applied,
-    Then card X stays with the user's edit.
 - **Risks:** nested Yjs types (columns, rule rows, flow steps) need per-collection diff rules;
-  performance on 500-node decks (bench with `pnpm bench`'s generator); keeping the base in hosts
-  costs one extra copy of the file in memory.
+  performance on 500-node decks (bench with `pnpm bench`'s generator).
 - **`/speckit.specify` prompt:**
   > Add a way to merge a changed Sododeck file into an already open document. When the deck file is
   > changed outside the editor (another program, a version-control pull, a text edit, the user's AI
   > agent), the open document is updated in place: only objects and fields that differ change,
-  > matched by their stable ids, so the user keeps their selection, viewport and undo history. When
-  > the caller knows the last version of the file the editor saw, the merge is three-way: only what
-  > changed since that version is applied, and edits the user made in the meantime, saved or not,
-  > are kept. The whole outside change is one undo step. An invalid incoming file is refused with
-  > its problems and the document stays as it was. Also tell agents using the AI deck skill to
-  > re-read the file right before writing it. Out of scope: conflict UI, any host integration, the
-  > agent bridge.
+  > matched by their stable ids, so the user keeps their selection, viewport and undo history. The
+  > incoming file wins where it differs. The whole outside change is one undo step. An invalid
+  > incoming file is refused with its problems and the document stays as it was. Also tell agents
+  > using the AI deck skill to re-read the file right before writing it. Out of scope: three-way
+  > merge, conflict UI, any host integration, the agent bridge.
 
 ## 067-embed-host-protocol
 
@@ -174,7 +165,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
     for both sides (`postMessage`), echo detection (last sent file).
   - `apps/app` "embed" entry (separate Vite input): editor route only; `host-persistence` attaches
     to the Yjs doc like `deck-persistence`, sends batched `change`, applies `external-change`
-    through 066 with the last file read or written as `base`, answers `flush`; `hostPictureStore` next to `dbPictureStore`.
+    through 066, answers `flush`; `hostPictureStore` next to `dbPictureStore`.
   - Loader kind `host` next to `demo` / `memory` / `stored`; save status driven by host replies.
   - Theme from the host (light / dark), mapped to the existing tokens.
   - A dev-only fake host page (`/embed-host` in dev builds) that loads a file, shows the messages and
@@ -237,8 +228,9 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
     raw JSON; dirty state, save, save as, revert and hot-exit backup through the editor's API.
   - Bridge to the embed build in a webview (strict CSP, local resources only, workers allowed).
   - Outside changes: listen for file changes and send `external-change` (066), ignoring our own
-    writes. A change on disk while the tab is dirty is merged (three-way against the last saved
-    file), never a "file changed on disk" choice; the tab stays dirty with both sets of edits.
+    writes. A change on disk while the tab is dirty is applied like any outside change (the file
+    wins, one undo step), never a "file changed on disk" choice; undo brings the unsaved edits
+    back.
   - Pictures: setting "embed in file" (default) or "save next to the deck" (068 `path`, folder
     `<deck>.assets/`).
   - Theme follows the editor's light / dark theme.
@@ -251,8 +243,8 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   - Given a repo with `docs/arch.sododeck`, When opened, Then the canvas shows and an edit marks the
     tab dirty; save writes valid, pretty-printed JSON.
   - Given the file open, When `git pull` changes it, Then the canvas updates without reloading.
-  - Given unsaved moves on the canvas, When an AI agent adds a flow to the file on disk, Then the
-    flow appears, the moves stay, and one undo removes only the flow.
+  - Given unsaved moves on the canvas, When an AI agent writes the file on disk, Then the canvas
+    shows the file, and one undo brings the moves back.
   - Given the extension running, When the user edits, Then the extension makes no network request.
 - **Risks:** webview CSP and workers; large decks over `postMessage` (measure 500 nodes); pretty
   JSON key order must be stable for clean diffs.
@@ -272,8 +264,8 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   - `apps/obsidian`: registers the `.sododeck` file type and a file view that hosts the embed build
     in an iframe (H1); reads and writes through the vault API; autosave (the notes app has no
     manual save) with `flush` on close.
-  - Outside changes (vault sync, another pane, an AI agent) → `external-change` (066, three-way
-    against the last file written), ignoring our own writes.
+  - Outside changes (vault sync, another pane, an AI agent) → `external-change` (066), ignoring
+    our own writes.
   - Pictures saved to the vault's attachment folder (068 `path`).
   - Theme follows the app's light / dark class; "New Sododeck deck" command and file-menu entry.
   - Release through the community plugin list (manifest, versions file).
@@ -296,6 +288,12 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## Later (not scheduled)
 
+- **Three-way merge for outside changes** (deferred from 066, founder 2026-10-07: editing the
+  file and the canvas at the same moment is rare). `applyFile(doc, file, { base })` with the last
+  file the editor read or wrote as the base applies only what changed since then and keeps the
+  user's unsaved edits; an object removed by one side and edited by the other is kept with the
+  edit. Do it when users report lost edits, or when 065 needs whole-deck `edit_deck` with
+  `baseRevision`.
 - **`.sododeck.md`** for Obsidian: titles, notes and rules written as readable Markdown (search,
   backlinks, block references) with the full JSON in a fenced block.
 - **`.sododeck.svg`** / **`.sododeck.png`**: an image file that also carries the deck, so it renders
