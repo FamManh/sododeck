@@ -17,10 +17,10 @@ function vaultOf(fake: FakeVault) {
 }
 
 describe('New Sododeck (US6)', () => {
-  it('names the file Sodo deck <ISO time>.sododeck in the chosen folder, or the root', () => {
-    expect(newDeckPath('', () => false, NOW)).toBe('Sodo deck 2026-10-07T22-30-15.sododeck');
+  it('names the file Sodo deck <date> <hh-mm>.sododeck in the chosen folder, or the root', () => {
+    expect(newDeckPath('', () => false, NOW)).toBe('Sodo deck 2026-10-07 22-30.sododeck');
     expect(newDeckPath('notes/a', () => false, NOW)).toBe(
-      'notes/a/Sodo deck 2026-10-07T22-30-15.sododeck',
+      'notes/a/Sodo deck 2026-10-07 22-30.sododeck',
     );
   });
 
@@ -34,8 +34,8 @@ describe('New Sododeck (US6)', () => {
     const first = await createNewDeck(vault, 'n', NOW);
     const second = await createNewDeck(vault, 'n', NOW);
     expect([first, second]).toEqual([
-      'n/Sodo deck 2026-10-07T22-30-15.sododeck',
-      'n/Sodo deck 2026-10-07T22-30-15 1.sododeck',
+      'n/Sodo deck 2026-10-07 22-30.sododeck',
+      'n/Sodo deck 2026-10-07 22-30 1.sododeck',
     ]);
     expect(fake.paths()).toHaveLength(2);
   });

@@ -13,8 +13,8 @@ export interface NewDeckVault {
 const EXTENSION = '.sododeck';
 
 /**
- * `Sodo deck <ISO time>.sododeck`. The time is the ISO string with `:` and `.` turned into `-`
- * (a colon is not allowed in a file name on every system), so names sort by creation time. A name
+ * `Sodo deck <date> <hh-mm>.sododeck` (the ISO time to the minute, `T` as a space and the colon
+ * as `-`: a colon is not allowed in a file name on every system), so names sort by creation time. A name
  * that is somehow taken gets ` 1`, ` 2`…, never overwritten.
  */
 export function newDeckPath(
@@ -22,10 +22,7 @@ export function newDeckPath(
   taken: (path: string) => boolean,
   now: Date = new Date(),
 ): string {
-  const stamp = now
-    .toISOString()
-    .replace(/\.\d+Z$/, '')
-    .replace(/[:.]/g, '-');
+  const stamp = now.toISOString().slice(0, 16).replace('T', ' ').replace(':', '-');
   const at = (name: string): string => (folder === '' ? name : `${folder}/${name}`);
   for (let n = 0; n < 10_000; n++) {
     const path = at(`Sodo deck ${stamp}${n === 0 ? '' : ` ${String(n)}`}${EXTENSION}`);
