@@ -47,6 +47,56 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : 'unknown error';
 }
 
+export type Stored = { ok: true; path: string } | { ok: false; reason: string };
+
+/**
+ * Stores picture bytes as `<deck base>.assets/<16 hex of id>.<ext>` next to the deck and returns
+ * the path to write into the deck (R8). An identical existing file is reused, a different one is
+ * never overwritten (`-2`, `-3`…). Used by `picture-put` and by Save As.
+ */
+export async function storePicture(
+  deck: Loc,
+  picture: { id: string; mime: string; bytes: Uint8Array },
+  ports: Ports,
+): Promise<Stored> {
+  const { id, bytes } = picture;
+  const fail = (reason: string): Stored => ({ ok: false, reason });
+  const { files } = ports;
+
+  if (!ports.trust.isTrusted()) return fail(NOT_TRUSTED);
+  const ext = EXTENSION[picture.mime];
+  if (ext === undefined) return fail('this picture type is not supported');
+  if (bytes.length > MAX_ASSET_BYTES) return fail('the picture is larger than 5 MiB');
+  if (assetId(bytes) !== id) return fail('the picture changed before it was stored');
+
+  const folder = assetsFolder(files.basename(deck));
+  const base = id.slice(0, 16);
+  const violation = checkPicturePath(`${folder}/${base}.${ext}`);
+  if (violation !== null) return fail(`The picture path ${PATH_VIOLATION_TEXT[violation]}`);
+
+  const folderGuard = await resolveInside(deck, folder, ports);
+  if (!folderGuard.ok) return fail(folderGuard.reason);
+
+  try {
+    for (let n = 1; n < 1000; n++) {
+      const file = withSuffix(`${base}.${ext}`, n);
+      const rel = `${folder}/${file}`;
+      const guard = await resolveInside(deck, rel, ports);
+      if (!guard.ok) return fail(guard.reason);
+      if (await files.exists(guard.loc)) {
+        if (same(await files.read(guard.loc), bytes)) return { ok: true, path: rel };
+        continue;
+      }
+      await files.mkdir(folderGuard.loc);
+      await files.write(guard.loc, bytes);
+      return { ok: true, path: rel };
+    }
+    return fail('could not find a free file name');
+  } catch (error) {
+    return fail(`could not be written: ${reasonOf(error)}`);
+  }
+}
+
 /**
  * Picture files next to the deck (R8, contracts §3): `picture-put` stores, `picture-get` serves.
  * Everything is judged on the real location (`resolveInside`) and nothing outside the workspace
@@ -65,44 +115,11 @@ export class PictureHost {
   }
 
   async put(message: PicturePut): Promise<Answer> {
-    const { id, bytes } = message;
-    const fail = (reason: string): Answer => ({ type: 'picture-store-failed', id, reason });
-    const { files } = this.ports;
-
-    if (!this.ports.trust.isTrusted()) return fail(NOT_TRUSTED);
-    const ext = EXTENSION[message.mime];
-    if (ext === undefined) return fail('this picture type is not supported');
-    if (bytes.length > MAX_ASSET_BYTES) return fail('the picture is larger than 5 MiB');
-    if (assetId(bytes) !== id) return fail('the picture changed before it was stored');
-
-    const folder = assetsFolder(files.basename(this.deck));
-    const base = id.slice(0, 16);
-    const violation = checkPicturePath(`${folder}/${base}.${ext}`);
-    if (violation !== null) return fail(`The picture path ${PATH_VIOLATION_TEXT[violation]}`);
-
-    const folderGuard = await resolveInside(this.deck, folder, this.ports);
-    if (!folderGuard.ok) return fail(folderGuard.reason);
-
-    try {
-      for (let n = 1; n < 1000; n++) {
-        const file = withSuffix(`${base}.${ext}`, n);
-        const rel = `${folder}/${file}`;
-        const guard = await resolveInside(this.deck, rel, this.ports);
-        if (!guard.ok) return fail(guard.reason);
-        if (await files.exists(guard.loc)) {
-          if (same(await files.read(guard.loc), bytes)) {
-            return { type: 'picture-stored', id, path: rel };
-          }
-          continue;
-        }
-        await files.mkdir(folderGuard.loc);
-        await files.write(guard.loc, bytes);
-        return { type: 'picture-stored', id, path: rel };
-      }
-      return fail('could not find a free file name');
-    } catch (error) {
-      return fail(`could not be written: ${reasonOf(error)}`);
-    }
+    const { id } = message;
+    const result = await storePicture(this.deck, message, this.ports);
+    return result.ok
+      ? { type: 'picture-stored', id, path: result.path }
+      : { type: 'picture-store-failed', id, reason: result.reason };
   }
 
   async get(message: PictureGet): Promise<Answer> {

@@ -189,6 +189,7 @@ export class FakeUi implements UiPort {
   status: string[] = [];
   external: string[] = [];
   opened: Loc[] = [];
+  revealed: Loc[] = [];
   saveDialogs: { name: string; folder: Loc | undefined }[] = [];
   saveChoice: Loc | undefined;
 
@@ -213,6 +214,9 @@ export class FakeUi implements UiPort {
   }
   async openUri(loc: Loc): Promise<void> {
     this.opened.push(loc);
+  }
+  async revealInOs(loc: Loc): Promise<void> {
+    this.revealed.push(loc);
   }
 }
 

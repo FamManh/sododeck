@@ -73,6 +73,8 @@ export interface UiPort {
   showSaveDialog(suggestedName: string, folder: Loc | undefined): Promise<Loc | undefined>;
   openExternal(url: string): Promise<void>;
   openUri(loc: Loc): Promise<void>;
+  /** Shows the file in the system's file manager. */
+  revealInOs(loc: Loc): Promise<void>;
 }
 
 export interface ClockPort {
