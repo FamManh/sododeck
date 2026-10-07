@@ -23,11 +23,19 @@ describe('MOTION', () => {
       dimMs: 250,
       ringMs: 200,
       overlayMs: 120,
-      tokenLoopMs: 1400,
+      tokenLoopMs: 1700,
       stepMs: 1700,
       toastMs: 2600,
       toastUndoMs: 6000,
     });
+  });
+});
+
+describe('token loop', () => {
+  // A loop shorter than a step restarts the token on the same connection before the step ends,
+  // so each connection looked like it ran twice.
+  it('lasts exactly one step, so the token crosses each connection once', () => {
+    expect(MOTION.tokenLoopMs).toBe(MOTION.stepMs);
   });
 });
 
