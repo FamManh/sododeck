@@ -11,6 +11,8 @@ export {
   type PreparedDeck,
 } from './deck';
 export { trimCrops, type TrimmedCrop } from './load-checks';
+export { applyDeckText, applyFile } from './apply-file';
+export type { ApplyCounts, ApplyResult, ApplySummary } from './apply-types';
 export {
   assetId,
   ASSET_TYPES,
