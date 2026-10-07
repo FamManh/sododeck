@@ -23,7 +23,6 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
 import { ArrowLeftRight, CircleAlert, FileDown, FileUp, ScanSearch } from 'lucide-react';
 import { useMemo, useRef, useState, type DragEvent } from 'react';
-import { useNavigate } from 'react-router';
 
 import { dialectName } from '../../db/export/schema-slice';
 import { applyImport, importAsNewDeck } from '../../db/import/apply-import';
@@ -33,12 +32,10 @@ import { plural } from '../../db/import/report-text';
 import { remapSuggestions } from '../../db/import/suggest-fks';
 import type { ImportPreview, ImportSource, SqlDialect } from '../../db/import/types';
 import { createLayoutClient } from '../../layout/layout-client';
-import { addDeck } from '../../library/library-actions';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
-import { getLibraryClient } from '../../storage/library-client';
-import { getLibraryDb } from '../../storage/library-db-instance';
+import { LibraryUnavailableError, useDeckServices } from '../deck-services';
 import { showUndoToast } from '../undo-toast';
 import { useViewState } from '../views/use-current-view';
 import { getImportClient } from './import-session';
@@ -113,7 +110,7 @@ export function ImportDialog() {
   const deck = useDeckSnapshot(editor.doc);
   const view = useViewState();
   const { fitView } = useReactFlow();
-  const navigate = useNavigate();
+  const services = useDeckServices();
   const toastApi = useToast();
   const returnFocus = useUiStore((s) => s.importDialog.returnFocus);
   const closeImport = useUiStore((s) => s.closeImport);
@@ -122,10 +119,13 @@ export function ImportDialog() {
   const viewId = useUiStore((s) => s.currentViewId);
   const client = getImportClient();
 
-  const context = useMemo(
-    () => targetContext(deck, { selection, drill }),
-    [deck, selection, drill],
-  );
+  const context = useMemo(() => {
+    const found = targetContext(deck, { selection, drill });
+    // A new deck goes to the library, which only the web app has.
+    return services === null
+      ? { ...found, options: found.options.filter((option) => option.kind !== 'new-deck') }
+      : found;
+  }, [deck, selection, drill, services]);
   const [tab, setTab] = useState<'paste' | 'file'>('paste');
   const [pasted, setPasted] = useState('');
   const [file, setFile] = useState<{ name: string; text: string } | null>(null);
@@ -201,12 +201,8 @@ export function ImportDialog() {
       if (kind === 'new-deck') {
         const placement = await placeImport(plan, (r) => layout.layout(r), []);
         const file = importAsNewDeck(plan, placement, newDeckName(fileName));
-        const db = await getLibraryDb();
-        if (db === null)
-          throw new Error('This browser cannot keep decks, so nothing was imported.');
-        const libraryClient = getLibraryClient();
-        const imported = await libraryClient.importFile(serializeDeck(file));
-        const id = await addDeck({ db, client: libraryClient }, imported, null);
+        if (services === null) throw new LibraryUnavailableError();
+        const id = await services.addDeckFromText(serializeDeck(file));
         if (mine !== run.current) return;
         const ui = useUiStore.getState();
         ui.setImportReport({ ...plan.report, suggestions: null, deckId: id, open: true });
@@ -214,7 +210,7 @@ export function ImportDialog() {
         toastApi.toast({
           message: `Imported ${plural(plan.report.mapped.tables, 'table')} into a new deck`,
         });
-        void navigate(`/deck/${id}`);
+        services.openDeck(id);
         return;
       }
       const existing = existingRects(view.deck, cardId);

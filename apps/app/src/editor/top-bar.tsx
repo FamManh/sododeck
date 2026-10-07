@@ -9,6 +9,7 @@ import { useEditor, useHistory } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { useThemeStore } from '../theme/theme-store';
 import { DeckName } from './deck-name';
+import { useSaveControls } from './save-context';
 import { SaveStatus } from './save-status';
 import { Wordmark } from './wordmark';
 
@@ -63,6 +64,7 @@ export function TopBar({ deckName }: { deckName: string }) {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  const hostOwnsTheme = useSaveControls().mode === 'host';
   const openPalette = useUiStore((state) => state.openPalette);
   const jumpRef = useRef<HTMLButtonElement>(null);
   const jumpShortcut = isApplePlatform() ? '⌘K' : 'Ctrl+K';
@@ -101,21 +103,23 @@ export function TopBar({ deckName }: { deckName: string }) {
           {jumpShortcut}
         </kbd>
       </Button>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Switch to ${nextTheme} theme`}
-            onClick={() => {
-              setTheme(nextTheme);
-            }}
-          >
-            {theme === 'dark' ? <Sun /> : <Moon />}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
-      </Tooltip>
+      {hostOwnsTheme ? null : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Switch to ${nextTheme} theme`}
+              onClick={() => {
+                setTheme(nextTheme);
+              }}
+            >
+              {theme === 'dark' ? <Sun /> : <Moon />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
+        </Tooltip>
+      )}
       <Button asChild variant="primary">
         <Link to=".">
           <ArrowLeft />

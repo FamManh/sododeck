@@ -14,6 +14,7 @@ import {
   type FieldChip,
   type FieldRow,
 } from './card-fields';
+import { useOpenLink } from './embed-host-context';
 import { statusIconOf } from './fields/field-icons';
 import { tagColours } from './tags/tag-colours';
 
@@ -104,6 +105,7 @@ export function HeaderStatus({ chip, narrow }: { chip: FieldChip; narrow: boolea
 }
 
 function Row({ row, textClass }: { row: FieldRow; textClass: string | null }) {
+  const openLink = useOpenLink();
   const label = (
     <span
       className={cn('shrink-0 text-[11.5px] leading-none', textClass ?? 'text-ink-muted')}
@@ -125,15 +127,30 @@ function Row({ row, textClass }: { row: FieldRow; textClass: string | null }) {
         <span className="shrink-0 font-mono text-[11.5px] leading-none text-ink">{row.text}</span>
       </span>
     );
+  } else if (row.kind === 'link' && row.href !== undefined && openLink === null) {
+    // The host cannot open links: the text stays, with no action to open it (067).
+    value = (
+      <span
+        title={row.href}
+        className="flex min-w-0 items-center justify-end gap-1 text-[11.5px] leading-none text-ink"
+      >
+        <LinkIcon aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3 shrink-0" />
+        <span className="truncate">{row.text}</span>
+      </span>
+    );
   } else if (row.kind === 'link' && row.href !== undefined) {
+    const href = row.href;
     value = (
       <a
-        href={row.href}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
-        title={row.href}
+        title={href}
         onClick={(event) => {
           event.stopPropagation();
+          // Through the host's door, so a link never navigates the editor's own frame.
+          event.preventDefault();
+          openLink?.(href);
         }}
         onMouseDown={(event) => {
           event.stopPropagation();

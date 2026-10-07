@@ -9,12 +9,15 @@ const WHERE = {
   stored: 'Stored in this browser',
   demo: 'Demo deck · not stored',
   memory: "Not stored: this browser doesn't keep decks",
+  host: 'Stored by the program that opened this deck',
 } as const;
 
 /** The deck inspector's STORAGE section (FR-034, design 10). */
 export function DeckInspectorStorage() {
   const { mode } = useSaveControls();
   const exportDeck = useExportDeck();
+  // The host's file is the store, and it decides where exports go (067).
+  if (mode === 'host') return null;
   return (
     <PanelSection label="Storage">
       <p className="flex items-center gap-2 text-body-sm">

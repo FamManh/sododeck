@@ -11,6 +11,8 @@ import { useUiStore } from '../../state/ui-store';
 import { useThemeStore } from '../../theme/theme-store';
 import { canRunAction, runAction } from '../actions/actions-for';
 import { ACTIONS } from '../actions/index';
+import { useDeckServices } from '../deck-services';
+import { useSaveControls } from '../save-context';
 import type { CanvasApi } from '../actions/types';
 import { readActionContext } from '../actions/use-action-context';
 import { openFlow } from '../flows/flow-mode';
@@ -61,6 +63,8 @@ function CommandPaletteSession({
   const jsonShown = useUiStore((s) => s.jsonShown);
   const codeOpen = useUiStore((s) => s.jsonPanel.codeDrawer.open);
   const { toast } = useToast();
+  const services = useDeckServices();
+  const saveMode = useSaveControls().mode;
   const commands = useMemo<readonly PaletteCommand[]>(() => {
     // Canvas actions offered as commands run exactly when their menu item would (019 FR-039).
     const canvasApi: CanvasApi = {
@@ -92,6 +96,8 @@ function CommandPaletteSession({
       },
       theme: { value: theme, resolved: theme, setTheme },
       focusModeAvailable: false,
+      library: services !== null,
+      themeSwitch: saveMode !== 'host',
       ...(screen === 'canvas'
         ? {
             shell: {
@@ -124,6 +130,8 @@ function CommandPaletteSession({
     openRules,
     setTheme,
     theme,
+    services,
+    saveMode,
     screen,
     hasSelection,
     jsonShown,

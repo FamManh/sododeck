@@ -19,19 +19,17 @@ import {
   Sun,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
 
 import {
   ImportProblemsDialog,
   type ImportProblemsRequest,
 } from '../../library/import-problems-dialog';
-import { importDeckFile, importedMessage, problemCount } from '../../library/library-actions';
-import { LibraryClientError } from '../../storage/library-client';
-import { importMessage } from '../../library/use-import-files';
+import { importedMessage, importMessage, problemCount } from '../../library/import-messages';
 import { useUiStore } from '../../state/ui-store';
+import { LibraryClientError } from '../../storage/library-client-error';
 import { useThemeStore } from '../../theme/theme-store';
-import { getLibraryClient } from '../../storage/library-client';
-import { getLibraryDb } from '../../storage/library-db-instance';
+import { LibraryUnavailableError, useDeckServices } from '../deck-services';
+import { useSaveControls } from '../save-context';
 import { shortcutLabel } from './shortcuts';
 
 /**
@@ -42,7 +40,8 @@ import { shortcutLabel } from './shortcuts';
  * live in the tools island's ⋯ More menu (founder feedback 2026-10-06).
  */
 export function DeckMenu() {
-  const navigate = useNavigate();
+  const services = useDeckServices();
+  const { mode } = useSaveControls();
   const openExport = useUiStore((s) => s.openExport);
   const hasReport = useUiStore((s) => s.importReport !== null);
   const theme = useThemeStore((state) => state.theme);
@@ -59,18 +58,9 @@ export function DeckMenu() {
       toast({ message: 'Import one file at a time.' });
       return;
     }
-    const db = await getLibraryDb();
-    if (db === null) {
-      toast({ message: 'This browser cannot keep decks, so nothing was imported.' });
-      return;
-    }
+    if (services === null) return;
     try {
-      const { deckId, name, report } = await importDeckFile(
-        { db, client: getLibraryClient() },
-        await file.text(),
-        null,
-        file.name,
-      );
+      const { deckId, name, report } = await services.importDeckFile(await file.text(), file.name);
       toast({
         message: importedMessage(name, problemCount(report), ' into the library'),
         // A deck that opened with problems offers them (062 US2); a clean one, the library.
@@ -79,7 +69,7 @@ export function DeckMenu() {
             ? {
                 label: 'Open library',
                 onAction: () => {
-                  void navigate('/');
+                  services.openLibrary();
                 },
               }
             : {
@@ -94,7 +84,9 @@ export function DeckMenu() {
         setProblems({ mode: 'refused', name: file.name, report: error.report });
         return;
       }
-      toast({ message: importMessage(error) });
+      toast({
+        message: error instanceof LibraryUnavailableError ? error.message : importMessage(error),
+      });
     }
   };
 
@@ -107,7 +99,7 @@ export function DeckMenu() {
         }}
         onOpenDeck={(deckId) => {
           setProblems(null);
-          void navigate(`/deck/${deckId}`);
+          services?.openDeck(deckId);
         }}
       />
       <input
@@ -134,23 +126,27 @@ export function DeckMenu() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent aria-label="Deck menu" aria-labelledby={undefined} align="start">
-          <DropdownMenuItem
-            onSelect={() => {
-              void navigate('/');
-            }}
-          >
-            <LibraryBig />
-            All decks
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => {
-              input.current?.click();
-            }}
-          >
-            <FileUp />
-            Import…
-          </DropdownMenuItem>
+          {services !== null && (
+            <>
+              <DropdownMenuItem
+                onSelect={() => {
+                  services.openLibrary();
+                }}
+              >
+                <LibraryBig />
+                All decks
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => {
+                  input.current?.click();
+                }}
+              >
+                <FileUp />
+                Import…
+              </DropdownMenuItem>
+            </>
+          )}
           {hasReport && (
             <DropdownMenuItem
               onSelect={() => {
@@ -179,15 +175,17 @@ export function DeckMenu() {
             Deck settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          {/* Set once and forgotten, so they live here rather than in the tools (§g-60). */}
-          <DropdownMenuItem
-            onSelect={() => {
-              setTheme(theme === 'dark' ? 'light' : 'dark');
-            }}
-          >
-            {theme === 'dark' ? <Sun /> : <Moon />}
-            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          </DropdownMenuItem>
+          {/* Set once and forgotten, so they live here rather than in the tools (§g-60). The host owns the theme in an embed. */}
+          {mode !== 'host' && (
+            <DropdownMenuItem
+              onSelect={() => {
+                setTheme(theme === 'dark' ? 'light' : 'dark');
+              }}
+            >
+              {theme === 'dark' ? <Sun /> : <Moon />}
+              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             shortcut={shortcutLabel('help')}
             onSelect={() => {

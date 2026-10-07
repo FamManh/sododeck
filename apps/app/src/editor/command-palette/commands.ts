@@ -13,6 +13,10 @@ export interface CommandContext {
     shortcut?: string;
   };
   focusModeAvailable: boolean;
+  /** The deck library exists (the web app); an embed has none. Default true. */
+  library?: boolean;
+  /** The user picks the theme (the web app); an embed's host owns it. Default true. */
+  themeSwitch?: boolean;
   /** Canvas-first shell commands (018), on the canvas screen only. */
   shell?: {
     /** Something is selected, so "Open details" has something to show. */
@@ -37,39 +41,49 @@ export function buildCommands({
   openExport,
   theme,
   focusModeAvailable,
+  library = true,
+  themeSwitch = true,
   shell,
 }: CommandContext): readonly PaletteCommand[] {
   const commands: PaletteCommand[] = [
     { id: 'export', title: 'Export deck…', run: openExport },
-    {
-      id: 'toggle-dark-mode',
-      title: 'Toggle dark mode',
-      aliases: ['theme', 'dark', 'switch theme'],
-      ...(theme.shortcut === undefined ? {} : { shortcut: theme.shortcut }),
-      run: () => {
-        theme.setTheme(theme.resolved === 'dark' ? 'light' : 'dark');
-      },
-    },
+    ...(themeSwitch
+      ? [
+          {
+            id: 'toggle-dark-mode',
+            title: 'Toggle dark mode',
+            aliases: ['theme', 'dark', 'switch theme'],
+            ...(theme.shortcut === undefined ? {} : { shortcut: theme.shortcut }),
+            run: () => {
+              theme.setTheme(theme.resolved === 'dark' ? 'light' : 'dark');
+            },
+          },
+        ]
+      : []),
     {
       id: 'open-rules',
       title: 'Open rule editor',
       aliases: ['rules', 'open rules'],
       run: openRules,
     },
-    {
-      id: 'go-to-library',
-      title: 'Go to library',
-      run: () => {
-        navigate('/');
-      },
-    },
-    {
-      id: 'new-deck',
-      title: 'New deck',
-      run: () => {
-        navigate('/deck/new');
-      },
-    },
+    ...(library
+      ? [
+          {
+            id: 'go-to-library',
+            title: 'Go to library',
+            run: () => {
+              navigate('/');
+            },
+          },
+          {
+            id: 'new-deck',
+            title: 'New deck',
+            run: () => {
+              navigate('/deck/new');
+            },
+          },
+        ]
+      : []),
   ];
 
   if (shell !== undefined) {

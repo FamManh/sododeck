@@ -10,6 +10,7 @@ import { liveDecks } from '../../storage/library-db';
 import { getLibraryDb, setLibraryDbForTests } from '../../storage/library-db-instance';
 import { DeckStub } from '../../test/deck-stub';
 import { freshLibraryDb } from '../../test/library-fixtures';
+import { WebDeckServicesProvider } from '../../test/web-deck-services-provider';
 import { DeckMenu } from './deck-menu';
 
 vi.mock('../../storage/library-client', (importOriginal) =>
@@ -29,7 +30,9 @@ async function setup() {
         path: '/',
         element: (
           <ToastProvider>
-            <DeckMenu />
+            <WebDeckServicesProvider>
+              <DeckMenu />
+            </WebDeckServicesProvider>
             <Toaster />
           </ToastProvider>
         ),
