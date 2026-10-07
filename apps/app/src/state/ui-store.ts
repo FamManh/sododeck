@@ -47,6 +47,18 @@ export interface EnumPopover {
   source: 'hover' | 'keyboard';
 }
 
+/**
+ * Where the database note popover is anchored (064): a column row or a table title. `click` came
+ * from a note icon and stays until dismissed; `hover` and `keyboard` follow the pointer or focus.
+ */
+export interface DbPopover {
+  kind: 'column' | 'table';
+  nodeId: string;
+  /** Set when `kind` is `column`. */
+  columnId?: string;
+  source: 'hover' | 'keyboard' | 'click';
+}
+
 export type { Selection } from './selection-kinds';
 export { selectionTargets } from './selection-kinds';
 
@@ -542,6 +554,8 @@ export interface UiState {
    * `keyboard` moves focus into it; a hover leaves focus where it is.
    */
   enumPopover: EnumPopover | null;
+  /** The one open column or table note popover (064); never open with `enumPopover`. */
+  dbPopover: DbPopover | null;
   /** What the delete confirmation is open for. */
   pendingDelete: PendingDelete | null;
   activeFlow: ActiveFlow;
@@ -708,6 +722,9 @@ export interface UiState {
   closePopover: () => void;
   openEnumPopover: (target: EnumPopover) => void;
   closeEnumPopover: () => void;
+  /** Opens the column or table popover, closing the enum popover (064 FR-011). */
+  openDbPopover: (target: DbPopover) => void;
+  closeDbPopover: () => void;
   /** Opens the confirmation for a canvas selection (components first, then connections). */
   requestDelete: (selection: Partial<Selection>) => void;
   /** Opens the confirmation for any removal targets (features, flows, branches…). */
@@ -1037,6 +1054,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     notesDisplay: readNotesDisplay(),
     popover: null,
     enumPopover: null,
+    dbPopover: null,
     pendingDelete: null,
     activeFlow: null,
     lastPlayedFlowId: null,
@@ -1233,6 +1251,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         dragCopyIds: NO_IDS,
         popover: null,
         enumPopover: null,
+        dbPopover: null,
         revealed: NO_IDS,
         descriptionMode: NO_MODES,
         stylePreview: null,
@@ -1425,10 +1444,24 @@ export const useUiStore = create<UiState>()((set, get) => {
         open.source === target.source
       )
         return;
-      set({ enumPopover: target });
+      set({ enumPopover: target, dbPopover: null });
     },
     closeEnumPopover: () => {
       if (get().enumPopover !== null) set({ enumPopover: null });
+    },
+    openDbPopover: (target) => {
+      const open = get().dbPopover;
+      if (
+        open?.kind === target.kind &&
+        open.nodeId === target.nodeId &&
+        open.columnId === target.columnId &&
+        open.source === target.source
+      )
+        return;
+      set({ dbPopover: target, enumPopover: null });
+    },
+    closeDbPopover: () => {
+      if (get().dbPopover !== null) set({ dbPopover: null });
     },
     requestDelete: (selection) => {
       set({ pendingDelete: { targets: selectionTargets(selection) } });
@@ -1459,6 +1492,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         focusedEdgeId: null,
         popover: null,
         enumPopover: null,
+        dbPopover: null,
         descriptionMode: NO_MODES,
       });
     },
@@ -1924,6 +1958,7 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({
         shellDeckId: deckId,
         enumPopover: null,
+        dbPopover: null,
         flyout: prefs.pinnedFlyout,
         pinnedFlyout: prefs.pinnedFlyout,
         sessionPinReturn: null,

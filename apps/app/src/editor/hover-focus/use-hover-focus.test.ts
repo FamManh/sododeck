@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { editorWrapper } from '../../test/render-canvas';
 import { useUiStore } from '../../state/ui-store';
-import { GRACE_MS, REST_MS, useHoverFocus } from './use-hover-focus';
+import { dbHoverSuspended, GRACE_MS, REST_MS, useHoverFocus } from './use-hover-focus';
 
 const mouse = {} as ReactMouseEvent;
 const node = (id: string) => ({ id }) as never;
@@ -296,5 +296,22 @@ describe('useHoverFocus rows and relationships (042 R14)', () => {
       result.current.onRelationshipLeave('r1');
     });
     expect(hover()).toBeNull();
+  });
+});
+
+describe('dbHoverSuspended (064)', () => {
+  const base = useUiStore.getState();
+
+  it('is off at rest and on for gestures, connections, menus and row edits', () => {
+    expect(dbHoverSuspended(base, false)).toBe(false);
+    expect(dbHoverSuspended(base, true)).toBe(true);
+    expect(dbHoverSuspended({ ...base, canvasGesture: 'pan' }, false)).toBe(true);
+    expect(dbHoverSuspended({ ...base, tool: 'hand' }, false)).toBe(true);
+    expect(
+      dbHoverSuspended(
+        { ...base, columnEdit: { tableId: 't', columnId: 'c', at: 0, select: 'name' } },
+        false,
+      ),
+    ).toBe(true);
   });
 });
