@@ -14,6 +14,7 @@ import {
   Copy,
   Download,
   Ellipsis,
+  FileText,
   Folder,
   FolderInput,
   Inbox,
@@ -102,6 +103,14 @@ function DeckMenuItems({ deck, folders, commands, kit }: DeckMenuProps & { kit: 
       >
         <Download />
         Export .sododeck
+      </Item>
+      <Item
+        onSelect={() => {
+          void commands.exportDeck(deck, 'markdown');
+        }}
+      >
+        <FileText />
+        Export .sododeck.md
       </Item>
       <Separator />
       <Item

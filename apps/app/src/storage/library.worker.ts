@@ -22,7 +22,7 @@ function run(request: LibraryRequest): LibraryResult {
     case 'importMermaid':
       return { op: 'importMermaid', ...importMermaid(request.text) };
     case 'export':
-      return { op: 'export', ...exportDeck(request.updates, request.pictures) };
+      return { op: 'export', ...exportDeck(request.updates, request.pictures, request.format) };
     case 'rename':
       return { op: 'rename', ...rename(request.updates, request.name) };
     case 'duplicate':

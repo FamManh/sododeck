@@ -1,3 +1,4 @@
+import { isDeckMarkdown } from '@sododeck/model/markdown-marker';
 import { useToast } from '@sododeck/ui/components/toast';
 import { useCallback, type DragEvent } from 'react';
 
@@ -10,11 +11,13 @@ import type { LibraryCommands } from './use-library-commands';
 
 /**
  * What a file's text is, by content and never by name (contracts/file-naming.md): JSON starting
- * with `{` is a deck; text with a Mermaid diagram keyword is Mermaid; anything else is neither.
+ * with `{` is a deck; a note whose front matter carries the deck marker is a deck note (070);
+ * text with a Mermaid diagram keyword is Mermaid; anything else is neither.
  */
-export function kindOfText(text: string): 'deck' | 'mermaid' | 'unknown' {
+export function kindOfText(text: string): 'deck' | 'deck-md' | 'mermaid' | 'unknown' {
   const trimmed = text.slice(text.charCodeAt(0) === 0xfeff ? 1 : 0).trimStart();
   if (trimmed.startsWith('{')) return 'deck';
+  if (isDeckMarkdown(text)) return 'deck-md';
   return diagramType(prepare(text).lines) === 'none' ? 'unknown' : 'mermaid';
 }
 
@@ -28,7 +31,7 @@ export interface ImportFilesOptions {
 }
 
 /**
- * Imports exactly one deck file (`.sododeck`, `.sododeck.json` or `.json`) (FR-023, FR-024): read
+ * Imports exactly one deck file (`.sododeck`, `.sododeck.md`, `.sododeck.json` or `.json`) (FR-023, FR-024): read
  * here, parsed and validated in the library worker, added to `folderId` (or Unfiled). Several
  * files add nothing. Text that is Mermaid goes to `onMermaid`; without it, it is not a deck. A
  * refused file opens the import problems dialog; a deck that opens with problems says so in its

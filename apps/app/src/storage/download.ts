@@ -4,6 +4,8 @@ const MAX_NAME_LENGTH = 100;
 /** The extension of a saved deck file. Older `.sododeck.json` and plain `.json` files still open. */
 export const DECK_EXTENSION = '.sododeck';
 const LEGACY_EXTENSION = '.sododeck.json';
+/** The Markdown note form of a deck (070): a readable note that also holds the whole deck. */
+export const DECK_MARKDOWN_EXTENSION = '.sododeck.md';
 
 /**
  * A deck name made safe for a download file name (research R14): characters that file systems
@@ -22,18 +24,19 @@ export function safeFileName(name: string): string {
 }
 
 /**
- * The file name for saving a deck: `<safe name>.sododeck`. A deck named after a file
- * (`Shop.sododeck`, `Shop.sododeck.json`) is not given the extension twice.
+ * The file name for saving a deck: `<safe name>.sododeck`, or `<safe name>.sododeck.md` for the
+ * Markdown form. A deck named after a file (`Shop.sododeck`, `Shop.sododeck.json`,
+ * `Shop.sododeck.md`) is not given an extension twice.
  */
-export function deckFileName(name: string): string {
+export function deckFileName(name: string, format: 'json' | 'markdown' = 'json'): string {
   const safe = safeFileName(name);
   const lower = safe.toLowerCase();
-  const stem = lower.endsWith(LEGACY_EXTENSION)
-    ? safe.slice(0, -LEGACY_EXTENSION.length)
-    : lower.endsWith(DECK_EXTENSION)
-      ? safe.slice(0, -DECK_EXTENSION.length)
-      : safe;
-  return `${stem.trim() === '' ? FALLBACK_NAME : stem}${DECK_EXTENSION}`;
+  const known = [DECK_MARKDOWN_EXTENSION, LEGACY_EXTENSION, DECK_EXTENSION].find((ext) =>
+    lower.endsWith(ext),
+  );
+  const stem = known === undefined ? safe : safe.slice(0, -known.length);
+  const extension = format === 'markdown' ? DECK_MARKDOWN_EXTENSION : DECK_EXTENSION;
+  return `${stem.trim() === '' ? FALLBACK_NAME : stem}${extension}`;
 }
 
 /** Saves `text` as a local file through a temporary `<a download>` (no network, FR-041). */

@@ -21,7 +21,7 @@ export function ImportButton({
       <input
         ref={input}
         type="file"
-        accept=".sododeck,.json,application/json"
+        accept=".sododeck,.md,.json,application/json,text/markdown"
         hidden
         data-testid="import-input"
         onChange={(event) => {

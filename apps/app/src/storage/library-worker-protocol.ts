@@ -9,7 +9,12 @@ export type LibraryRequest =
   | { op: 'create'; name: string }
   | { op: 'import'; text: string; name?: string }
   | { op: 'importMermaid'; text: string }
-  | { op: 'export'; updates: Uint8Array[]; pictures?: Map<string, Uint8Array> }
+  | {
+      op: 'export';
+      updates: Uint8Array[];
+      pictures?: Map<string, Uint8Array>;
+      format?: 'json' | 'markdown';
+    }
   | { op: 'rename'; updates: Uint8Array[]; name: string }
   | { op: 'duplicate'; updates: Uint8Array[]; name: string };
 

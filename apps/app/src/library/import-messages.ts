@@ -12,7 +12,7 @@ export function importMessage(error: unknown): string {
   if (error instanceof LibraryClientError && error.code === 'unsupported-version') {
     return 'That file was made with a newer version of Sododeck.';
   }
-  return 'That file is not a valid .sododeck file. Older .sododeck.json files also open.';
+  return 'That file is not a valid .sododeck or .sododeck.md file. Older .sododeck.json files also open.';
 }
 
 export function problemCount(report: ProblemReport | null): number {
