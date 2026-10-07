@@ -23,6 +23,8 @@ Founder decision H2: the host decides where pictures live, and the file format a
 ### Session 2026-10-07
 
 - Q: May a picture path leave the deck's folder (`../Attachments/x.png`), e.g. for a notes app's shared attachment folder? → A: Yes, through leading `..` segments. Hosts must refuse any path that resolves outside their workspace or vault; the web app never reads pointed-at files.
+- Q: Does a pointed-at picture still need the fingerprint id, stored size, width and height, like an embedded one? → A: Yes, one rule for every picture. The AI skill gains an offline helper that reads an image file and writes its picture entry (id, type, size, width, height, name, path), delivered in 068.
+- Q: At what level does the web app's import problem list show a pointed-at picture? → A: As a warning, one line per picture with its path and reason; no new "info" level.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -56,7 +58,7 @@ A person opens, in the web app, a deck that came from a project folder and point
 
 1. **Given** a deck with pointed-at pictures, **When** it is imported into the web app, **Then** the import succeeds and every other object is present.
 2. **Given** an opened deck with a pointed-at picture, **When** the person looks at that image on the canvas, **Then** it shows as missing, and its reason (on the canvas and in the image's details) says it is a separate file and names the path.
-3. **Given** the import's problem list, **When** a deck with pointed-at pictures is opened, **Then** each such picture is listed once, as information (not an error), with the same reason.
+3. **Given** the import's problem list, **When** a deck with pointed-at pictures is opened, **Then** each such picture is listed once as a warning (not an error), with its path and the same reason, and the deck still opens.
 4. **Given** a deck with pointed-at pictures, **When** it is checked with the AI skill's bundled checker, **Then** it reports no error for those pictures.
 
 ---
@@ -78,7 +80,23 @@ A person opens a deck that points at picture files, edits other things (moves a 
 
 ---
 
-### User Story 4 - Pictures added in the web app keep embedding (Priority: P2)
+### User Story 4 - An AI agent points at an existing image (Priority: P2)
+
+An AI agent writing a deck in a project wants to show `docs/img/login.png`. It runs the skill's helper on that file and gets the complete picture entry to put in the deck, then places an image that uses it. The deck validates and, opened in a folder-based editor, shows the picture.
+
+**Why this priority**: It is how the "agent writes the file, user sees it drawn" goal of backlog 3 reaches pictures; without it an agent would have to compute a fingerprint and dimensions by hand.
+
+**Independent Test**: Run the helper on a PNG next to a deck. The entry it prints has the right fingerprint, size, width, height, name and relative path, and a deck using it passes the skill's checker. Run it on a 6 MB file or a non-image: it refuses with a clear message.
+
+**Acceptance Scenarios**:
+
+1. **Given** a PNG, JPEG, GIF, WebP or SVG file inside the project, **When** the helper is run with the deck's location, **Then** it outputs a picture entry whose fingerprint, size and dimensions match the file and whose path is relative to the deck.
+2. **Given** a file over the size limit or of another type, **When** the helper is run, **Then** it refuses and says why, writing nothing.
+3. **Given** the helper's entry placed in a deck with an image using it, **When** the deck is checked with the skill's checker, **Then** there is no error.
+
+---
+
+### User Story 5 - Pictures added in the web app keep embedding (Priority: P2)
 
 A person adds a new picture in the web app (paste, drop, upload). It is embedded in the deck as today. Nothing in the web app writes a path.
 
@@ -114,13 +132,14 @@ A person adds a new picture in the web app (paste, drop, upload). It is embedded
 - **FR-005**: Every existing valid file MUST stay valid, and MUST be written back byte-identical after opening and saving.
 - **FR-006**: The published format description, the app's validation, and the AI skill's bundled checker MUST agree on which files are valid (existing parity checks extended to the new form).
 - **FR-007**: The web app MUST open a deck with pointed-at pictures without refusing it, and MUST show each such picture as missing, with a reason that says it is a separate file and names its path. The reason MUST appear on the canvas image and in the image's details.
-- **FR-008**: The web app's import problem list MUST list each pointed-at picture once, as information, with the same reason.
+- **FR-008**: The web app's import problem list MUST list each pointed-at picture once as a warning, with its path and the same reason. No new severity level is added to the list (062's error / warning rule stays).
 - **FR-009**: Exporting, saving, copying the deck as a file and copying images inside a deck MUST keep each pointed-at picture's path and facts unchanged, and MUST NOT write embedded data for it.
 - **FR-010**: Pictures added in the web app MUST keep being embedded. The web app MUST NOT create a path.
 - **FR-011**: The deck model MUST keep a pointed-at picture's path through every operation that keeps picture facts today (open, save, export, outside-change merge from 066, clipboard), and MUST report it to callers so a host can read the file.
 - **FR-012**: The web app MUST NOT try to read, fetch or look up a pointed-at file in any way (no network request, no file access).
 - **FR-013**: The format change MUST be recorded in a decision record, with the reasons and the compatibility note for older app versions.
 - **FR-014**: Hosts that read pointed-at files (069, 070) MUST refuse a path that resolves outside their workspace or vault. This feature records the rule; the hosts implement it.
+- **FR-015**: The AI skill's bundled tools MUST include an offline helper that, given an image file and the deck's location, produces a complete pointed-at picture entry (fingerprint id, type, stored size, width, height, name, relative path), so an agent never computes these by hand. It MUST refuse files whose type or size the format does not allow.
 
 ### Key Entities
 
@@ -138,6 +157,7 @@ A person adds a new picture in the web app (paste, drop, upload). It is embedded
 - **SC-004**: The format description, the app's validation and the AI skill's checker give the same valid / invalid verdict on 100% of the new test cases (both forms, both present, neither present, each bad path kind).
 - **SC-005**: A deck whose pictures are all pointed at is at least 90% smaller than the same deck with embedded pictures, for a deck with one 200 KB screenshot.
 - **SC-006**: Opening a deck with pointed-at pictures in the web app makes zero network requests and zero file-access prompts.
+- **SC-007**: For 100% of test images (each allowed type), the skill helper's entry matches the file's fingerprint, size and dimensions, and decks using it pass the checker.
 
 ## Assumptions
 
@@ -146,5 +166,6 @@ A person adds a new picture in the web app (paste, drop, upload). It is embedded
 - **The web app does not read pointed-at files** (no folder access) and offers no way to turn a reference into an embedded picture in this feature. Replacing a missing picture by hand stays as it is today.
 - **Picture reasons in the UI** use plain words ("Saved as a separate file: <path>"), in the existing missing-picture look, and in the image's details panel. The exact wording is settled at planning time against DESIGN.md.
 - **The picture id stays the fingerprint of the bytes** for pointed-at pictures; a host computes it when it creates the entry and may verify it when it reads the file (069, 070).
+- **The skill helper** runs offline with the skill's other bundled scripts (no install step, no network) and prints the entry for the agent to place; it does not edit the deck itself.
 - **Out of scope**: reading pointed-at files in the web app; host behaviour (where to save, what to do when the file changed: 069, 070); converting between the two forms; the `.sododeck.md` wrapper.
 - **Dependencies**: 055 (pictures) and 057 (picture editing), both merged. Independent of 066 and 067. If 066 merges first, its outside-change merge must keep the path (FR-011); this feature adds that case to 066's round-trip corpus.
