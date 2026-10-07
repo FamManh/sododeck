@@ -12,10 +12,11 @@ Interactive, editable architecture & flow diagram workspace. One model (nodes, e
 ## Repo map
 
 ```
-apps/app/         Vite + React SPA, the editor → app.sododeck.com
+apps/app/         Vite + React SPA, the editor → app.sododeck.com; also the "embed" build (`embed.html` → `dist-embed/`, storage-free, for host programs)
 apps/site/        Astro marketing/docs/blog → sododeck.com
 packages/schema/  JSON Schema v1 for .sododeck files → generated TS types + Zod
 packages/model/   Yjs document model, the ONLY Yjs ↔ JSON conversion
+packages/host-protocol/  Messages between the embedded editor and a host program: Zod schemas, transports, scripted fake host (067)
 packages/skill/   AI diagram skill (027): Markdown + bundled offline validate/lint → dist/sododeck-diagram/
 packages/ui/      Design tokens, Tailwind v4 theme, shared React components (shadcn/ui, Radix, lucide)
 packages/config/  Shared tsconfig, ESLint, Prettier
@@ -25,7 +26,7 @@ docs/             spec.md, decisions/ (ADRs), design/, deploy.md
 
 Each app/package has its own `CLAUDE.md` with its responsibility and boundaries. **Read it before changing that package.**
 
-Dependency direction (never the reverse): `app → model → schema`, `skill → model → schema`, `app → ui`, `site → ui`, everything → `config`. The site only copies the skill's built archive (no code import).
+Dependency direction (never the reverse): `app → model → schema`, `app → host-protocol`, `skill → model → schema`, `app → ui`, `site → ui`, everything → `config`. The site only copies the skill's built archive (no code import).
 
 ## Commands (repo root)
 
