@@ -1016,10 +1016,34 @@ describe('DeckNode as a table card (041)', () => {
 
   it('is named "Table <title>, <n> columns" with the table role description', () => {
     renderWithEditor(<DeckNode {...tableProps()} />, tables());
-    const card = screen.getByRole('group', { name: 'Table orders, 7 columns' });
+    const card = screen.getByRole('group', { name: 'Table orders, 7 columns, has note' });
     expect(card).toHaveAttribute('aria-roledescription', 'table');
     expect(within(card).getByRole('list', { name: 'Columns' })).toBeInTheDocument();
-    expect(within(card).getByText('One row per checkout.')).toBeInTheDocument();
+    // The note is never drawn under the title (064 FR-005a), only behind the note icon.
+    expect(within(card).queryByText('One row per checkout.')).not.toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Show note for orders' })).toBeInTheDocument();
+  });
+
+  it('hides the header note icon with "Note icons" off, and has none without a note', () => {
+    const hidden = { ...tables(), tableDisplay: { hideNotes: true } };
+    const { unmount } = renderWithEditor(<DeckNode {...tableProps(hidden)} />, hidden);
+    expect(screen.queryByRole('button', { name: 'Show note for orders' })).not.toBeInTheDocument();
+    unmount();
+    const plain = { ...ordersNode, description: '' };
+    renderWithEditor(<DeckNode {...tableProps(tables(), {}, plain)} />, tables());
+    expect(screen.queryByRole('button', { name: 'Show note for orders' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Table orders, 7 columns' })).toBeInTheDocument();
+  });
+
+  it('marks the title of a noted table for the hover popover, not of a plain one', () => {
+    const { container, unmount } = renderWithEditor(<DeckNode {...tableProps()} />, tables());
+    expect(container.querySelector('[data-table-title]')).toHaveAttribute('data-db-hover');
+    unmount();
+    const plain = { ...ordersNode, description: '' };
+    const again = renderWithEditor(<DeckNode {...tableProps(tables(), {}, plain)} />, tables());
+    expect(again.container.querySelector('[data-table-title]')).not.toHaveAttribute(
+      'data-db-hover',
+    );
   });
 
   it('reads "Table" with one schema and "Table · <schema>" with two', () => {
@@ -1035,7 +1059,7 @@ describe('DeckNode as a table card (041)', () => {
     const long = { ...ordersNode, title: 'order_line_items_with_a_much_longer_name_than_fits' };
     renderWithEditor(<DeckNode {...tableProps(tables(), {}, long)} />, tables());
     expect(
-      screen.getByRole('group', { name: `Table ${long.title}, 7 columns` }),
+      screen.getByRole('group', { name: `Table ${long.title}, 7 columns, has note` }),
     ).toBeInTheDocument();
   });
 
@@ -1050,7 +1074,7 @@ describe('DeckNode as a table card (041)', () => {
     renderWithEditor(<DeckNode {...p} />, tables());
     expect(screen.getByTestId('card-plate-icon')).toBeInTheDocument();
     expect(screen.queryByText('orders')).not.toBeInTheDocument();
-    const box = screen.getByRole('group', { name: 'Table orders, 7 columns' });
+    const box = screen.getByRole('group', { name: 'Table orders, 7 columns, has note' });
     expect(box.style.height).toBe(`${String(p.data.layout.height)}px`);
   });
 

@@ -144,15 +144,15 @@ describe('DeckInspector › Database (041 US4)', () => {
     const names = within(list)
       .getAllByRole('switch')
       .map((s) => (s as HTMLButtonElement).labels[0]?.textContent);
-    expect(names).toEqual(['Data types', 'Nullable marker', 'Notes', 'Index footer']);
+    expect(names).toEqual(['Data types', 'Nullable marker', 'Note icons', 'Index footer']);
     for (const toggle of within(list).getAllByRole('switch')) expect(toggle).toBeChecked();
   });
 
   it('writes the hide flag in one undo step, and removes it when turned back on', async () => {
     const { doc, editor, user } = setupWith(tableDeck);
-    await user.click(screen.getByRole('switch', { name: 'Notes' }));
+    await user.click(screen.getByRole('switch', { name: 'Note icons' }));
     expect(toJSON(doc).tableDisplay).toEqual({ hideNotes: true });
-    expect(screen.getByRole('switch', { name: 'Notes' })).not.toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Note icons' })).not.toBeChecked();
     act(() => {
       editor().undo();
     });

@@ -3,15 +3,15 @@
  * and its width, never of the zoom (R2) and never measured from the DOM (§g-58, ADR 0016). The
  * canvas geometry, `DeckNode` and the export all read it, so boxes, rows and connectors agree.
  *
- * Height = 12 + header 24 + 8 + title 18 + (8 + note lines × 17) + body, where the body (only when
+ * Height = 12 + header 24 + 8 + title 18 + body, where the body (only when
  * the table has columns) is 8 + rows × 24 + ("+n columns" pill or "Show all" button: 6 + 24) +
  * (footer 24) + 8, and a
- * table without columns ends with the card's own 12.
+ * table without columns ends with the card's own 12. The table note is never drawn on the card
+ * (064): a note icon after the title opens it in a popover, so the height does not depend on it.
  */
 import type { DbColumn, DbDetail, Id, SododeckFile } from '@sododeck/schema';
 
 import { textMeasurer } from './card-tags';
-import { wrapText } from './card-layout';
 import { truncate, type TextMeasurer } from './export/text-measure';
 import type { TableContext } from './table-keys';
 import type { DeckTableDetail } from '@sododeck/model';
@@ -24,9 +24,7 @@ export const TABLE_CARD = {
   gap: 8,
   headerHeight: 24,
   titleLineHeight: 18,
-  noteLineHeight: 17,
-  maxNoteLines: 2,
-  /** Space between the title (or note) and the first row; the hairline sits in its middle. */
+  /** Space between the title and the first row; the hairline sits in its middle. */
   bodyGap: 8,
   rowHeight: 24,
   /** Rows drawn at All before "Show all n columns" (048 FR-001); relationship ends are extra. */
@@ -46,8 +44,10 @@ export const TABLE_CARD = {
   pillHeight: 24,
   footerHeight: 24,
   bottom: 8,
+  /** The row note icon (064) and its gap after the name. */
+  noteIcon: 12,
+  noteIconGap: 4,
   titleFont: "600 14px 'Geist Variable', system-ui, sans-serif",
-  noteFont: "400 12px 'Geist Variable', system-ui, sans-serif",
   nameFont: "500 12px 'Geist Variable', system-ui, sans-serif",
   keyNameFont: "600 12px 'Geist Variable', system-ui, sans-serif",
   typeFont: "400 11px 'Geist Mono Variable', ui-monospace, monospace",
@@ -71,6 +71,13 @@ export interface TableRow {
   enum?: { id: Id; name: string; text: string; color?: string };
   /** Width the type text or chip takes at the right of the row. */
   typeWidth: number;
+  /** The column has a note and note icons show (064): a note icon follows the name. */
+  hasNote: boolean;
+  /**
+   * The row cannot show everything about its column (064 R1): a note, a cut name or type, a
+   * default, a check or auto-increment. Hovering it opens the column popover.
+   */
+  hidden: boolean;
 }
 
 export interface TableLayout {
@@ -79,9 +86,10 @@ export interface TableLayout {
   /** "Table" or "Table · <schema>". */
   typeName: string;
   titleCut: boolean;
-  /** Note lines as drawn (0–2); the last ends with an ellipsis when cut. */
-  noteLines: readonly string[];
-  noteCut: boolean;
+  /** The table has a note (064): its title opens the table popover. */
+  noted: boolean;
+  /** `noted` and note icons show: a note icon follows the title. */
+  hasNote: boolean;
   detail: DbDetail;
   /** The table's own detail choice; absent means it follows the deck. */
   ownDetail: DbDetail | undefined;
@@ -308,21 +316,38 @@ export function tableLayout(
     }
     const rowGlyphs = glyphs[i] ?? [];
     const font = column.pk === true ? t.keyNameFont : t.nameFont;
+    const noted = (column.note ?? '').trim() !== '';
+    const hasNote = noted && !display.hideNotes;
     const nameMax =
-      inner - keySlot - t.keyGap - (typeWidth > 0 ? typeWidth + t.typeGap : 0) - nullableRoom;
+      inner -
+      keySlot -
+      t.keyGap -
+      (typeWidth > 0 ? typeWidth + t.typeGap : 0) -
+      nullableRoom -
+      (hasNote ? t.noteIcon + t.noteIconGap : 0);
     const nameText = truncate(column.name, font, Math.max(0, nameMax), measure);
+    const nameCut = nameText !== column.name;
     return [
       {
         columnId: column.id,
         glyphs: rowGlyphs,
         name: column.name,
         nameText,
-        nameCut: nameText !== column.name,
+        nameCut,
         ...(type === undefined ? {} : { type, typeText: shownType }),
         typeCut,
         nullable: !display.hideNullable && column.notNull !== true && column.pk !== true,
         ...(chip === undefined ? {} : { enum: chip }),
         typeWidth,
+        hasNote,
+        hidden:
+          noted ||
+          nameCut ||
+          typeCut ||
+          column.default !== undefined ||
+          column.defaultExpr !== undefined ||
+          column.check !== undefined ||
+          column.increment === true,
       },
     ];
   });
@@ -365,15 +390,7 @@ export function tableLayout(
       ? undefined
       : plural(indexCount, 'index', 'indexes');
 
-  const note = display.hideNotes ? '' : (node.description ?? '').trim();
-  const wrapped = note === '' ? [] : wrapText(note, inner, t.noteFont, measure);
-  const noteCut = wrapped.length > t.maxNoteLines;
-  const noteLines = noteCut
-    ? [
-        ...wrapped.slice(0, t.maxNoteLines - 1),
-        truncate(`${wrapped[t.maxNoteLines - 1] ?? ''}…`, t.noteFont, inner, measure),
-      ]
-    : wrapped;
+  const noted = (node.description ?? '').trim() !== '';
 
   // The footer row holds the index count, and at Names also "n columns".
   const footerRow = hasBody && (footer !== undefined || hidden?.kind === 'all');
@@ -385,20 +402,10 @@ export function tableLayout(
       (footerRow ? t.footerHeight : 0) +
       t.bottom
     : t.paddingY;
-  const height =
-    t.paddingY +
-    t.headerHeight +
-    t.gap +
-    t.titleLineHeight +
-    (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
-    body;
+  const height = t.paddingY + t.headerHeight + t.gap + t.titleLineHeight + body;
 
   const titleTop = t.paddingY + t.headerHeight + t.gap;
-  const rowsTop =
-    titleTop +
-    t.titleLineHeight +
-    (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
-    t.bodyGap;
+  const rowsTop = titleTop + t.titleLineHeight + t.bodyGap;
   const slotTop = rowsTop + slots * t.rowHeight + (slots > 0 ? t.pillGap : 0);
   const pillTop = hidden?.kind === 'more' ? slotTop : undefined;
   const button: TableLayout['button'] =
@@ -412,9 +419,10 @@ export function tableLayout(
     height,
     typeName:
       context.showSchema && schema !== undefined && schema !== '' ? `Table · ${schema}` : 'Table',
-    titleCut: measure(node.title, t.titleFont) > inner,
-    noteLines,
-    noteCut,
+    // The note icon (14 + 4) follows the title on the same line.
+    titleCut: measure(node.title, t.titleFont) > inner - (noted && !display.hideNotes ? 18 : 0),
+    noted,
+    hasNote: noted && !display.hideNotes,
     detail,
     ownDetail: node.detail,
     keySlot,

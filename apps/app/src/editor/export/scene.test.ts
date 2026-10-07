@@ -918,7 +918,7 @@ describe('buildScene: table cards (041 US5)', () => {
   it('applies the deck detail and toggles', () => {
     const keys = { ...shop, tableDisplay: { detail: 'keys' as const, hideNotes: true } };
     expect(tableOf(keys, 'orders')?.rows.map((r) => r.columnId)).toEqual(['o-id', 'o-c']);
-    expect(tableOf(keys, 'orders')?.noteLines).toEqual([]);
+    expect(tableOf(keys, 'orders')?.hasNote).toBe(false);
     const noTypes = { ...shop, tableDisplay: { hideTypes: true, hideIndexes: true } };
     expect(tableOf(noTypes, 'orders')?.rows.every((r) => r.type === undefined)).toBe(true);
     expect(tableOf(noTypes, 'orders')?.footer).toBeUndefined();

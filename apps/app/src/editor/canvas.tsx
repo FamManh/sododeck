@@ -108,6 +108,8 @@ import { useDrawerWidths } from './shell/use-drawer-widths';
 import { problemMarks } from './problems/problem-marks';
 import { ShapeNode } from './shapes/shape-node';
 import { useProblems } from './problems/use-problems';
+import { DbPopover } from './table/db-popover';
+import { notePointerPress, pointerOver as dbPointerOver } from './table/db-hover';
 
 const nodeTypes: NodeTypes = {
   'collapsed-group': CollapsedGroupNode,
@@ -716,6 +718,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
       onPointerOverCapture={(event) => {
         hover.notePointerType(event.pointerType);
+        dbPointerOver(event.target, event.pointerType);
         // Column rows (042 R14): delegated here, rows are plain elements with `data-row`.
         const target = event.target instanceof Element ? event.target : null;
         const card = target?.closest<HTMLElement>('[data-node-id]');
@@ -729,8 +732,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         hoveredRow.current = row;
         hover.onRowHover(tableId, row);
       }}
+      onPointerLeave={() => {
+        dbPointerOver(null, 'mouse');
+      }}
       onPointerDownCapture={(event) => {
         hover.notePointerType(event.pointerType);
+        notePointerPress();
         pointerFocus.current = true;
         setTimeout(() => {
           pointerFocus.current = false;
@@ -938,6 +945,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       <EdgePopover deck={fullDeck} />
       {/* The one enum values popover (041): renders nothing until a chip opens it. */}
       <EnumPopover deck={fullDeck} />
+      {/* The one column / table note popover (064), opened by rows, titles and note icons. */}
+      <DbPopover deck={fullDeck} />
       <ProblemFixPopover />
       <MergedEdgePopover deck={deck} bundles={bundles} />
       <ConnectPopover deck={fullDeck} />

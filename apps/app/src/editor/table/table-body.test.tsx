@@ -1,7 +1,7 @@
 import { fromJSON, toJSON, type DeckDoc } from '@sododeck/model';
 import type { DbColumn } from '@sododeck/schema';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
@@ -9,6 +9,8 @@ import { fixedWidthMeasurer } from '../export/text-measure';
 import type { TableContext } from '../table-keys';
 import type { ProblemMark } from '../problems/problem-marks';
 import { tableLayout, type TableNode } from '../table-layout';
+import { useUiStore } from '../../state/ui-store';
+import { cancelDbHover, DB_REST_MS, pointerOver } from './db-hover';
 import { TableBody } from './table-body';
 
 const col = (id: string, extra: Partial<DbColumn> = {}): DbColumn => ({
@@ -278,5 +280,141 @@ describe('Show all / Show fewer (048 contracts/scale-ui.md)', () => {
   it('draws no button for a table within the limit', () => {
     renderBody();
     expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
+  });
+});
+
+describe('TableBody notes (064 US1)', () => {
+  const noted: TableNode = {
+    ...orders,
+    columns: [
+      col('id', { pk: true, note: 'Unique id' }),
+      col('email', { type: 'text', note: 'Used for sign-in' }),
+      col('plain', { type: 'int' }),
+      col('created_at', { type: 'timestamptz', default: 'now()' }),
+    ],
+  };
+  const initial = useUiStore.getState();
+
+  beforeEach(() => {
+    useUiStore.setState(initial, true);
+  });
+  afterEach(() => {
+    act(() => {
+      pointerOver(null, 'mouse');
+    });
+    cancelDbHover();
+    vi.useRealTimers();
+  });
+
+  it('draws the note icon only on noted rows, and none with note icons off', () => {
+    const { unmount } = renderBody(noted);
+    expect(screen.getByRole('button', { name: 'Show note for id' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show note for email' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show note for plain' })).not.toBeInTheDocument();
+    unmount();
+    renderBody(noted, context({ hideNotes: true }));
+    expect(screen.queryByRole('button', { name: /Show note for/ })).not.toBeInTheDocument();
+  });
+
+  it('marks rows with hidden information for hover, and drops the native title', () => {
+    renderBody(noted);
+    const rowOf = (name: RegExp) => screen.getByRole('listitem', { name });
+    expect(rowOf(/^email/)).toHaveAttribute('data-db-hover');
+    expect(rowOf(/^created_at/)).toHaveAttribute('data-db-hover');
+    expect(rowOf(/^plain/)).not.toHaveAttribute('data-db-hover');
+    expect(rowOf(/^created_at/)).not.toHaveAttribute('title');
+  });
+
+  it('opens nothing on a short plain row, and a popover on a row with a default', () => {
+    vi.useFakeTimers();
+    render(
+      <div data-node-id="orders">
+        <TableBody
+          nodeId="orders"
+          layout={tableLayout(noted, context(), undefined, fixedWidthMeasurer(0.6))}
+          focused={false}
+        />
+      </div>,
+    );
+    act(() => {
+      pointerOver(screen.getByRole('listitem', { name: /^plain/ }), 'mouse');
+      vi.advanceTimersByTime(DB_REST_MS);
+    });
+    expect(useUiStore.getState().dbPopover).toBeNull();
+    act(() => {
+      pointerOver(screen.getByRole('listitem', { name: /^created_at/ }), 'mouse');
+      vi.advanceTimersByTime(DB_REST_MS);
+    });
+    expect(useUiStore.getState().dbPopover).toMatchObject({ columnId: 'created_at' });
+  });
+
+  it('closes on a table drag and opens nothing during one', () => {
+    vi.useFakeTimers();
+    render(
+      <div data-node-id="orders">
+        <TableBody
+          nodeId="orders"
+          layout={tableLayout(noted, context(), undefined, fixedWidthMeasurer(0.6))}
+          focused={false}
+        />
+      </div>,
+    );
+    act(() => {
+      pointerOver(screen.getByRole('listitem', { name: /^email/ }), 'mouse');
+      vi.advanceTimersByTime(DB_REST_MS);
+    });
+    expect(useUiStore.getState().dbPopover).not.toBeNull();
+    act(() => {
+      useUiStore.setState({ canvasGesture: 'drag' });
+    });
+    expect(useUiStore.getState().dbPopover).toBeNull();
+    act(() => {
+      pointerOver(screen.getByRole('listitem', { name: /^created_at/ }), 'mouse');
+      vi.advanceTimersByTime(DB_REST_MS);
+    });
+    expect(useUiStore.getState().dbPopover).toBeNull();
+  });
+
+  it('touch hover opens nothing, but a tap on the icon does', () => {
+    vi.useFakeTimers();
+    render(
+      <div data-node-id="orders">
+        <TableBody
+          nodeId="orders"
+          layout={tableLayout(noted, context(), undefined, fixedWidthMeasurer(0.6))}
+          focused={false}
+        />
+      </div>,
+    );
+    act(() => {
+      pointerOver(screen.getByRole('listitem', { name: /^email/ }), 'touch');
+      vi.advanceTimersByTime(DB_REST_MS);
+    });
+    expect(useUiStore.getState().dbPopover).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show note for email' }));
+    expect(useUiStore.getState().dbPopover).toEqual({
+      kind: 'column',
+      nodeId: 'orders',
+      columnId: 'email',
+      source: 'click',
+    });
+  });
+
+  it('opens from keyboard focus rest and closes on blur (FR-009)', () => {
+    vi.useFakeTimers();
+    renderBody(noted);
+    const email = screen.getByRole('listitem', { name: /^email/ });
+    act(() => {
+      email.focus();
+      vi.advanceTimersByTime(DB_REST_MS);
+    });
+    expect(useUiStore.getState().dbPopover).toMatchObject({
+      columnId: 'email',
+      source: 'keyboard',
+    });
+    act(() => {
+      screen.getByRole('listitem', { name: /^plain/ }).focus();
+    });
+    expect(useUiStore.getState().dbPopover).toBeNull();
   });
 });
