@@ -1,0 +1,7 @@
+**
+!dist/extension.cjs
+!media/**
+!README.md
+!CHANGELOG.md
+!icon.png
+!package.json
