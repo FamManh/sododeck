@@ -16,7 +16,13 @@ export const VIEW_TYPE = 'sododeck';
 /** Opens the same file in the plain Markdown view and keeps the leaf there (US1: the escape). */
 export const SOURCE_STATE_KEY = 'sododeckSource';
 
+/** Timings in the developer console (`[sododeck]`), to see where opening a deck spends its time. */
+function mark(label: string, since: number): void {
+  console.debug(`[sododeck] ${label}: ${String(Math.round(performance.now() - since))} ms`);
+}
+
 export class DeckView extends TextFileView {
+  private openedAt = 0;
   private frame: Frame | undefined;
   private session: HostSession | undefined;
   private errorEl: HTMLElement | undefined;
@@ -61,8 +67,10 @@ export class DeckView extends TextFileView {
   private start(fileText: string): void {
     const file = this.file;
     if (file === null) return;
+    this.openedAt = performance.now();
     this.contentEl.addClass('sododeck-view');
     const frame = createFrame(this.contentEl, page);
+    mark('frame created', this.openedAt);
     this.frame = frame;
     const ports: Ports = {
       files: vaultFiles(this.app, (path, text) => this.writeOwn(path, text)),
@@ -76,6 +84,17 @@ export class DeckView extends TextFileView {
         },
       },
     };
+    const sent = frame.transport.send.bind(frame.transport);
+    const received = frame.transport.listen.bind(frame.transport);
+    frame.transport.send = (message) => {
+      if (message.type === 'init') mark('init sent', this.openedAt);
+      sent(message);
+    };
+    frame.transport.listen = (handler) =>
+      received((message) => {
+        if (message.type === 'ready') mark('canvas ready', this.openedAt);
+        handler(message);
+      });
     this.session = new HostSession({
       path: file.path,
       fileText,
