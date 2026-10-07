@@ -10,6 +10,14 @@ export {
   type LoadedDeck,
   type PreparedDeck,
 } from './deck';
+export {
+  fromMarkdown,
+  isDeckMarkdown,
+  MARKER_KEY,
+  MARKER_VALUE,
+  toMarkdown,
+  type FromMarkdown,
+} from './markdown-form';
 export { trimCrops, type TrimmedCrop } from './load-checks';
 export { applyDeckText, applyFile } from './apply-file';
 export type { ApplyCounts, ApplyResult, ApplySummary } from './apply-types';
