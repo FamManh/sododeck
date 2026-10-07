@@ -46,9 +46,9 @@ Deploying from GitHub Actions instead needs a `CLOUDFLARE_API_TOKEN` (Pages:Edit
 - DevTools → Application → Service Workers shows `sw.js` active. Go offline and reload: the app still loads.
 - DevTools → Network: no requests to third-party origins (telemetry off).
 - `https://sododeck.com/docs` and `/blog/hello-world` load.
+- `https://sododeck.com/schema/v1.json` returns the schema as `application/schema+json` with `Access-Control-Allow-Origin: *`.
 
 ## Open items
 
 - PWA icons: only an SVG icon today. Add 192/512 PNG + maskable before promoting installability.
 - Content-Security-Policy header: not set yet. Add once Monaco's worker/blob and style needs are pinned down (and telemetry hosts, if enabled).
-- Publish `schema/v1.json` at `https://sododeck.com/schema/v1.json`.

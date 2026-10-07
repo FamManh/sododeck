@@ -12,6 +12,7 @@ Astro (static output) + Tailwind v4 + MDX. React islands allowed, but keep them 
 - `src/styles/landing.css` — marketing buttons, stage gating, Replay. Breakpoints `tab` (700px) and `desk` (1280px) are in `global.css`; marketing type tokens (`text-marketing-*`) come from `@sododeck/ui`.
 - `src/styles/global.css` — imports `@sododeck/ui/styles.css` so tokens match the app.
 - `src/site.ts` — `APP_URL` (override with `PUBLIC_APP_URL`).
+- `src/integrations/publish-schema.ts` — on build, copies `packages/schema/schema/v1.json` to `dist/schema/v1.json`, the `$schema` URL of every deck file (headers in `public/_headers`). A file copy, not an import; `turbo.json` lists the schema as a build input so the cache notices changes. Not served by `pnpm dev`.
 
 ## Boundaries
 
@@ -23,7 +24,3 @@ Astro (static output) + Tailwind v4 + MDX. React islands allowed, but keep them 
 ## Commands
 
 `pnpm dev` (4321) · `pnpm build` · `pnpm typecheck` (`astro check`) · `pnpm lint` · `pnpm test` (Vitest, jsdom)
-
-## TODO
-
-Publish `packages/schema/schema/v1.json` at `/schema/v1.json` (the `$schema` URL) at build time.
