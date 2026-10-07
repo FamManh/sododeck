@@ -11,6 +11,7 @@ export {
   type PreparedDeck,
 } from './deck';
 export {
+  emptyDeckText,
   fromMarkdown,
   isDeckMarkdown,
   MARKER_KEY,

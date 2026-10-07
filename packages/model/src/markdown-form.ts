@@ -592,6 +592,9 @@ function failure(code: MdProblemCode): FromMarkdown {
 const canonicalText = (value: unknown): string =>
   `${JSON.stringify(canonicalize(value), null, 2)}\n`;
 
+/** The canonical text of an empty deck: what a marker-only note or an empty file opens as. */
+export const emptyDeckText = (): string => canonicalText(emptySododeckFile());
+
 function bodyTargets(deck: Json): Map<string, Target[]> {
   const byId = new Map<string, Target[]>();
   const add = (target: Target): void => {

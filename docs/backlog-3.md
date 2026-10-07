@@ -94,10 +94,10 @@ the editor hides what the host cannot do, as `features.ts` does for browser APIs
 
 ### Founder decisions (decided 2026-10-07: all three as recommended)
 
-| #   | Question                                   | Decision                                                                                                                                                                                               |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| H1  | How the editor runs inside a host          | **An iframe in every host.** VS Code requires a webview (an iframe). In Obsidian, mounting React into its DOM would leak Tailwind's preflight and `:root` tokens and Radix portals into the host's UI. |
-| H2  | Where pictures live when a file is on disk | **Host decides; file can reference.** Make `assets[id].data` optional and add a relative `path` (068), so a host can keep pictures as sibling files or vault attachments.                              |
+| #   | Question                                   | Decision                                                                                                                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H1  | How the editor runs inside a host          | **An iframe in every host.** VS Code requires a webview (an iframe). In Obsidian, mounting React into its DOM would leak Tailwind's preflight and `:root` tokens and Radix portals into the host's UI.                                                                                                                                                                      |
+| H2  | Where pictures live when a file is on disk | **Host decides; file can reference.** Make `assets[id].data` optional and add a relative `path` (068), so a host can keep pictures as sibling files or vault attachments.                                                                                                                                                                                                   |
 | H3  | File name in Obsidian                      | **Both, `.sododeck.md` recommended** (amended by the founder, 2026-10-07, in the 070 spec). `.sododeck.md` is a Markdown note (readable text + the full deck as a JSON block) so search, backlinks and picture links that the app rewrites on a move all work; plain `.sododeck` is also registered and opens and edits too. `.sododeck.json` is not supported in Obsidian. |
 
 ## Dependency graph
@@ -273,8 +273,14 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 070-obsidian-plugin
 
-- **Status:** specified and planned (2026-10-07) — see [`spec.md`](../specs/070-obsidian-plugin/spec.md)
-  and [`plan.md`](../specs/070-obsidian-plugin/plan.md). The founder changed the scope in the
+- **Status:** implemented in code (2026-10-07), real-app checks open — see
+  [`spec.md`](../specs/070-obsidian-plugin/spec.md), [`plan.md`](../specs/070-obsidian-plugin/plan.md),
+  ADR [0051](decisions/0051-deck-markdown-form.md) and [0052](decisions/0052-obsidian-plugin.md),
+  [`apps/obsidian/`](../apps/obsidian/) and the release checklist
+  [`docs/release/obsidian-plugin.md`](release/obsidian-plugin.md). Phase A (the Markdown form in the
+  model and the web app) and phase B (the plugin) are both built and unit-tested; spikes S1, S3, S4
+  and every phone check wait for a real Obsidian (`specs/070-obsidian-plugin/research.md`, "Spike
+  results"). The founder changed the scope in the
   clarification: decks in a vault are Markdown notes (`.sododeck.md`); the former "Later" item is
   now part of this feature. The spec and plan replace the draft below where they differ.
 - **Milestone:** after 069 · **Depends on:** 066, 067, 068 (069 is the pattern, not a code
