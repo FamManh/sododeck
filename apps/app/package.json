@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.embed.config.ts && node scripts/check-embed-bundle.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc",

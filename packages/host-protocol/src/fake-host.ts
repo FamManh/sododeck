@@ -18,6 +18,8 @@ export interface FakeHostOptions {
   capabilities?: Partial<Capabilities>;
   /** Sent in `init` (default `PROTOCOL_VERSION`); set another value to test a mismatch. */
   protocolVersion?: number;
+  /** `false`: do not answer `ready` with `init` (call `sendInit()` when ready). Default true. */
+  autoInit?: boolean;
   /** `false`: never answer `change` (tests the 5 s no-answer path). Default true. */
   answerChanges?: boolean;
   /** Pictures the host can serve for `picture-get`. */
@@ -82,7 +84,7 @@ export function createFakeHost(
     log.push({ dir: 'in', message, at: Date.now() });
     switch (message.type) {
       case 'ready':
-        sendInit();
+        if (host.options.autoInit !== false) sendInit();
         break;
       case 'change': {
         last = message.text;

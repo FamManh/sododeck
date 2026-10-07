@@ -51,7 +51,9 @@ export type EditorMessage = z.infer<typeof editorMessageSchema>;
 export const hostMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('init'),
-    protocolVersion: z.number().int().positive(),
+    // Any integer, and missing reads as 0: a host on another version still gets the editor's
+    // plain "update" message instead of being ignored (the editor compares for equality).
+    protocolVersion: z.number().int().default(0),
     text: z.string(),
     theme: scheme,
     capabilities: capabilitiesSchema,

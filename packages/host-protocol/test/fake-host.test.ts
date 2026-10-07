@@ -56,6 +56,15 @@ describe('createFakeHost', () => {
     expect(b.received).toEqual([]);
   });
 
+  it('does not answer ready with init when autoInit is false, until sendInit', async () => {
+    const { fake, received, send } = setup({ autoInit: false });
+    await send({ type: 'ready', protocolVersion: 1, editorVersion: '0' });
+    expect(received).toEqual([]);
+    fake.sendInit();
+    await tick();
+    expect((received as { type: string }[]).map((m) => m.type)).toEqual(['init']);
+  });
+
   it('flush resolves on flushed; sendExternal and setTheme post', async () => {
     const { fake, received, send } = setup();
     const done = fake.flush();

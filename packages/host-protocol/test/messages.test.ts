@@ -49,6 +49,14 @@ describe('parseHostMessage', () => {
     });
   });
 
+  it('reads any integer protocol version, and a missing one as 0, so a mismatch is reported', () => {
+    const base = { type: 'init', text: '', theme: 'light', capabilities: caps };
+    expect(parseHostMessage({ ...base, protocolVersion: 2 })).toMatchObject({ protocolVersion: 2 });
+    expect(parseHostMessage({ ...base, protocolVersion: 0 })).toMatchObject({ protocolVersion: 0 });
+    expect(parseHostMessage(base)).toMatchObject({ protocolVersion: 0 });
+    expect(parseHostMessage({ ...base, protocolVersion: 1.5 })).toBeNull();
+  });
+
   it('accepts an unknown theme string', () => {
     const m = parseHostMessage({
       type: 'init',

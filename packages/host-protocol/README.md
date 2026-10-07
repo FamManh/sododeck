@@ -18,7 +18,7 @@ editor                                   host
 
 - The editor sends `ready` once, after it has loaded. It is the only message sent before `init` and carries no deck content.
 - The editor accepts messages only from its parent window. From `init` on, it sends only to the origin `init` came from.
-- `init.protocolVersion` must equal the editor's (`1`). Otherwise the editor sends `fatal` and shows which side needs an update; it then ignores everything but a later `init` with a matching version.
+- `init.protocolVersion` must equal the editor's (`1`); a missing one reads as `0`. Otherwise the editor sends `fatal` and shows which side needs an update; it then ignores everything but a later `init` with a matching version.
 - No `init` within 10 s: the editor shows "The program hosting this editor did not send a deck" and keeps waiting.
 - A second `init` is treated as `external-change` (theme and capabilities are taken from it too).
 
