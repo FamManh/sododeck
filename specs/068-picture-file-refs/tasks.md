@@ -166,7 +166,7 @@
 - [x] T032 [P] Update `packages/schema/CLAUDE.md` (068 entry: `path`, I8, I9, `checkPicturePath`), `packages/model/CLAUDE.md` (`fileRefs`, `picture-file-ref`, `picture-facts.ts`, the `attachAssets` rule) and `packages/skill/CLAUDE.md` (the `picture` command).
 - [x] T033 [P] Update `docs/backlog-3.md`: mark 068 specified with links, and add to the 069 and 070 in-scope lists "refuse picture paths that resolve outside the workspace / vault (068 FR-014)".
 - [x] T034 Measure SC-005 in a model test, `packages/model/test/assets.test.ts`: a deck with one generated 200 KB PNG, serialized embedded vs pointed-at, must be at least 90 % smaller.
-- [ ] T035 Run the definition of done from the repo root: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` (the no-third-party-requests check covers SC-006). Fix anything red. Confirm there is no `.only` / `.skip`.
+- [x] T035 Run the definition of done from the repo root: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` (the no-third-party-requests check covers SC-006). Fix anything red. Confirm there is no `.only` / `.skip`.
 - [ ] T036 Walk `quickstart.md` scenarios 1–15 against test names. Take a screenshot of the missing-picture state and the inspector row for the PR (UI work: definition of done).
 - [ ] T037 Commit in small Conventional Commits (`feat(schema): …`, `feat(model): …`, `feat(app): …`, `feat(skill): …`, `docs: …`; no AI attribution trailer, per AGENTS.md). Push and open a PR to `main` with a summary, screenshots, assumptions and the next step (069).
 
