@@ -43,9 +43,9 @@ A host program loads the embedded editor and gives it the contents of a deck fil
 1. **Given** the fake host with a sample deck, **When** the editor loads, **Then** the editor says it is ready, the host sends the file, and the canvas shows that deck.
 2. **Given** a host that says it uses the dark scheme, **When** the editor shows the deck, **Then** it uses the editor's dark theme; **When** the host later reports the light scheme, **Then** the editor switches without reloading the deck.
 3. **Given** the embedded editor, **When** the user looks for the deck library, the home screen, a "new deck", "open deck" or "import deck file" control, **Then** none is present: only the open deck's screen is shown.
-6. **Given** the embedded editor, **When** the user opens the Mermaid import, **Then** they can paste Mermaid text and it is added to the open deck, and there is no control to choose a file from disk.
-4. **Given** a host that sends an empty file (a new, blank `.sododeck` file), **When** the editor loads it, **Then** it shows an empty deck and the first edit sends a complete, valid deck file back.
-5. **Given** a host whose file is invalid (for example a hand edit left a dangling reference), **When** the editor loads it, **Then** it shows the file's problems in plain words, does not show a partial deck, and sends nothing back.
+4. **Given** the embedded editor, **When** the user opens the Mermaid import, **Then** they can paste Mermaid text and it is added to the open deck, and there is no control to choose a file from disk.
+5. **Given** a host that sends an empty file (a new, blank `.sododeck` file), **When** the editor loads it, **Then** it shows an empty deck and the first edit sends a complete, valid deck file back.
+6. **Given** a host whose file is invalid (for example a hand edit left a dangling reference), **When** the editor loads it, **Then** it shows the file's problems in plain words, does not show a partial deck, and sends nothing back.
 
 ---
 

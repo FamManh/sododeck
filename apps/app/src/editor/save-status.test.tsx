@@ -1,11 +1,12 @@
 import { serializeDeck } from '@sododeck/model';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as download from '../storage/download';
 import { useSaveStatusStore } from '../storage/save-status';
 import { deckOf, editorWrapper } from '../test/render-canvas';
+import { savedFile } from '../test/saved-file';
 import { SaveContext, type SaveControls } from './save-context';
 import { SaveStatus } from './save-status';
 
@@ -63,7 +64,7 @@ describe('SaveStatus', () => {
   });
 
   it('shows the error with Export, and details with Export and Retry', async () => {
-    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const downloadBlob = vi.spyOn(download, 'downloadBlob').mockImplementation(() => undefined);
     const { save, user } = setup();
     act(() => {
       useSaveStatusStore.getState().dispatch({
@@ -75,7 +76,13 @@ describe('SaveStatus', () => {
     const region = status();
     if (!region) throw new Error('no status');
     await user.click(within(region).getByRole('button', { name: 'Export' }));
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck', serializeDeck(deck));
+    await waitFor(() => {
+      expect(downloadBlob).toHaveBeenCalled();
+    });
+    expect(await savedFile(downloadBlob)).toMatchObject({
+      name: 'Shop.sododeck',
+      text: serializeDeck(deck),
+    });
     expect(save.markExported).toHaveBeenCalledOnce();
 
     await user.click(
@@ -88,7 +95,9 @@ describe('SaveStatus', () => {
     await user.click(within(details).getByRole('button', { name: 'Retry' }));
     expect(save.flush).toHaveBeenCalledOnce();
     await user.click(within(details).getByRole('button', { name: 'Export .sododeck' }));
-    expect(downloadText).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(downloadBlob).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('says "Demo · not saved" for the demo deck', () => {

@@ -19,8 +19,8 @@ import { copyText } from '../../lib/clipboard';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { downloadBlob, downloadText } from '../../storage/download';
 import { focusCanvas } from '../canvas-actions';
+import { useSaveFile } from '../embed-host-context';
 import { useSaveControls } from '../save-context';
 import {
   availableSchemaScopes,
@@ -74,6 +74,7 @@ export function ExportDialog() {
   const closeExport = useUiStore((s) => s.closeExport);
   const announceLive = useUiStore((s) => s.announce);
   const { markExported } = useSaveControls();
+  const saveFile = useSaveFile();
   const { toast } = useToast();
   const selectedNodes = useUiStore((s) => s.selection.nodes);
   const selectedGroups = useUiStore((s) => s.selection.groups);
@@ -232,15 +233,17 @@ export function ExportDialog() {
       (format === 'png' || format === 'svg') && ready.svg !== null && ready.bounds !== null
         ? await copyImage(format, Promise.resolve({ svg: ready.svg, bounds: ready.bounds }), scale)
         : ready.text !== null && (await copyText(ready.text));
-    tell(ok ? 'Copied' : "Couldn't copy — use Download instead");
+    tell(
+      ok ? 'Copied' : saveFile === null ? "Couldn't copy" : "Couldn't copy — use Download instead",
+    );
   };
   const download = async () => {
-    if (ready === null) return;
+    if (ready === null || saveFile === null) return;
     if (state.format === 'png') {
       if (ready.svg === null || ready.bounds === null || pngBlocked) return;
       setRasterizing(true);
       try {
-        downloadBlob(ready.fileName, await rasterize(ready.svg, ready.bounds, scale));
+        saveFile(ready.fileName, await rasterize(ready.svg, ready.bounds, scale));
       } catch {
         tell(FAILED);
         return;
@@ -248,15 +251,13 @@ export function ExportDialog() {
         setRasterizing(false);
       }
     } else if (ready.text !== null) {
-      downloadText(
-        ready.fileName,
-        ready.text,
+      const mime =
         state.format === 'svg'
           ? 'image/svg+xml'
           : schemaFormat !== null
             ? 'text/plain'
-            : 'application/json',
-      );
+            : 'application/json';
+      saveFile(ready.fileName, new Blob([ready.text], { type: mime }));
       // Only a JSON file is a backup (005's "last export").
       if (state.format === 'json') markExported();
     }
@@ -526,18 +527,21 @@ export function ExportDialog() {
           >
             Copy
           </Button>
-          <Button
-            variant="primary"
-            disabled={ready === null || rasterizing || pngBlocked || sqlBlocked}
-            aria-describedby={sqlBlocked ? SQL_BLOCKED_BANNER_ID : undefined}
-            aria-busy={rasterizing}
-            onClick={() => {
-              void download();
-            }}
-          >
-            <Download aria-hidden />
-            Download
-          </Button>
+          {/* No download without a way to save: the host of an embed may not offer one (067). */}
+          {saveFile !== null && (
+            <Button
+              variant="primary"
+              disabled={ready === null || rasterizing || pngBlocked || sqlBlocked}
+              aria-describedby={sqlBlocked ? SQL_BLOCKED_BANNER_ID : undefined}
+              aria-busy={rasterizing}
+              onClick={() => {
+                void download();
+              }}
+            >
+              <Download aria-hidden />
+              Download
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

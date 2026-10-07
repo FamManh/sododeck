@@ -176,6 +176,7 @@ export function SaveStatus({ variant = 'text' }: { variant?: 'text' | 'icon' }) 
   const { mode } = useSaveControls();
   const status = useSaveStatusStore((s) => s.status);
 
+  if (mode === 'host') return null;
   if (mode === 'demo') {
     return (
       <span role="status" className="px-1 text-caption whitespace-nowrap text-ink-muted">

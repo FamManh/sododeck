@@ -43,6 +43,13 @@ export const router = createBrowserRouter([
             Component: (await import('../routes/design-gallery-page')).DesignGalleryPage,
           }),
         },
+        {
+          // The fake host for the embedded editor (067); not in production builds.
+          path: '/embed-host',
+          lazy: async () => ({
+            Component: (await import('../routes/embed-host-page')).EmbedHostPage,
+          }),
+        },
       ]
     : []),
   { path: '*', Component: NotFoundPage },

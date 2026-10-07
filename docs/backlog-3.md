@@ -161,6 +161,12 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 067-embed-host-protocol
 
+- **Status:** implemented (2026-10-07) — see [`spec.md`](../specs/067-embed-host-protocol/spec.md),
+  [`tasks.md`](../specs/067-embed-host-protocol/tasks.md) and
+  [ADR 0049](decisions/0049-embeddable-editor-host-protocol.md). Undo of an outside change follows
+  066 (the applied file is not an undo step). The clarified spec replaces the draft below where
+  they differ: whole-file messages over a 100 ms window, `blocked` read-only state for invalid
+  files, host abilities, no "Saved" state, picture paths written with `setPicturePath`.
 - **Milestone:** after 066 · **Depends on:** 066; H1 · **Estimate:** 5 d
 - **Goal:** The editor runs inside any host page that speaks one documented protocol, with no
   IndexedDB, library, service worker or telemetry.

@@ -4,11 +4,13 @@ import { Input } from '@sododeck/ui/components/input';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ExternalLink, Link2, Pencil, X } from 'lucide-react';
+import { Copy, ExternalLink, Link2, Pencil, X } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 
-import { openLink, parseLinkInput } from '../../lib/links';
+import { copyText } from '../../lib/clipboard';
+import { parseLinkInput } from '../../lib/links';
 import { useUiStore } from '../../state/ui-store';
+import { useOpenLink } from '../embed-host-context';
 import { FieldError } from '../field-edit';
 import { FieldLabel } from './field-label';
 
@@ -28,6 +30,7 @@ export function LinksField({
   onCommit: (links: Link[] | null) => void;
 }) {
   const id = useId();
+  const openLink = useOpenLink();
   const links = value ?? [];
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +73,7 @@ export function LinksField({
                       }
                     }}
                   />
-                ) : safe ? (
+                ) : safe && openLink !== null ? (
                   <a
                     href={link.url}
                     target="_blank"
@@ -93,13 +96,26 @@ export function LinksField({
                     />
                   </a>
                 ) : (
-                  // An imported link with another scheme is shown, never opened.
+                  // An imported link with another scheme is shown, never opened; so is any link
+                  // when the host cannot open links (067), with a copy action instead.
                   <span
                     title={link.url}
                     className="min-w-0 flex-1 truncate text-body-sm text-ink-secondary"
                   >
                     {label}
                   </span>
+                )}
+                {openLink === null && editing !== i && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Copy link ${label}`}
+                    onClick={() => {
+                      void copyText(link.url);
+                    }}
+                  >
+                    <Copy />
+                  </Button>
                 )}
                 {editing !== i && (
                   <Button

@@ -4,7 +4,13 @@
  * them to its blob store before calling `addImages`, so a document never names a picture the store
  * lacks (another tab can show it at once).
  */
-import type { Id, Image, Size } from '@sododeck/schema';
+import {
+  checkPicturePath,
+  PATH_VIOLATION_TEXT,
+  type Id,
+  type Image,
+  type Size,
+} from '@sododeck/schema';
 
 import { type AssetId, type AssetMeta, metaOf } from '../assets';
 import { jsonEqual, toY, type YObject, type YValue } from '../convert';
@@ -280,5 +286,34 @@ export function setImageFlip(
       if (on) writeField(map, 'images', key, true);
       else map.delete(key);
     }
+  });
+}
+
+/**
+ * Records where the host stored a picture (067): `path`, relative to the deck file, written into
+ * `meta.assets[id]`; `null` removes it. Untracked: saved and synced, never an undo step, because
+ * where the bytes live is a fact about storage, not an edit the user made. `invalid` for a path
+ * the format refuses (`checkPicturePath`), `not-found` for a picture the deck does not have.
+ * Writes nothing when the value is already there.
+ */
+export function setPicturePath(ctx: EditContext, id: AssetId, path: string | null): void {
+  const entry = assetsMap(ctx.doc)?.get(id);
+  if (entry === undefined) {
+    throw new DeckEditError('not-found', [
+      { path: 'asset', message: `Picture "${id}" does not exist.` },
+    ]);
+  }
+  if (path !== null) {
+    const violation = checkPicturePath(path);
+    if (violation !== null) {
+      throw new DeckEditError('invalid', [
+        { path: 'path', message: `The picture path ${PATH_VIOLATION_TEXT[violation]}` },
+      ]);
+    }
+  }
+  if ((entry.get('path') ?? null) === path) return;
+  ctx.transactUntracked(() => {
+    if (path === null) entry.delete('path');
+    else entry.set('path', path);
   });
 }

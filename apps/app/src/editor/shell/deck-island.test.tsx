@@ -12,6 +12,7 @@ import { playbackDeck } from '../../test/flow-fixtures';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { SaveContext } from '../save-context';
 import { useCurrentViewSync } from '../views/use-view-sync';
+import { WebDeckServicesProvider } from '../../test/web-deck-services-provider';
 import { DeckIsland } from './deck-island';
 
 function Island() {
@@ -19,7 +20,9 @@ function Island() {
   const deck = useDeckSnapshot(useEditor().doc);
   return (
     <MemoryRouter>
-      <DeckIsland deck={deck} />
+      <WebDeckServicesProvider>
+        <DeckIsland deck={deck} />
+      </WebDeckServicesProvider>
     </MemoryRouter>
   );
 }
@@ -80,6 +83,25 @@ describe('DeckIsland (018 contract "Deck island")', () => {
 
     await user.click(within(menu).getByRole('menuitem', { name: 'Deck settings' }));
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
+  });
+
+  it('has no library items without deck services (embed)', async () => {
+    const user = userEvent.setup();
+    function Embedded() {
+      const deck = useDeckSnapshot(useEditor().doc);
+      return (
+        <MemoryRouter>
+          <DeckIsland deck={deck} />
+        </MemoryRouter>
+      );
+    }
+    renderWithEditor(<Embedded />, shop);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    const menu = screen.getByRole('menu', { name: 'Deck menu' });
+    for (const name of ['All decks', 'Import…']) {
+      expect(within(menu).queryByRole('menuitem', { name })).not.toBeInTheDocument();
+    }
+    expect(within(menu).getByRole('menuitem', { name: 'Export…' })).toBeInTheDocument();
   });
 
   it('switches the theme from its menu (§g-60)', async () => {

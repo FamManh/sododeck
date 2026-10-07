@@ -1,32 +1,13 @@
-import { createEditor, isLegacyLayout, type DeckDoc } from '@sododeck/model';
-import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
-import { ReactFlowProvider } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLoaderData, useNavigate, useOutlet, useParams } from 'react-router';
+import { isLegacyLayout, type DeckDoc } from '@sododeck/model';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLoaderData } from 'react-router';
 
-import { dbPictureStore, memoryPictureStore, PictureStoreContext } from '../images/picture-store';
-import { Announcer } from '../editor/announcer';
-import { Canvas } from '../editor/canvas';
-import { CommandPalette } from '../editor/command-palette/command-palette';
-import { ConfirmDeleteDialog } from '../editor/confirm-delete-dialog';
 import { DeckDeletedDialog } from '../editor/deck-deleted-dialog';
-import { useFlowShortcuts, usePlaybackShortcuts } from '../editor/flows/use-flow-shortcuts';
-import { useFlowSync } from '../editor/flows/use-flow-sync';
-import { fitMissingFrames, openDeck, type DeckSource } from '../editor/open-deck';
-import { SaveContext, type SaveControls } from '../editor/save-context';
-import { nextProblem } from '../editor/problems/next-problem';
-import { ProblemsProvider } from '../editor/problems/problems-provider';
-import { useGoToProblem } from '../editor/problems/use-go-to-problem';
-import { useProblems } from '../editor/problems/use-problems';
-import { CanvasShell } from '../editor/shell/canvas-shell';
-import { ShellChrome } from '../editor/shell/shell-chrome';
-import { TopBar } from '../editor/top-bar';
-import { RuleNavContext, type RuleNav } from '../editor/rules/rule-nav';
-import { useEditorShortcuts } from '../editor/use-canvas-shortcuts';
-import { EditorProvider } from '../model/editor-context';
-import { useEditor } from '../model/use-editor';
-import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
-import { useUiStore } from '../state/ui-store';
+import { EditorShell } from '../editor/editor-shell';
+import { openDeck, type DeckSource } from '../editor/open-deck';
+import { type SaveControls } from '../editor/save-context';
+import { dbPictureStore, memoryPictureStore } from '../images/picture-store';
+import { readDeck } from '../model/use-deck-snapshot';
 import { sweepBlobs } from '../storage/blob-gc';
 import { attachDeckChannel } from '../storage/deck-channel';
 import { attachDeckPersistence, type DeckPersistence } from '../storage/deck-persistence';
@@ -35,104 +16,18 @@ import { isOwnUpdate } from '../storage/origins';
 import { useSaveStatusStore } from '../storage/save-status';
 import type { DeckLoaderData } from './deck-loader';
 import { DeckNotFoundPage } from './deck-not-found-page';
+import { useWebDeckServices } from './web-deck-services';
 
-/**
- * The canvas screen (the deck route's default), canvas-first (018, ADR 0014): the canvas fills
- * the window and every control floats over it. Flow keys (006) belong to this screen only.
- */
-export function CanvasScreen() {
-  const editor = useEditor();
-  const deck = useDeckSnapshot(editor.doc);
-  const navigate = useNavigate();
-  useFlowShortcuts();
-  usePlaybackShortcuts();
-  const ruleNav = useMemo<RuleNav>(
-    () => ({
-      openRules: (ruleId, options) => {
-        void navigate(ruleId === undefined ? 'rules' : `rules/${encodeURIComponent(ruleId)}`, {
-          state: options?.newRule === true ? { newRule: true } : undefined,
-        });
-      },
-    }),
-    [navigate],
-  );
-
-  return (
-    <RuleNavContext value={ruleNav}>
-      <CanvasShell canvas={<Canvas />}>
-        <ShellChrome
-          deck={deck}
-          onOpenRules={() => {
-            ruleNav.openRules();
-          }}
-        />
-      </CanvasShell>
-    </RuleNavContext>
-  );
-}
-
-/**
- * What both screens share (research R8): the top bar, the delete confirmation, the live region,
- * document-wide keys and flow sync. The child route (the rule editor) renders below the top bar;
- * without one, the canvas screen does.
- */
-function EditorChrome() {
-  const editor = useEditor();
-  const deck = useDeckSnapshot(editor.doc);
-  const outlet = useOutlet();
-  const navigate = useNavigate();
-  const { deckId } = useParams();
-  const screen = outlet === null ? 'canvas' : 'rules';
-  const deckPath = deckId === undefined ? '.' : `/deck/${encodeURIComponent(deckId)}`;
-  const openRules = (ruleId?: string) => {
-    void navigate(
-      ruleId === undefined
-        ? `${deckPath}/rules`
-        : `${deckPath}/rules/${encodeURIComponent(ruleId)}`,
-      { state: undefined },
-    );
-  };
-  const navigateToCanvas = () => {
-    void navigate(deckPath);
-  };
-  const problems = useProblems();
-  const goToProblem = useGoToProblem({ screen, openRules, navigateToCanvas });
-  useEditorShortcuts({
-    canvas: screen === 'canvas',
-    onProblem: (direction) => {
-      const ui = useUiStore.getState();
-      const next = nextProblem(problems?.list ?? [], ui.problemCursor, direction);
-      if (next === null) ui.announce('No problems');
-      else goToProblem(next);
-    },
-  });
-  useFlowSync();
-
-  return (
-    <div className="h-dvh bg-app">
-      {screen === 'rules' ? (
-        <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)]">
-          <TopBar deckName={deck.name ?? 'Untitled deck'} />
-          {outlet}
-        </div>
-      ) : (
-        <CanvasScreen />
-      )}
-      <CommandPalette screen={screen} openRules={openRules} navigateToCanvas={navigateToCanvas} />
-      <ConfirmDeleteDialog deck={deck} />
-      <Announcer />
-    </div>
-  );
-}
-
-/** Attaches storage to a stored deck and exposes flush/export bookkeeping to the editor. */
 /** Loader data of a deck the editor can open. */
 type OpenDeckData = Exclude<DeckLoaderData, { kind: 'not-found' }>;
 
+/** Attaches storage to a stored deck and exposes flush/export bookkeeping to the editor. */
 function useSaveControlsFor(data: OpenDeckData, doc: DeckDoc) {
   const persistenceRef = useRef<DeckPersistence | null>(null);
 
-  useEffect(() => {
+  // A layout effect: it must run before the shell's own effects (fitting frames), which are
+  // children's passive effects, so those writes are saved.
+  useLayoutEffect(() => {
     if (data.kind === 'memory') {
       // Storage is unavailable (research R15): the first edit shows the error state.
       const onUpdate = (_: Uint8Array, origin: unknown) => {
@@ -176,13 +71,10 @@ function useSaveControlsFor(data: OpenDeckData, doc: DeckDoc) {
   );
 }
 
-function EditorShell({ data, opened }: { data: OpenDeckData; opened: DeckDoc }) {
-  const [doc] = useState(() => {
-    useUiStore.getState().resetForDeck(data.kind === 'stored' ? data.deckId : null);
-    useSaveStatusStore.getState().reset();
-    return opened;
-  });
+/** The web editor: the shared shell with the library's storage, pictures and services around it. */
+function WebEditor({ data, doc }: { data: OpenDeckData; doc: DeckDoc }) {
   const save = useSaveControlsFor(data, doc);
+  const services = useWebDeckServices();
   const pictures = useMemo(
     () => (data.kind === 'stored' ? dbPictureStore(data.db, data.deckId) : memoryPictureStore()),
     [data],
@@ -193,41 +85,24 @@ function EditorShell({ data, opened }: { data: OpenDeckData; opened: DeckDoc }) 
     const used = (readDeck(doc).images ?? []).map((image) => image.asset);
     void sweepBlobs(data.db, data.deckId, used).catch(() => undefined);
   }, [data, doc]);
-  // After storage is attached (effects run in order), so the fitted frames and the freed notes
-  // are saved and synced. A deck stored before ADR 0041 may still pin notes: they become free
-  // where they are shown.
-  useEffect(() => {
-    const fitter = createEditor(doc);
-    fitter.freeLegacyStickies();
-    fitMissingFrames(fitter, readDeck(doc));
-    fitter.destroy();
-  }, [doc]);
 
   return (
-    <SaveContext value={save}>
-      <PictureStoreContext value={pictures}>
-        <EditorProvider doc={doc}>
-          <ProblemsProvider doc={doc}>
-            <ToastProvider>
-              <ReactFlowProvider>
-                <EditorChrome />
-              </ReactFlowProvider>
-              {data.kind === 'stored' && (
-                <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
-              )}
-              <Toaster />
-            </ToastProvider>
-          </ProblemsProvider>
-        </EditorProvider>
-      </PictureStoreContext>
-    </SaveContext>
+    <EditorShell
+      doc={doc}
+      save={save}
+      pictures={pictures}
+      services={services}
+      deckKey={data.kind === 'stored' ? data.deckId : null}
+      extras={
+        data.kind === 'stored' ? (
+          <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
+        ) : null
+      }
+    />
   );
 }
 
-/**
- * Editor shell. The Yjs document is the single source of truth: every panel renders from
- * `useDeckSnapshot` and writes through `useEditor()`; storage attaches to it as a provider.
- */
+/** The editor route: storage attaches to the deck's document as a provider (the web app). */
 export function EditorPage() {
   const data = useLoaderData<DeckLoaderData>();
   if (data.kind === 'not-found') return <DeckNotFoundPage />;
@@ -247,5 +122,5 @@ function DeckGate({ data }: { data: OpenDeckData }) {
   if (data.kind === 'stored' && isLegacyLayout(doc)) {
     return <DeckNotFoundPage reason="unsupported" />;
   }
-  return <EditorShell data={data} opened={doc} />;
+  return <WebEditor data={data} doc={doc} />;
 }
