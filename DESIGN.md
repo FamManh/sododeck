@@ -266,7 +266,7 @@ The lift is paint-only: it never moves the card's box for snapping, hit tests, e
 
 #### Connectors (117–119)
 
-- **Line types** (§g-64): **curved** (default; a cubic leaving each end along the side normal with control distance max(28, 0.42 × length)), **elbow** (orthogonal, 017's route) and **straight**. The design only draws curved.
+- **Line types** (§g-64): **curved** (default for connectors; a cubic leaving each end along the side normal with control distance max(28, 0.42 × length)), **elbow** (orthogonal, 017's route) and **straight**. The design only draws curved. A table relationship defaults to **elbow** (ADR 0046).
 - **States:** played Secondary 2.5px; current Deck Orange 3.25px over an 8px orange halo at 18 %; upcoming dashed `2 6` with round caps; dimmed 20 % opacity; highlighted Ink 2.75px; error path Clay 2.5px dashed `7 4` ending in an × (no arrow).
 - **Label:** 20 tall pill, 11 / 600, Surface fill, 1.5px Border-strong, Secondary text. Current step: solid Deck Orange with On Primary text. Error: Clay Soft fill, Clay border and text with an ⊗ icon.
 - **Bundle count:** 22px Ink pill "×n" (11.5 / 700, Surface text) with a 2px canvas ring (118, 119).
@@ -410,11 +410,11 @@ Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; onl
 | Level | Zoom | Table shows |
 | --- | --- | --- |
 | Landscape | ≤ 30 % | the table icon on the colour fill; no text |
-| System | 31–50 % | name, PK / FK dots and the column count |
+| System | 31–50 % | the same rows as Container, so a zoomed-out schema still reads |
 | Container | 51–150 % | keys only and "+n columns" |
 | Component | > 150 % | all columns, up to the row limit |
 
-A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; at System and Landscape connectors run table to table from the title row and merge ×n.
+A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; rows are drawn at every level but Landscape; at Landscape connectors run table to table from the title row and merge ×n.
 
 #### Contrast (FR-013)
 

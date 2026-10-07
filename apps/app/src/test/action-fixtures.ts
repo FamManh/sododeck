@@ -65,8 +65,13 @@ export function actionContext(
 }
 
 /** Labels per section, as a menu or the toolbar would show them. */
-export function labels(target: MenuTarget, surface: Surface, mode: Mode = 'edit'): string[][] {
-  return actionsFor(ACTIONS, actionContext(target, mode), surface).map((section) =>
+export function labels(
+  target: MenuTarget,
+  surface: Surface,
+  mode: Mode = 'edit',
+  file: SododeckFile = actionDeck,
+): string[][] {
+  return actionsFor(ACTIONS, actionContext(target, mode, file), surface).map((section) =>
     section.actions.map((action) => action.label),
   );
 }

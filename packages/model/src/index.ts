@@ -169,6 +169,7 @@ export {
   type Dash,
   type EdgeLineStyle,
   type EdgeShape,
+  type ShapedEdge,
   type Width,
 } from './edge-shape';
 export type { EdgeStylePatch } from './ops/edge-style';

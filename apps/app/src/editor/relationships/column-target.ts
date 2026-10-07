@@ -7,7 +7,7 @@ import { isDbTable } from '@sododeck/model';
 import type { DbColumn, Id, SododeckFile } from '@sododeck/schema';
 
 import { cardBox, tableLayoutOf } from '../canvas-geometry';
-import type { Level } from '../levels';
+import { rowsDrawn, type Level } from '../levels';
 import type { Box, Point } from '../routing/route-path';
 import { tableContextOf } from '../table-keys';
 import { rowAtSlot, TABLE_CARD, type TableLayout } from '../table-layout';
@@ -49,15 +49,15 @@ export function columnTargetAt(
 
 /**
  * The drawn tables a relationship drag can land on, in draw order (042): their boxes and layouts
- * at `level`, the same numbers the cards are drawn with. Rows exist only from 90 %, so below it
- * there are none.
+ * at `level`, the same numbers the cards are drawn with. Rows are not drawn at Landscape, so there
+ * are none there.
  */
 export function targetTablesOf(
   deck: SododeckFile,
   visible: ReadonlySet<Id>,
   level: Level,
 ): TargetTable[] {
-  if (level !== 'container' && level !== 'component') return [];
+  if (!rowsDrawn(level)) return [];
   const context = tableContextOf(deck);
   return deck.nodes.flatMap((node, index) => {
     if (!isDbTable(node) || !visible.has(node.id)) return [];

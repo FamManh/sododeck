@@ -113,8 +113,6 @@ export interface TableLayout {
   /** Whether the column body (hairline and what follows) is drawn. */
   hasBody: boolean;
   columnCount: number;
-  /** System level content: key dots and the column count. */
-  compact: { pkCount: number; fkCount: number; columnCount: number };
 }
 
 type Node = SododeckFile['nodes'][number];
@@ -433,11 +431,6 @@ export function tableLayout(
     titleCenter: titleTop + t.titleLineHeight / 2,
     hasBody,
     columnCount: columns.length,
-    compact: {
-      pkCount: columns.filter((c) => c.pk === true).length,
-      fkCount: columns.filter((c) => c.pk !== true && fk.has(c.id)).length,
-      columnCount: columns.length,
-    },
   };
 }
 

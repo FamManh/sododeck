@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import ELK from 'elkjs/lib/elk.bundled.js';
+import type { ElkNode } from 'elkjs/lib/elk-api';
 
 import {
   applyPins,
@@ -232,5 +233,72 @@ describe('computeLayout group ends (050 US4)', () => {
     // Left to right: the source sits left of the group it feeds.
     expect(a !== undefined && m !== undefined && a.x + a.width <= m.x).toBe(true);
     expectNoOverlap(request, result);
+  });
+});
+
+describe('table relationships on rows', () => {
+  const table = (id: string, rows: number) => ({ id, width: 240, height: 60 + rows * 24 });
+  const rel = (id: string, parent: string, child: string, parentRow: number, childRow: number) => ({
+    id,
+    source: parent,
+    target: child,
+    sourceY: 72 + parentRow * 24,
+    targetY: 72 + childRow * 24,
+  });
+  // The schema from the bug report: one candidate table referenced by four, a cycle with the
+  // calculation snapshot, and a queue on the vessel snapshot.
+  const request: LayoutRequest = {
+    nodes: [
+      table('vessel', 21),
+      table('candidate', 39),
+      table('apm', 9),
+      table('invoice', 11),
+      table('history', 24),
+      table('calc', 23),
+      table('queue', 16),
+    ],
+    groups: [],
+    edges: [
+      rel('e1', 'vessel', 'candidate', 0, 30),
+      rel('e2', 'candidate', 'apm', 0, 1),
+      rel('e3', 'candidate', 'invoice', 0, 1),
+      rel('e4', 'candidate', 'history', 0, 1),
+      rel('e5', 'candidate', 'calc', 0, 1),
+      rel('e6', 'calc', 'candidate', 0, 32),
+      rel('e7', 'calc', 'history', 0, 23),
+      rel('e8', 'vessel', 'queue', 0, 1),
+    ],
+    pinned: {},
+  };
+
+  it('lays tables out in layers, without overlap, the referenced table first', async () => {
+    const result = await computeLayout(request);
+    expectNoOverlap(request, result);
+    const x = (id: string) => result[id]?.x ?? NaN;
+    expect(x('vessel')).toBeLessThan(x('candidate'));
+    expect(x('vessel')).toBeLessThan(x('queue'));
+    expect(x('candidate')).toBeLessThan(x('apm'));
+    expect(x('candidate')).toBeLessThan(x('invoice'));
+    expect(x('calc')).toBeLessThan(x('history'));
+  });
+
+  it('gives each linked row a fixed port on the side it leaves or enters', async () => {
+    let sent: ElkNode | undefined;
+    const spy = {
+      layout: (graph: ElkNode) => {
+        sent = graph;
+        return elk.layout(graph);
+      },
+    };
+    await layoutWith(request, spy as unknown as Parameters<typeof layoutWith>[1]);
+    const candidate = sent?.children?.find((c) => c.id === 'candidate');
+    expect(candidate?.layoutOptions).toMatchObject({ 'elk.portConstraints': 'FIXED_POS' });
+    expect(candidate?.ports).toContainEqual(
+      expect.objectContaining({ id: 'e1:target', y: 72 + 30 * 24 }),
+    );
+    expect(candidate?.ports).toContainEqual(expect.objectContaining({ id: 'e2:source', x: 240 }));
+    expect(sent?.edges).toContainEqual(
+      expect.objectContaining({ id: 'e1', sources: ['e1:source'], targets: ['e1:target'] }),
+    );
   });
 });

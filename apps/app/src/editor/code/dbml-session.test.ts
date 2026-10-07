@@ -37,7 +37,13 @@ const writerOf = (deck: SododeckFile) => {
 
 let counter = 0;
 
-function setup(options: { scope?: 'schema' | 'selection'; selection?: string[] } = {}) {
+function setup(
+  options: {
+    scope?: 'schema' | 'selection';
+    selection?: string[];
+    arrange?: ConstructorParameters<typeof DbmlSession>[0]['arrange'];
+  } = {},
+) {
   const doc = fromJSON(shopDeck('postgres'));
   const editor = createEditor(doc, { captureTimeout: 5 });
   const state = { text: '' };
@@ -60,6 +66,7 @@ function setup(options: { scope?: 'schema' | 'selection'; selection?: string[] }
     onChange: (view) => views.push(view),
     onRemoved: (r) => removed.push(r),
     onAdded: (a) => added.push(a),
+    ...(options.arrange === undefined ? {} : { arrange: options.arrange }),
     sessionId: 't',
   });
   session.setScope(options.scope ?? 'schema');
@@ -348,6 +355,44 @@ describe('DbmlSession', () => {
       await wait('applied');
       expect(session.view().problems.filter((p) => p.severity === 'error')).toEqual([]);
       expect(toJSON(doc).nodes.filter((n) => n.title === 'notes')).toHaveLength(1);
+    });
+  });
+
+  describe('pasted tables', () => {
+    const paste = (text: string) =>
+      `${text}\nTable a1 {\n  id int [pk]\n}\nTable b1 {\n  id int [pk]\n  a_id int [ref: > a1.id]\n}\n`;
+
+    it('lays out two or more added tables in the same undo step', async () => {
+      const original = shopDeck('postgres');
+      const arrange = vi.fn((_deck: SododeckFile, ids: readonly string[]) =>
+        Promise.resolve(new Map(ids.map((id, i) => [id, { x: 5000 + i * 300, y: 7000 }]))),
+      );
+      const { doc, editor, session, type, wait } = setup({ arrange });
+      session.setFocused(true);
+      type(paste(shopText()));
+      await wait('applied');
+      await vi.waitFor(() => {
+        expect(toJSON(doc).nodes.find((n) => n.title === 'b1')?.position?.y).toBe(7000);
+      });
+      expect(arrange).toHaveBeenCalledTimes(1);
+      expect(arrange.mock.calls[0]?.[1]).toHaveLength(2);
+      expect(editor.undo()).toBe(true);
+      expect(toJSON(doc)).toEqual(original);
+    });
+
+    it('keeps the plan’s place for one added table, and when the layout fails', async () => {
+      const arrange = vi.fn(() => Promise.reject(new Error('no worker')));
+      const { doc, session, type, wait } = setup({ arrange });
+      session.setFocused(true);
+      type(`${shopText()}\nTable solo {\n  id int [pk]\n}\n`);
+      await wait('applied');
+      expect(arrange).not.toHaveBeenCalled();
+      type(paste(shopText()));
+      await wait('applied');
+      await vi.waitFor(() => {
+        expect(arrange).toHaveBeenCalledTimes(1);
+      });
+      expect(toJSON(doc).nodes.find((n) => n.title === 'a1')?.position).toBeDefined();
     });
   });
 });

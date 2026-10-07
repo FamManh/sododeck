@@ -15,7 +15,7 @@
  * Writes go through `applySchemaPlan` in one merged batch keyed `dbml:<session>:<burst>`; the burst
  * number moves on after 2 s without typing, on blur, on undo / redo and on any other local write.
  */
-import type { DeckEditor } from '@sododeck/model';
+import { baseViewId, resolveViews, type DeckEditor, type Point } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { applySchemaPlan } from '../../db/sync/apply-schema-plan';
@@ -60,6 +60,11 @@ export interface SessionDeps {
   onRemoved?: (removed: { id: Id; name: string }[]) => void;
   /** Tables an apply added (Selection: they join the selection). */
   onAdded?: (ids: Id[]) => void;
+  /**
+   * Lays out tables an apply added together (two or more: a paste), with their relationships.
+   * Off the main thread; the positions join the apply's undo step. Absent: they keep the plan's.
+   */
+  arrange?: (deck: SododeckFile, ids: readonly Id[]) => Promise<ReadonlyMap<Id, Point>>;
   /** Called on every state or problem change. */
   onChange?: (view: SessionView) => void;
   sessionId?: string;
@@ -288,5 +293,49 @@ export class DbmlSession {
     }
     if (result.addedTableIds.length > 0) this.deps.onAdded?.(result.addedTableIds);
     if (result.removedTables.length > 0) this.deps.onRemoved?.(result.removedTables);
+    if (result.addedTableIds.length > 1) void this.arrangeAdded(result.addedTableIds);
+  }
+
+  /**
+   * Moves tables just added to where the layout puts them, in the apply's undo step. A table that
+   * is gone or was moved meanwhile keeps its place.
+   */
+  private async arrangeAdded(ids: readonly Id[]): Promise<void> {
+    const arrange = this.deps.arrange;
+    if (arrange === undefined) return;
+    const merge = this.mergeKey();
+    const placed = this.deps.getDeck();
+    const wanted = new Set(ids);
+    const placedAt = new Map(
+      placed.nodes.filter((n) => wanted.has(n.id)).map((n) => [n.id, n.position]),
+    );
+    let positions: ReadonlyMap<Id, Point>;
+    try {
+      positions = await arrange(placed, ids);
+    } catch {
+      return;
+    }
+    if (this.disposed) return;
+    const now = this.deps.getDeck();
+    const moves: Record<Id, Point> = {};
+    for (const node of now.nodes) {
+      const to = positions.get(node.id);
+      const was = placedAt.get(node.id);
+      if (to === undefined || was === undefined) continue;
+      if (node.position?.x === was.x && node.position.y === was.y) moves[node.id] = to;
+    }
+    if (Object.keys(moves).length === 0) return;
+    const { editor } = this.deps;
+    this.applying = true;
+    try {
+      editor.batch(
+        () => {
+          editor.moveInView(baseViewId(resolveViews(now)), moves);
+        },
+        { merge },
+      );
+    } finally {
+      this.applying = false;
+    }
   }
 }

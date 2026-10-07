@@ -6,9 +6,23 @@ import type { ColorRef, Edge, EdgeShape, EdgeStyle } from '@sododeck/schema';
 
 export type { EdgeShape };
 
-/** The stored shape; else `elbow` when a route offset exists (pre-029 files); else `curved`. */
-export function edgeShape(edge: Pick<Edge, 'route' | 'style'>): EdgeShape {
-  return edge.style?.shape ?? (edge.route?.offset !== undefined ? 'elbow' : 'curved');
+/** The keys that decide a connector's line type. */
+export type ShapedEdge = Pick<
+  Edge,
+  'route' | 'style' | 'cardinality' | 'fromColumns' | 'toColumns'
+>;
+
+/**
+ * The stored shape; else `elbow` when a route offset exists (pre-029 files) or for a table
+ * relationship (it reads row to row, so it runs in straight legs); else `curved`.
+ */
+export function edgeShape(edge: ShapedEdge): EdgeShape {
+  if (edge.style?.shape !== undefined) return edge.style.shape;
+  const relationship =
+    edge.cardinality !== undefined ||
+    (edge.fromColumns?.length ?? 0) > 0 ||
+    (edge.toColumns?.length ?? 0) > 0;
+  return edge.route?.offset !== undefined || relationship ? 'elbow' : 'curved';
 }
 
 export type Dash = NonNullable<EdgeStyle['dash']>;
@@ -24,7 +38,7 @@ export interface EdgeLineStyle {
 }
 
 /** Defaults: solid, 2 px (today's line since 029), no colour (the default grey), not animated. */
-export function edgeLineStyle(edge: Pick<Edge, 'route' | 'style'>): EdgeLineStyle {
+export function edgeLineStyle(edge: ShapedEdge): EdgeLineStyle {
   const style = edge.style;
   return {
     shape: edgeShape(edge),
