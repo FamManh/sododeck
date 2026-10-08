@@ -33,6 +33,9 @@ export function DeckInspectorStorage() {
         <FileText />
         Export .sododeck.md
       </Button>
+      <p className="text-body-sm text-ink-secondary">
+        .sododeck opens in Obsidian and VS Code. .sododeck.md adds search and links in Obsidian.
+      </p>
     </PanelSection>
   );
 }

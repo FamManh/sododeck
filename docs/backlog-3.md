@@ -331,7 +331,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 071-shared-vault-decks
 
-- **Status:** not started (added 2026-10-07, founder request).
+- **Status:** in progress (spec: `specs/071-shared-vault-decks/spec.md`; added 2026-10-07, founder request).
 - **Milestone:** after 070 · **Depends on:** 069 (VS Code extension), 070 (the `.sododeck.md` form
   and the Obsidian plugin) · **Estimate:** 2–3 d
 - **Goal:** one folder of decks that opens as a canvas in both Obsidian and VS Code, with the
@@ -375,7 +375,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   user's unsaved edits; an object removed by one side and edited by the other is kept with the
   edit. Do it when users report lost edits, or when 065 needs whole-deck `edit_deck` with
   `baseRevision`.
-- **`.sododeck.md` in other hosts and tools:** the code-editor extension (069, now 071) and the skill (027) open and validate the Markdown form too. (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
+- **`.sododeck.md` in other tools:** the skill (027) opens and validates the Markdown form too. (The code-editor extension moved into 071.) (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
 - **`.sododeck.svg`** / **`.sododeck.png`**: an image file that also carries the deck, so it renders
   on code hosts and in Markdown previews and still opens for editing.
 - **Links to notes and code:** a card or note links to a vault note or a workspace file and the
