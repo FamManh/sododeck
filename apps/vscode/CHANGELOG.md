@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 0.2.0
 
 - Opens `.sododeck.md` notes as a canvas, so one folder works in VS Code and Obsidian. Text you write outside the generated part of a note is kept on save; a Markdown file without the Sododeck marker stays a text file.
 - Pictures in notes: links written by Obsidian resolve inside the workspace.

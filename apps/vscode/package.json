@@ -2,7 +2,7 @@
   "name": "sododeck",
   "displayName": "Sododeck",
   "description": "Architecture and flow diagrams as .sododeck files: open them as a canvas in VS Code, save with the normal save, and keep them in your repo. Local only: no network, no telemetry.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "publisher": "Sododeck",
