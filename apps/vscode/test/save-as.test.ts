@@ -1,9 +1,11 @@
+import { fromMarkdown, isDeckMarkdown } from '@sododeck/model';
 import { describe, expect, it } from 'vitest';
 
 import { DeckDocument } from '../src/deck-document';
 import { rewritePicturePaths, saveDocumentAs } from '../src/save-as';
 import { deckWithPathPicture, emptyDeckText, PNG, PNG_ID } from './deck-fixtures';
 import { makeFakes } from './fakes';
+import { deckText, noteWithOwnText } from './note-fixtures';
 
 const OLD = 'file:///ws/docs/old.sododeck';
 const NEW = 'file:///ws/other/new.sododeck';
@@ -101,5 +103,24 @@ describe('rewritePicturePaths', () => {
   it('is the identity when nothing changes', () => {
     const text = deckWithPathPicture(PNG_ID, 'a/b.png');
     expect(rewritePicturePaths(text, new Map())).toBe(text);
+  });
+});
+
+describe('saveDocumentAs between forms', () => {
+  it('converts a plain deck to a note', async () => {
+    const fakes = makeFakes();
+    const text = deckText();
+    const doc = DeckDocument.fromDisk(OLD, text);
+    await saveDocumentAs(doc, null, 'file:///ws/other/new.sododeck.md', fakes);
+    const written = fakes.files.get('file:///ws/other/new.sododeck.md') ?? '';
+    expect(isDeckMarkdown(written)).toBe(true);
+    expect(fromMarkdown(written)).toMatchObject({ ok: true, deckText: text });
+  });
+
+  it('converts a note to a plain deck', async () => {
+    const fakes = makeFakes();
+    const doc = DeckDocument.fromDisk('file:///ws/a.sododeck.md', noteWithOwnText());
+    await saveDocumentAs(doc, null, NEW, fakes);
+    expect(fakes.files.get(NEW)).toBe(deckText());
   });
 });

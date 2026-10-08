@@ -63,25 +63,45 @@
           }
         ],
         "priority": "default"
+      },
+      {
+        "viewType": "sododeck.note",
+        "displayName": "Sododeck canvas (note)",
+        "selector": [
+          {
+            "filenamePattern": "*.sododeck.md"
+          }
+        ],
+        "priority": "option"
       }
     ],
     "commands": [
       {
         "command": "sododeck.newDeck",
-        "title": "New Sododeck deck",
+        "title": "New Sododeck",
+        "category": "Sododeck"
+      },
+      {
+        "command": "sododeck.newNote",
+        "title": "New Sododeck note",
+        "category": "Sododeck"
+      },
+      {
+        "command": "sododeck.copyAsSododeck",
+        "title": "Copy as .sododeck",
         "category": "Sododeck"
       },
       {
         "command": "sododeck.openInWeb",
         "title": "Open in Sododeck web",
         "category": "Sododeck",
-        "enablement": "activeCustomEditorId == sododeck.canvas"
+        "enablement": "activeCustomEditorId =~ /^sododeck\\.(canvas|note)$/"
       },
       {
         "command": "sododeck.openAsText",
         "title": "Open as text",
         "category": "Sododeck",
-        "enablement": "activeCustomEditorId == sododeck.canvas"
+        "enablement": "activeCustomEditorId =~ /^sododeck\\.(canvas|note)$/"
       }
     ],
     "menus": {
@@ -90,12 +110,22 @@
           "command": "sododeck.newDeck",
           "when": "explorerResourceIsFolder",
           "group": "navigation"
+        },
+        {
+          "command": "sododeck.newNote",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation"
+        },
+        {
+          "command": "sododeck.copyAsSododeck",
+          "when": "resourceFilename =~ /\\.sododeck\\.json$/",
+          "group": "navigation"
         }
       ],
       "editor/title": [
         {
           "command": "sododeck.openAsText",
-          "when": "activeCustomEditorId == sododeck.canvas",
+          "when": "activeCustomEditorId =~ /^sododeck\\.(canvas|note)$/",
           "group": "navigation"
         }
       ]

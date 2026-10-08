@@ -29,7 +29,7 @@ describe('revert', () => {
     await revertDocument(fakes.files, doc, session);
     await settle();
     expect(doc.text).toBe('DISK');
-    expect(doc.savedText).toBe('DISK');
+    expect(doc.savedDeckText).toBe('DISK');
     expect(doc.dirty).toBe(false);
     expect(editor.of('external-change')).toEqual([{ type: 'external-change', text: 'DISK' }]);
     expect(fakes.files.writes).toEqual([]);
@@ -57,7 +57,7 @@ describe('backup and restore', () => {
 
     const restored = await openDocument(fakes.files, DECK, BACKUP);
     expect(restored.text).toBe('UNSAVED');
-    expect(restored.savedText).toBe('DISK');
+    expect(restored.savedDeckText).toBe('DISK');
     expect(restored.dirty).toBe(true);
   });
 

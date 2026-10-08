@@ -1,4 +1,5 @@
 import { DeckDocument } from './deck-document';
+import { encode } from './file-codec';
 import { writeDeckFile } from './file-writer';
 import type { FilePort, Loc } from './ports';
 
@@ -34,7 +35,7 @@ export async function openDocument(files: FilePort, loc: Loc, backup?: Loc): Pro
 
 /**
  * Save (FR-007, FR-010): ask the canvas for anything pending, then write the canvas's last text
- * byte for byte. A clean document writes nothing. The only place besides save as and the new-deck
+ * byte for byte (a note: through the Markdown form, keeping the user's own text). A clean document writes nothing. The only place besides save as and the new-deck
  * command that writes the deck file.
  */
 export async function saveDocument(
@@ -45,8 +46,10 @@ export async function saveDocument(
   await session?.flush();
   if (!doc.dirty) return;
   const text = doc.text;
-  await writeDeckFile(files, doc.loc, text);
-  doc.markSaved(text);
+  // A note keeps the user's own text: the last file text is what `toMarkdown` merges into.
+  const fileText = encode(doc.kind, text, doc.fileText);
+  await writeDeckFile(files, doc.loc, fileText);
+  doc.markSaved(text, fileText);
 }
 
 /** Revert: the disk wins; the canvas shows it and the document is clean. */
@@ -61,7 +64,7 @@ export async function revertDocument(
     return;
   }
   doc.revertTo(disk);
-  session?.sendExternalChange(disk);
+  session?.sendExternalChange(doc.canvasText);
 }
 
 /** Hot exit (R7): the current text goes to the destination VS Code chose. */
@@ -70,5 +73,6 @@ export async function backupDocument(
   doc: DeckDocument,
   destination: Loc,
 ): Promise<void> {
-  await files.write(destination, new TextEncoder().encode(doc.text));
+  const fileText = doc.problems === null ? encode(doc.kind, doc.text, doc.fileText) : doc.fileText;
+  await files.write(destination, new TextEncoder().encode(fileText));
 }

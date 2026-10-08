@@ -1,41 +1,90 @@
+import { emptyDeckText } from '@sododeck/model';
+
+import { decode, kindOf, type FileKind, type Problem } from './file-codec';
 import type { Loc } from './ports';
 
 /**
- * One open deck file (data-model.md). Pure: the text is whatever the canvas last sent, kept byte
- * for byte, and `savedText` is what the disk held when we last read or wrote it. VS Code's own
- * changed mark follows `dirty` through the events the provider fires.
+ * One open deck file (data-model.md). Pure. `text` is always the deck text the canvas speaks,
+ * kept byte for byte; `fileText` is what the file held when we last read or wrote it (for a
+ * `.sododeck.md` note that is Markdown, and the `previous` that keeps the user's own text on
+ * save). VS Code's own changed mark follows `dirty` through the events the provider fires.
  */
 export class DeckDocument {
   loc: Loc;
-  /** The latest file text from the canvas, or the text the document started with. */
+  /** The latest deck text from the canvas, or the text the document started with. */
   text: string;
-  /** What the disk held when last read or written by us. */
-  savedText: string;
-  /** Text of our last save, to recognise its echo from the file watcher. */
+  /** The file text last read or written by us. */
+  fileText: string;
+  /** The deck text that file text decodes to; a clean document's `text` equals it. */
+  savedDeckText: string;
+  /** Set when a note cannot be decoded: read-only, never dirty, never saved. */
+  problems: Problem[] | null = null;
+  /** File text of our last save, to recognise its echo from the file watcher. */
   lastWritten: string | null = null;
   /** Highest `change.seq` seen; a stale or repeated one is ignored. */
   lastSeq = -1;
   /** The file was deleted on disk; the document stays and counts as changed so save is offered. */
   missing = false;
 
-  private constructor(loc: Loc, text: string, savedText: string) {
+  private constructor(loc: Loc, fileText: string) {
     this.loc = loc;
-    this.text = text;
-    this.savedText = savedText;
+    this.fileText = fileText;
+    this.text = '';
+    this.savedDeckText = '';
+    this.adopt(fileText);
+  }
+
+  get kind(): FileKind {
+    return kindOf(this.loc);
+  }
+
+  /**
+   * What the canvas should be shown: the deck text, or for an unreadable note the file text, so
+   * the canvas reports its own problems and stays read-only (067 FR-014).
+   */
+  get canvasText(): string {
+    return this.problems === null ? this.text : this.fileText;
   }
 
   /** A document that starts clean from the file's text. */
-  static fromDisk(loc: Loc, diskText: string): DeckDocument {
-    return new DeckDocument(loc, diskText, diskText);
+  static fromDisk(loc: Loc, fileText: string): DeckDocument {
+    return new DeckDocument(loc, fileText);
   }
 
   /** A document restored from a hot-exit backup: dirty against what the disk holds now. */
-  static fromBackup(loc: Loc, backupText: string, diskText: string): DeckDocument {
-    return new DeckDocument(loc, backupText, diskText);
+  static fromBackup(loc: Loc, backupFileText: string, diskFileText: string): DeckDocument {
+    const doc = new DeckDocument(loc, diskFileText);
+    const backup = doc.decodeFile(backupFileText);
+    if (doc.problems === null && backup.ok) doc.text = backup.deckText;
+    return doc;
   }
 
   get dirty(): boolean {
-    return this.text !== this.savedText || this.missing;
+    return this.problems === null && (this.text !== this.savedDeckText || this.missing);
+  }
+
+  /** Plain files pass through verbatim; the host session shows an empty one as an empty deck. */
+  private decodeFile(fileText: string): ReturnType<typeof decode> {
+    if (this.kind === 'plain') return { ok: true, deckText: fileText };
+    return fileText.trim() === ''
+      ? { ok: true, deckText: emptyDeckText() }
+      : decode('markdown', fileText);
+  }
+
+  /** Makes `fileText` the clean state of the document (or marks it unreadable). */
+  private adopt(fileText: string): void {
+    const decoded = this.decodeFile(fileText);
+    this.fileText = fileText;
+    if (decoded.ok) {
+      this.problems = null;
+      this.text = decoded.deckText;
+      this.savedDeckText = decoded.deckText;
+    } else {
+      this.problems = decoded.problems;
+      this.text = '';
+      this.savedDeckText = '';
+    }
+    this.missing = false;
   }
 
   /**
@@ -54,31 +103,40 @@ export class DeckDocument {
     this.lastSeq = -1;
   }
 
-  markSaved(text: string = this.text): void {
+  /** After a write: `deckText` is what the canvas had, `fileText` what went to the file. */
+  markSaved(deckText: string = this.text, fileText: string = deckText): void {
     this.missing = false;
-    this.savedText = text;
-    this.lastWritten = text;
+    this.savedDeckText = deckText;
+    this.fileText = fileText;
+    this.lastWritten = fileText;
   }
 
-  /** Revert: the disk text becomes both the text and the saved text, even when equal to ours. */
-  revertTo(diskText: string): void {
-    this.text = diskText;
-    this.savedText = diskText;
-    this.missing = false;
+  /** Revert: the disk text becomes the clean state, even when equal to ours. */
+  revertTo(diskFileText: string): void {
+    this.adopt(diskFileText);
   }
 
   /**
-   * The disk now holds `diskText`. False when it is nothing new (it equals what the canvas has,
-   * what we last read, or what we last wrote); true when it replaced the document. A replaced
-   * document is clean and keeps no unsaved edits.
+   * The disk now holds `diskFileText`. False when it is nothing new (it is what we last wrote, or
+   * decodes to the deck text the canvas has or the file had; only the user's own text changed).
+   * True when it replaced the document; a replaced document is clean and keeps no unsaved edits.
    */
-  applyDisk(diskText: string): boolean {
-    if (diskText === this.text || diskText === this.savedText || diskText === this.lastWritten) {
+  applyDisk(diskFileText: string): boolean {
+    if (this.problems === null && diskFileText === this.lastWritten) return false;
+    const decoded = this.decodeFile(diskFileText);
+    if (!decoded.ok) {
+      if (this.problems !== null && diskFileText === this.fileText) return false;
+      this.adopt(diskFileText);
+      return true;
+    }
+    if (
+      this.problems === null &&
+      (decoded.deckText === this.text || decoded.deckText === this.savedDeckText)
+    ) {
+      this.fileText = diskFileText;
       return false;
     }
-    this.text = diskText;
-    this.savedText = diskText;
-    this.missing = false;
+    this.adopt(diskFileText);
     return true;
   }
 }

@@ -43,11 +43,11 @@
 
 **Independent Test**: read the five docs; run quickstart step 1.
 
-- [ ] T007 [P] [US1] Create `docs/shared-folder.md`: one folder as vault and workspace; `.sododeck` opens in both; what `.sododeck.md` adds in Obsidian (search by card text, backlinks, links that follow moves) and that VS Code opens it too; how to bring in a `.sododeck.json` (rename or the copy command); picture rules per form; what happens on a simultaneous edit (the file wins). English; no other diagram tools named.
-- [ ] T008 [P] [US1] Update `apps/vscode/README.md` (shared-folder section, command table renamed to **New Sododeck**, new commands, note support, untrusted-workspace behavior) and `apps/vscode/CHANGELOG.md` (next version entry).
-- [ ] T009 [P] [US1] Update `apps/obsidian/README.md` (shared-folder section, the copy command) and check its command names say **New Sododeck**.
-- [ ] T010 [P] [US1] In `apps/app/src/editor/deck-inspector-storage.tsx` add one short help line under the export buttons: `.sododeck` opens in Obsidian and VS Code; `.sododeck.md` adds search and links in Obsidian. Add/extend `apps/app/src/editor/deck-inspector-storage.test.tsx` to assert the text by role/label.
-- [ ] T011 [US1] Update `docs/backlog-3.md` § 071 (status: in progress; link to the spec) and the "Later" bullet about `.sododeck.md` in other hosts; add a pointer from `AGENTS.md` repo map only if the file layout line needs it.
+- [x] T007 [P] [US1] Create `docs/shared-folder.md`: one folder as vault and workspace; `.sododeck` opens in both; what `.sododeck.md` adds in Obsidian (search by card text, backlinks, links that follow moves) and that VS Code opens it too; how to bring in a `.sododeck.json` (rename or the copy command); picture rules per form; what happens on a simultaneous edit (the file wins). English; no other diagram tools named.
+- [x] T008 [P] [US1] Update `apps/vscode/README.md` (shared-folder section, command table renamed to **New Sododeck**, new commands, note support, untrusted-workspace behavior) and `apps/vscode/CHANGELOG.md` (next version entry).
+- [x] T009 [P] [US1] Update `apps/obsidian/README.md` (shared-folder section, the copy command) and check its command names say **New Sododeck**.
+- [x] T010 [P] [US1] In `apps/app/src/editor/deck-inspector-storage.tsx` add one short help line under the export buttons: `.sododeck` opens in Obsidian and VS Code; `.sododeck.md` adds search and links in Obsidian. Add/extend `apps/app/src/editor/deck-inspector-storage.test.tsx` to assert the text by role/label.
+- [x] T011 [US1] Update `docs/backlog-3.md` § 071 (status: in progress; link to the spec) and the "Later" bullet about `.sododeck.md` in other hosts; add a pointer from `AGENTS.md` repo map only if the file layout line needs it.
 
 **Checkpoint**: SC-006 can be checked by reading the READMEs.
 
@@ -62,9 +62,9 @@
 - [ ] T012 [P] [US2] Write failing tests in `apps/vscode/test/commands.test.ts` for `copyAsSododeck(ports, source)`: valid deck → `<name>.sododeck` written with identical text and original unchanged; existing target → `<name> 1.sododeck`; invalid content → no file and a "not a Sododeck deck" warning; write failure → warning with the reason.
 - [ ] T013 [US2] Implement `copyAsSododeck` in `apps/vscode/src/commands.ts` (validate with `inspectDeckText`; never overwrite; write via `writeDeckFile`; open the new file). Make T012 pass.
 - [ ] T014 [US2] Wire it in `apps/vscode/package.json` (command `sododeck.copyAsSododeck`, title "Copy as .sododeck", explorer context menu `when: resourceFilename =~ /\.sododeck\.json$/`) and `apps/vscode/src/extension.ts`.
-- [ ] T015 [P] [US2] Write failing tests in `apps/obsidian/test/commands.test.ts` for `copyAsSododeck(vault, path)` with the same cases (use `fake-vault.ts`).
-- [ ] T016 [US2] Implement `copyAsSododeck` and `deckJsonFiles(vault)` in `apps/obsidian/src/commands.ts` (pure). Make T015 pass.
-- [ ] T017 [US2] In `apps/obsidian/src/main.ts` add the palette command "Copy .sododeck.json as .sododeck" with a suggest modal over `deckJsonFiles`, opening the new file; list the new `obsidian` import in `apps/obsidian/CLAUDE.md` boundaries if a new glue file is added. Spike S3 (mobile picker) recorded in `research.md` after a manual check.
+- [x] T015 [P] [US2] Write failing tests in `apps/obsidian/test/commands.test.ts` for `copyAsSododeck(vault, path)` with the same cases (use `fake-vault.ts`).
+- [x] T016 [US2] Implement `copyAsSododeck` and `deckJsonFiles(vault)` in `apps/obsidian/src/commands.ts` (pure). Make T015 pass.
+- [x] T017 [US2] In `apps/obsidian/src/main.ts` add the palette command "Copy .sododeck.json as .sododeck" with a suggest modal over `deckJsonFiles`, opening the new file; list the new `obsidian` import in `apps/obsidian/CLAUDE.md` boundaries if a new glue file is added. Spike S3 (mobile picker) recorded in `research.md` after a manual check.
 
 **Checkpoint**: US2 complete in both hosts.
 

@@ -98,8 +98,8 @@ export class DiskSync implements Disposable {
       doc.missing = false;
       return;
     }
-    // Invalid text is sent too: the canvas shows its problems and stays read-only (067 FR-014).
-    this.o.session()?.sendExternalChange(text);
+    // Invalid text is sent too (an unreadable note as its file text): the canvas shows its problems and stays read-only (067 FR-014).
+    this.o.session()?.sendExternalChange(doc.canvasText);
     if (wasDirty) {
       await this.o.clearMark();
       ports.ui.notify(REPLACED_NOTICE);
