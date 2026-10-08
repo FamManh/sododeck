@@ -27,12 +27,12 @@ const InlineTextarea = forwardRef<
       // An empty field is as wide as its placeholder; +2 keeps the caret inside.
       const empty = el.value === '' && el.placeholder !== '';
       if (empty) el.value = el.placeholder;
-      el.style.width = '0px';
-      el.style.width = `${String(el.scrollWidth + 2)}px`;
+      el.style.setProperty('width', COLLAPSED);
+      el.style.setProperty('width', `${String(el.scrollWidth + 2)}px`);
       if (empty) el.value = '';
     }
-    el.style.height = '0px';
-    el.style.height = `${String(el.scrollHeight)}px`;
+    el.style.setProperty('height', COLLAPSED);
+    el.style.setProperty('height', `${String(el.scrollHeight)}px`);
   }, [value, fitWidth]);
 
   return (
@@ -50,5 +50,8 @@ const InlineTextarea = forwardRef<
     />
   );
 });
+
+/** Collapse before measuring, so `scrollWidth` / `scrollHeight` are the content's own size. */
+const COLLAPSED = '0px';
 
 export { InlineTextarea };

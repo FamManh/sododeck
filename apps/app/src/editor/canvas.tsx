@@ -694,8 +694,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     if (previousViewId.current === viewId) return undefined;
     previousViewId.current = viewId;
     return fitBox(scopeBounds(deck, graph, level));
-    // Only the switch itself fits; later edits in the view must not move the viewport.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the switch itself fits; later edits in the view must not move the viewport
   }, [viewId]);
 
   return (

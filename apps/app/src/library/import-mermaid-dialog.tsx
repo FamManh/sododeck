@@ -69,8 +69,7 @@ function MermaidImportForm({
       started.current = true;
       void run(request.text);
     }
-    // Once, on open: the form remounts for every request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open: the form remounts for every request
   }, []);
 
   if (result !== null) {

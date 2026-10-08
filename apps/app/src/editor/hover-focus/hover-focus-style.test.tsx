@@ -31,7 +31,8 @@ function mount() {
   return { ...view, wrapper };
 }
 
-const css = (container: HTMLElement) => container.querySelector('style')?.textContent ?? '';
+const sheets = () => [...document.adoptedStyleSheets] as unknown as { text: string }[];
+const css = (_container?: HTMLElement) => sheets()[0]?.text ?? '';
 
 describe('HoverFocusStyle (034 R1)', () => {
   beforeEach(() => {
@@ -39,8 +40,8 @@ describe('HoverFocusStyle (034 R1)', () => {
   });
 
   it('renders no style and no marker without a hover focus', () => {
-    const { container, getByTestId } = mount();
-    expect(container.querySelector('style')).toBeNull();
+    const { getByTestId } = mount();
+    expect(sheets()).toHaveLength(0);
     expect(getByTestId('canvas')).not.toHaveAttribute('data-hover-focus');
   });
 
@@ -124,19 +125,19 @@ describe('HoverFocusStyle (034 R1)', () => {
   });
 
   it('drops the style and the marker when the hover clears, or the id is not visible', () => {
-    const { container, getByTestId } = mount();
+    const { getByTestId } = mount();
     act(() => {
       useUiStore.getState().setHoverFocus({ id: 'a', source: 'pointer' });
     });
     act(() => {
       useUiStore.getState().clearHoverFocus();
     });
-    expect(container.querySelector('style')).toBeNull();
+    expect(sheets()).toHaveLength(0);
     expect(getByTestId('canvas')).not.toHaveAttribute('data-hover-focus');
     act(() => {
       useUiStore.getState().setHoverFocus({ id: 'missing', source: 'pointer' });
     });
-    expect(container.querySelector('style')).toBeNull();
+    expect(sheets()).toHaveLength(0);
     expect(getByTestId('canvas')).not.toHaveAttribute('data-hover-focus');
   });
 
@@ -208,9 +209,9 @@ describe('HoverFocusStyle columns and relationships (042 R14)', () => {
   });
 
   it('dims nothing for a column without relationships', () => {
-    const { container, getByTestId } = mountTables();
+    const { getByTestId } = mountTables();
     focusColumn('orders', 'o2');
-    expect(container.querySelector('style')).toBeNull();
+    expect(sheets()).toHaveLength(0);
     expect(getByTestId('canvas')).not.toHaveAttribute('data-hover-focus');
   });
 

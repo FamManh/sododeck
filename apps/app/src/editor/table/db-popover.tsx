@@ -85,8 +85,7 @@ function DbPopoverContent({
   const keyboard = target.source === 'keyboard';
   useEffect(() => {
     if (keyboard) useUiStore.getState().announce(spoken);
-    // Once per open: the component is keyed by its target.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per open: the component is keyed by its target
   }, []);
   return (
     <Popover

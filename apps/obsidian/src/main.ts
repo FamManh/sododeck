@@ -49,7 +49,7 @@ export default class SododeckPlugin extends Plugin {
 
     this.addCommand({
       id: 'new-deck',
-      name: 'New Sododeck',
+      name: 'New deck',
       callback: () => {
         const active = this.app.workspace.getActiveFile();
         void this.newDeck(active?.parent?.path === '/' ? '' : (active?.parent?.path ?? ''));
@@ -69,8 +69,8 @@ export default class SododeckPlugin extends Plugin {
       }),
     );
     this.addCommand({
-      id: 'copy-as-sododeck',
-      name: 'Copy .sododeck.json as .sododeck',
+      id: 'copy-json-as-deck',
+      name: 'Copy JSON deck as a deck file',
       callback: () => {
         const paths = deckJsonFiles(this.app.vault.getFiles().map((f) => f.path));
         if (paths.length === 0) {

@@ -90,11 +90,11 @@ describe('feature detection', () => {
 });
 
 describe('isApplePlatform', () => {
-  it('detects Apple platforms from navigator.platform', () => {
-    const spy = vi.spyOn(navigator, 'platform', 'get');
-    spy.mockReturnValue('MacIntel');
+  it('detects Apple platforms from navigator.appVersion', () => {
+    const spy = vi.spyOn(navigator, 'appVersion', 'get');
+    spy.mockReturnValue('5.0 (Macintosh; Intel Mac OS X 10_15_7)');
     expect(isApplePlatform()).toBe(true);
-    spy.mockReturnValue('Win32');
+    spy.mockReturnValue('5.0 (Windows NT 10.0; Win64; x64)');
     expect(isApplePlatform()).toBe(false);
     spy.mockRestore();
   });

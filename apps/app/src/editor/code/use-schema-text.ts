@@ -100,8 +100,7 @@ export function useSchemaText(
     return () => {
       clearTimeout(timer);
     };
-    // `selection` is covered by `selectionKey`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `selection` is covered by `selectionKey`
   }, [deck, enabled, format, scope, dialect, selectionKey]);
 
   return result;

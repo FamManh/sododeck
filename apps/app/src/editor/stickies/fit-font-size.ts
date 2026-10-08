@@ -101,14 +101,14 @@ export const domMeasurer: Measure = ({ text, width, fontSize, align }) => {
   if (host === null || root === null) {
     host = document.createElement('div');
     host.setAttribute('aria-hidden', 'true');
-    host.style.cssText =
-      'position:fixed;left:-99999px;top:0;visibility:hidden;pointer-events:none;overflow:hidden;height:0';
+    host.className =
+      'pointer-events-none invisible fixed top-0 -left-[99999px] h-0 overflow-hidden';
     document.body.appendChild(host);
     root = createRoot(host);
   }
-  host.style.width = `${width}px`;
-  host.style.fontSize = `${fontSize}px`;
-  host.style.textAlign = align;
+  host.style.setProperty('width', `${width}px`);
+  host.style.setProperty('font-size', `${fontSize}px`);
+  host.style.setProperty('text-align', align);
   flushSync(() => {
     root?.render(createElement(MarkdownView, { text, className: 'gap-1 text-[length:inherit]' }));
   });

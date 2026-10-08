@@ -48,8 +48,7 @@ export function useImportPreview(
       live = false;
       window.clearTimeout(timer);
     };
-    // `key` stands for `source` and `target`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands for `source` and `target`
   }, [client, key, empty]);
 
   useEffect(

@@ -51,7 +51,7 @@ describe('New Sododeck (US6)', () => {
   });
 });
 
-describe('Copy .sododeck.json as .sododeck (071 US2)', () => {
+describe('Copy JSON deck as a deck file (071 US2)', () => {
   const deck = newDeckText();
 
   function copyVault(fake: FakeVault) {
