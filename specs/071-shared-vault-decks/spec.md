@@ -15,7 +15,7 @@ Two hosts already open decks as a canvas:
 - **069 (VS Code extension)** opens the plain `.sododeck` file.
 - **070 (Obsidian plugin)** opens the plain `.sododeck` file and the Markdown form, `.sododeck.md` (readable text the notes app can search and link, plus the full deck).
 
-A team or a person who keeps one folder as both an Obsidian vault and a VS Code workspace gets half of this today: a plain `.sododeck` already works in both, but a `.sododeck.md` note shows as text in VS Code. And nobody is told that the plain file is the shared one, so people do not know which form to pick, and older `.sododeck.json` files are not opened by Obsidian at all.
+A team or a person who keeps one folder as both an Obsidian vault and a VS Code workspace gets half of this today: a plain `.sododeck` already works in both, but a `.sododeck.md` note shows as text in VS Code. And nobody is told that the plain file is the shared one, so people do not know which form to pick, and older `.sododeck.json` files are not opened by Obsidian at all (VS Code already opens them as a canvas).
 
 This feature closes both gaps in two parts:
 
@@ -51,7 +51,7 @@ A user opens one folder as an Obsidian vault and as a VS Code workspace. A plain
 
 ### User Story 2 - Bring an older `.sododeck.json` in (Priority: P1)
 
-A user has decks saved as `.sododeck.json` from before. Neither host opens that name as a canvas. They bring one in with a single step and keep their work.
+A user has decks saved as `.sododeck.json` from before. VS Code opens that name, but Obsidian does not, so the deck is stranded outside the shared folder. They bring one in with a single step and keep their work.
 
 **Why this priority**: Without it, older decks are stranded outside the shared folder.
 
@@ -158,6 +158,7 @@ The user adds a picture to a deck note in VS Code and later opens the note in Ob
 
 - **FR-017**: A note saved from VS Code MUST open as a deck in Obsidian, and a note saved from Obsidian MUST open as a deck in VS Code (round trip proven by tests on the same fixtures).
 - **FR-018**: Nothing is sent over the network (architecture rule 5); no new runtime dependency.
+- **FR-019**: For a note, a picture link written by Obsidian (a file name or shortest path, not always relative to the note) MUST show in VS Code: the extension resolves the link first relative to the note, then as a path ending anywhere inside the workspace, and shows the picture only when exactly one file matches and its bytes match the picture's id; with several or none it shows missing with a plain reason.
 
 ### Key Entities
 
@@ -181,6 +182,6 @@ The user adds a picture to a deck note in VS Code and later opens the note in Ob
 
 - Both hosts (069, 070) and the Markdown form with its reader and writer (070) are built and merged.
 - Picture storage (FR-014/FR-015) and the new-deck default and name (FR-013) are confirmed by the founder (2026-10-08).
-- `.sododeck.json` support in the hosts is limited to the one-step copy command; neither host registers that name as a canvas.
+- `.sododeck.json` support is not widened: VS Code keeps opening it as it does today (069), Obsidian does not open it, and the one-step copy command is how a `.sododeck.json` reaches the shared form.
 - Out of scope: the skill (027) writing or checking `.sododeck.md`; rewriting links in VS Code; links from cards to notes; deck previews inside notes.
 - The marker, the generated region and the reader/writer behave as specified in 070; this feature adds no new rule to them.
