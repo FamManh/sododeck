@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -22,6 +23,14 @@ export default defineConfig({
   base: './',
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   plugins: [react(), tailwindcss()],
+  resolve: {
+    // No dynamic `<script>` injection in the embed (hosts reject it): see the shim.
+    alias: {
+      '@monaco-editor/loader': fileURLToPath(
+        new URL('./src/embed/monaco-loader-shim.ts', import.meta.url),
+      ),
+    },
+  },
   worker: { format: 'es' },
   build: {
     outDir: 'dist-embed',
