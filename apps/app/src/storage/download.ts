@@ -49,7 +49,7 @@ export function downloadBlob(fileName: string, blob: Blob): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;
-  anchor.style.display = 'none';
+  anchor.hidden = true;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

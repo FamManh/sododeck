@@ -1,4 +1,4 @@
-/* global acquireVsCodeApi */
+/* global acquireVsCodeApi -- injected by the VS Code webview host */
 // Two small jobs so the embedded editor runs unchanged inside a webview (R4, R5):
 // 1. present the webview's channel to the editor as its parent window;
 // 2. let it start workers from the extension's own files. A webview page cannot construct a

@@ -64,8 +64,7 @@ function useRevealWhileEditing(edit: TitleEdit) {
     return () => {
       cancelAnimationFrame(frame);
     };
-    // Once per edit session.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per edit session
   }, [edit.id]);
 }
 

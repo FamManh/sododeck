@@ -29,8 +29,7 @@ function liveStore<T>(query: () => Promise<T>) {
  * recreated when `deps` change, like `useMemo`.
  */
 export function useLiveQuery<T>(query: () => Promise<T>, deps: readonly unknown[]): T | undefined {
-  // The caller's deps, exactly as with useMemo; the query closure is rebuilt with them.
-  // eslint-disable-next-line react-hooks/use-memo, react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/use-memo, react-hooks/exhaustive-deps -- the caller's deps, exactly as with useMemo; the query closure is rebuilt with them
   const store = useMemo(() => liveStore(query), deps);
   return useSyncExternalStore(store.subscribe, store.get);
 }

@@ -17,9 +17,12 @@ export function supportsIndexedDB(): boolean {
 /** Apple platforms use ⌘ for shortcuts; everything else uses Ctrl. */
 export function isApplePlatform(): boolean {
   if (typeof navigator === 'undefined') return false;
+  // `appVersion` names the OS too (Macintosh, iPhone, Windows) and is the fallback where
+  // `userAgentData` is missing (Safari, Firefox). The embedded editor sits in a sandboxed frame,
+  // where a host's own platform API is out of reach.
   const platform =
     (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
-    navigator.platform;
+    navigator.appVersion;
   return /mac|iphone|ipad|ipod/i.test(platform);
 }
 

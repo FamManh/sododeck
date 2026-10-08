@@ -34,8 +34,7 @@ export function TableFilter({
   // Follow the current match, e.g. after Enter or when typing moves it off screen.
   useEffect(() => {
     if (current !== undefined) reveal(nodeId, layout, current);
-    // The layout object changes with every keystroke; only a new match should pan.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the layout object changes with every keystroke; only a new match should pan
   }, [current, nodeId]);
 
   if (filter === null) return null;

@@ -34,16 +34,25 @@ export const HoverFocusStyle = memo(function HoverFocusStyle({
   useEffect(() => {
     const root = wrapper.current;
     if (root === null) return undefined;
-    let style: HTMLStyleElement | null = null;
+    // A constructed stylesheet, not a `<style>` element: hosts that load the page forbid
+    // creating style elements. The selectors are all under the wrapper's data attributes.
+    const doc = root.ownerDocument;
+    let sheet: CSSStyleSheet | null = null;
     const clear = () => {
-      style?.remove();
-      style = null;
+      const dropped = sheet;
+      if (dropped !== null) {
+        doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter((other) => other !== dropped);
+      }
+      sheet = null;
       root.removeAttribute('data-hover-focus');
       root.removeAttribute('data-hover-rows');
     };
     const show = (text: string, attribute: 'data-hover-focus' | 'data-hover-rows') => {
-      style ??= root.appendChild(document.createElement('style'));
-      style.textContent = text;
+      if (sheet === null) {
+        sheet = new CSSStyleSheet();
+        doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+      }
+      sheet.replaceSync(text);
       root.removeAttribute(
         attribute === 'data-hover-focus' ? 'data-hover-rows' : 'data-hover-focus',
       );

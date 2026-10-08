@@ -74,8 +74,7 @@ export function ColumnLineEditor({
     }
     const name = parseColumnLine(input.value, { enums }).tokens.find((t) => t.kind === 'name');
     input.setSelectionRange(name?.from ?? 0, name?.to ?? input.value.length);
-    // Once per edit session: a new row reuses this component with a fresh key.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per edit session: a new row reuses this component with a fresh key
   }, []);
 
   const close = (focusColumnId: string | null) => {

@@ -46,8 +46,7 @@ export function InspectorBranch({
     const first =
       labelError !== undefined ? labelId : conditionError !== undefined ? conditionId : null;
     if (first !== null) document.getElementById(first)?.focus();
-    // Only on a new press, not while typing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new press, not while typing
   }, [check]);
 
   const update = (patch: Parameters<typeof editor.updateBranch>[2]) => {

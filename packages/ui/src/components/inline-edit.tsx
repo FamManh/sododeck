@@ -54,8 +54,7 @@ function InlineEdit({
     if (!autoFocus) return;
     input.current?.focus();
     input.current?.select();
-    // Only on mount: a later value change must not steal the selection.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount: a later value change must not steal the selection
   }, []);
 
   function commit() {

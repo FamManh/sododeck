@@ -89,8 +89,7 @@ export function DetailDrawer({
     return () => {
       cancelAnimationFrame(frame);
     };
-    // Only when the drawer opens, not on every width change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the drawer opens, not on every width change
   }, [drawer.open]);
 
   useEffect(() => {

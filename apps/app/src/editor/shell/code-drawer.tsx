@@ -49,8 +49,7 @@ export function CodeDrawer() {
     return () => {
       cancelAnimationFrame(frame);
     };
-    // Only when the drawer opens, not on every tab change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the drawer opens, not on every tab change
   }, [open]);
 
   // However it closed (Esc, ×, the menu, a narrow window opening the details drawer), focus must

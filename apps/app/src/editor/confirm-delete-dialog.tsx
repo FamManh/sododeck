@@ -117,8 +117,7 @@ function useRunDelete(deck: SododeckFile, requested: RemovalTarget[]) {
 
 function DeleteNow({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
   const run = useRunDelete(deck, pending.targets as RemovalTarget[]);
-  // Once per request: `pending` is a new object for every requestDelete.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once per request: `pending` is a new object for every requestDelete
   useEffect(run, [pending]);
   return null;
 }
@@ -126,8 +125,7 @@ function DeleteNow({ deck, pending }: { deck: SododeckFile; pending: PendingDele
 function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const targets = pending.targets as RemovalTarget[];
-  // Computed once when the dialog opens; the deck cannot change underneath a modal dialog.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- computed once when the dialog opens; the deck cannot change underneath a modal dialog
   const preview = useMemo(() => previewRemoval(deck, targets), [targets]);
   const { title, body } = describeRemoval(deck, targets, preview);
   const confirm = useRunDelete(deck, targets);

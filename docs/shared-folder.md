@@ -20,7 +20,7 @@ Pick `.sododeck.md` if you want those Obsidian gains; pick `.sododeck` if you wa
 
 ## Bring in a `.sododeck.json`
 
-Older decks may be `.sododeck.json` files. VS Code opens them directly. Obsidian does not, so in either tool run **Copy as .sododeck** (VS Code: right-click the file in the Explorer; Obsidian: the command **Copy .sododeck.json as .sododeck**). It writes a `.sododeck` next to the original, never overwrites a file, and leaves the original unchanged. Renaming the file to `.sododeck` works too.
+Older decks may be `.sododeck.json` files. VS Code opens them directly. Obsidian does not, so in either tool run **Copy as .sododeck** (VS Code: right-click the file in the Explorer; Obsidian: the command **Sododeck: Copy JSON deck as a deck file**). It writes a `.sododeck` next to the original, never overwrites a file, and leaves the original unchanged. Renaming the file to `.sododeck` works too.
 
 ## Pictures
 

@@ -30,6 +30,21 @@ if (typeof window !== 'undefined') {
     globalThis.CSS = { escape: (value: string) => value.replace(/["\\]/g, '\\$&') } as typeof CSS;
   }
 
+  // jsdom's stylesheets parse and drop the complex selectors the hover focus style adopts. A stub
+  // that keeps the text, so tests read what the page would style with.
+  class StyleSheetStub {
+    text = '';
+    replaceSync(text: string) {
+      this.text = text;
+    }
+  }
+  window.CSSStyleSheet = StyleSheetStub as unknown as typeof CSSStyleSheet;
+  Object.defineProperty(document, 'adoptedStyleSheets', {
+    configurable: true,
+    writable: true,
+    value: [],
+  });
+
   // Object URLs of pictures (055): jsdom's Blob is not the one vitest's URL polyfill expects.
   // Tests that look at the URL replace these.
   let objectUrls = 0;

@@ -113,7 +113,9 @@ describe('Canvas', () => {
   });
 
   describe('hover focus (034, only in Focus mode since 051)', () => {
-    const lit = (container: HTMLElement) => container.querySelector('style')?.textContent ?? '';
+    // The hover focus style is an adopted stylesheet (a stub that keeps its text, see test-setup).
+    const lit = (_container?: HTMLElement) =>
+      ([...document.adoptedStyleSheets] as unknown as { text: string }[])[0]?.text ?? '';
     const rest = () =>
       act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 250));
