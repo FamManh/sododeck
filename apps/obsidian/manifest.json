@@ -1,0 +1,10 @@
+{
+  "id": "sododeck",
+  "name": "Sododeck",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.7",
+  "description": "Open and edit Sododeck architecture decks (.sododeck.md and .sododeck) as a canvas. Works offline; sends nothing over the network; reads and writes only your vault.",
+  "author": "Sododeck",
+  "authorUrl": "https://sododeck.com",
+  "isDesktopOnly": false
+}

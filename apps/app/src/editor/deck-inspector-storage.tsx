@@ -1,6 +1,6 @@
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
-import { Download, HardDrive } from 'lucide-react';
+import { Download, FileText, HardDrive } from 'lucide-react';
 
 import { useSaveControls } from './save-context';
 import { useExportDeck } from './use-export-deck';
@@ -16,6 +16,7 @@ const WHERE = {
 export function DeckInspectorStorage() {
   const { mode } = useSaveControls();
   const exportDeck = useExportDeck();
+  const exportMarkdown = useExportDeck('markdown');
   // The host's file is the store, and it decides where exports go (067).
   if (mode === 'host') return null;
   return (
@@ -27,6 +28,10 @@ export function DeckInspectorStorage() {
       <Button size="sm" className="self-start" onClick={exportDeck}>
         <Download />
         Export .sododeck
+      </Button>
+      <Button size="sm" className="self-start" onClick={exportMarkdown}>
+        <FileText />
+        Export .sododeck.md
       </Button>
     </PanelSection>
   );

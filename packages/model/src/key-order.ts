@@ -8,7 +8,7 @@
  */
 import { jsonSchema } from '@sododeck/schema';
 
-import { isRecord } from './convert';
+import { isRecord } from './is-record';
 
 type Shape =
   | { kind: 'object'; properties: [string, Shape][] }

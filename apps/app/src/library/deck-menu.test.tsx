@@ -1,4 +1,4 @@
-import { serializeDeck } from '@sododeck/model';
+import { serializeDeck, toMarkdown } from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -157,6 +157,30 @@ describe('deck menu', () => {
         name: 'Shop',
         nodes: [{ id: 'a', type: 'service', title: 'Orders' }],
       }),
+    );
+    await waitFor(async () => {
+      expect((await db.decks.get('d1'))?.exportedAt).not.toBeNull();
+    });
+  });
+
+  it('exports <name>.sododeck.md, the readable note form, and records it (070)', async () => {
+    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const { user, db } = await setup();
+    await user.click(screen.getByRole('button', { name: 'More actions for Shop' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Export .sododeck.md' }));
+    await waitFor(() => {
+      expect(downloadText).toHaveBeenCalledOnce();
+    });
+    expect(downloadText).toHaveBeenCalledWith(
+      'Shop.sododeck.md',
+      toMarkdown(
+        serializeDeck({
+          ...emptySododeckFile(),
+          name: 'Shop',
+          nodes: [{ id: 'a', type: 'service', title: 'Orders' }],
+        }),
+      ),
+      'text/markdown',
     );
     await waitFor(async () => {
       expect((await db.decks.get('d1'))?.exportedAt).not.toBeNull();

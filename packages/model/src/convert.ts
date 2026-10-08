@@ -4,6 +4,8 @@
  */
 import * as Y from 'yjs';
 
+import { isRecord } from './is-record';
+
 export type YValue = null | boolean | number | string | Y.Map<YValue> | Y.Array<YValue> | Y.Text;
 export type YObject = Y.Map<YValue>;
 export type YList = Y.Array<YValue>;
@@ -62,6 +64,4 @@ export function jsonEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+export { isRecord };

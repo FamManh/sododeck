@@ -6,6 +6,7 @@ import {
   fromJSON,
   serializeDeck,
   toJSON,
+  toMarkdown,
 } from '@sododeck/model';
 import full from '@sododeck/schema/examples/full.sododeck.json' with { type: 'json' };
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
@@ -65,6 +66,80 @@ describe('library ops', () => {
     expect(imported.summary).toMatchObject({ name: 'Bench', nodeCount: 500, edgeCount: 1000 });
     const exported = exportDeck([imported.bytes]);
     expect(exported).toEqual({ json: text, name: 'Bench' });
+  });
+
+  it('imports a .sododeck.md note like its JSON and exports the note form (070)', () => {
+    const file = {
+      ...emptySododeckFile(),
+      name: 'Shop',
+      nodes: [{ id: 'a', type: 'service', title: 'Orders' }],
+    };
+    const text = serializeDeck(file);
+    const note = toMarkdown(text);
+    const fromJson = importFile(text);
+    const fromNote = importFile(note);
+    expect(fromNote.summary).toEqual(fromJson.summary);
+    expect(fromNote.openReport).toEqual(fromJson.openReport);
+    expect(exportDeck([fromNote.bytes], new Map(), 'markdown')).toEqual({
+      json: note,
+      name: 'Shop',
+    });
+    expect(exportDeck([fromNote.bytes])).toEqual({ json: text, name: 'Shop' });
+  });
+
+  it('reads a title edited in the note text, by id (070)', () => {
+    const text = serializeDeck({
+      ...emptySododeckFile(),
+      name: 'Shop',
+      nodes: [{ id: 'a', type: 'service', title: 'Orders' }],
+    });
+    const edited = toMarkdown(text).replace('### Orders %%a%%', '### Orders service %%a%%');
+    const imported = importFile(edited);
+    expect(toJSON(docOf([imported.bytes])).nodes[0]?.title).toBe('Orders service');
+  });
+
+  it('refuses a damaged deck block with the model entries (070)', () => {
+    const broken = toMarkdown(serializeDeck(emptySododeckFile())).replace(
+      /```json\n[\s\S]*?\n```/,
+      '```json\n{oops\n```',
+    );
+    let caught: unknown;
+    try {
+      importFile(broken, 'Shop.sododeck.md');
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(LibraryOpError);
+    expect((caught as LibraryOpError).report?.problems[0]?.code).toBe('md-deck-block-not-json');
+  });
+
+  it('keeps embedded pictures embedded in the note (070)', () => {
+    const asset = assetId(PNG_1X1);
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      name: 'Pics',
+      images: [{ id: 'img', asset, position: { x: 0, y: 0 }, size: { width: 64, height: 64 } }],
+      assets: {
+        [asset]: {
+          type: 'image/png',
+          bytes: PNG_1X1.length,
+          width: 1,
+          height: 1,
+          name: 'dot.png',
+          data: encodeBase64(PNG_1X1),
+        },
+      },
+    };
+    const imported = importFile(serializeDeck(file));
+    const note = exportDeck(
+      [imported.bytes],
+      new Map(imported.pictures.map((p) => [p.id, p.bytes])),
+      'markdown',
+    ).json;
+    expect(note).toContain(`- dot.png %%${asset}%%`);
+    expect(note).not.toContain('[[');
+    const back = importFile(note);
+    expect(back.pictures.map((p) => p.id)).toEqual([asset]);
   });
 
   it('reports image crops trimmed on import and keeps crop and flips on export (057)', () => {

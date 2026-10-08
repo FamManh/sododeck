@@ -182,16 +182,24 @@ export async function renameFolderInline(
   }
 }
 
-/** Downloads `<name>.sododeck`, the model's export of the stored deck (FR-025, FR-027). */
-export async function exportDeckFile(ctx: LibraryActionContext, deckId: string): Promise<void> {
+/**
+ * Downloads `<name>.sododeck` (or `<name>.sododeck.md`), the model's export of the stored deck
+ * (FR-025, FR-027).
+ */
+export async function exportDeckFile(
+  ctx: LibraryActionContext,
+  deckId: string,
+  format: 'json' | 'markdown' = 'json',
+): Promise<void> {
   const log = await logOf(ctx, deckId);
   const pictures = new Map<string, Uint8Array>();
   for (const pictureId of await listBlobIds(ctx.db, deckId)) {
     const row = await getBlobRow(ctx.db, deckId, pictureId);
     if (row) pictures.set(row.id, row.bytes);
   }
-  const { json, name } = await ctx.client.exportDeck(log.bytes, pictures);
-  downloadText(deckFileName(name), json);
+  const { json, name } = await ctx.client.exportDeck(log.bytes, pictures, format);
+  if (format === 'markdown') downloadText(deckFileName(name, format), json, 'text/markdown');
+  else downloadText(deckFileName(name), json);
   await markExported(ctx.db, deckId, clock(ctx));
 }
 
