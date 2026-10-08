@@ -4,7 +4,7 @@ The plugin is a **host** for the embedded editor (067): it opens `.sododeck` fil
 
 ## Boundaries
 
-- **Only these files import `obsidian`**: `src/main.ts`, `src/deck-view.ts`, `src/obsidian-ports.ts`, `src/md-swap.ts`, `src/settings-tab.ts`. Everything else is pure, takes the interfaces of `src/ports.ts`, and is tested with the fakes in `test/` (`fake-vault.ts`, `fake-editor.ts`; `fake-obsidian.ts` only for the glue tests).
+- **Only these files import `obsidian`**: `src/main.ts`, `src/deck-view.ts`, `src/obsidian-ports.ts`, `src/md-swap.ts`, `src/settings-tab.ts` (`main.ts` also holds the small picker for the copy command). Everything else is pure, takes the interfaces of `src/ports.ts`, and is tested with the fakes in `test/` (`fake-vault.ts`, `fake-editor.ts`; `fake-obsidian.ts` only for the glue tests).
 - Never import `apps/app`. The build **inlines** `apps/app/dist-embed/` into one HTML string (`scripts/inline-embed.ts`) that `main.js` carries; nothing is fetched at run time.
 - Never reformat `change.text`; a `.sododeck` is written byte for byte. A `.sododeck.md` note goes through `@sododeck/model`'s `toMarkdown` / `fromMarkdown` only (`src/file-codec.ts`); the canvas never sees Markdown.
 - The deck file is written only after a `change` (or a flush) from the canvas, never for an equal file, an unreadable note or a deleted deck, and never recreated.

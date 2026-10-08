@@ -41,13 +41,16 @@ const EMBED_MARKERS = [
 ];
 /**
  * URLs that are identifiers, not requests: the schema's own id, the JSON Schema dialect ids the
- * validation library names, and XML namespaces.
+ * validation library names, XML namespaces, and the issue link inside the Yjs "imported twice"
+ * message (the copy command validates a deck with the model, which brings Yjs into the plugin code;
+ * the link is text in a console message, never requested).
  */
 const ALLOWED_URLS = [
   'https://sododeck.com',
   'https://json-schema.org',
   'http://json-schema.org',
   'http://www.w3.org',
+  'https://github.com/yjs/yjs/issues/',
 ];
 
 export interface BundleInput {

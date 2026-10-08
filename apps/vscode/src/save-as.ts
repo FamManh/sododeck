@@ -9,6 +9,7 @@ import {
 
 import type { DeckDocument } from './deck-document';
 import type { Flushable } from './document-ops';
+import { encode, kindOf } from './file-codec';
 import { writeDeckFile } from './file-writer';
 import { storePicture } from './picture-host';
 import type { Loc, Ports } from './ports';
@@ -57,7 +58,10 @@ async function copyPictures(
   return moved;
 }
 
-/** Save As (FR-017a): flush, copy pictures next to the new deck, write the new file. */
+/**
+ * Save As (FR-017a): flush, copy pictures next to the new deck, write the new file. The
+ * destination's name picks the form (R7), so Save As converts between `.sododeck` and a note.
+ */
 export async function saveDocumentAs(
   doc: DeckDocument,
   session: Flushable | null,
@@ -67,5 +71,6 @@ export async function saveDocumentAs(
   await session?.flush();
   const text = doc.text;
   const moved = await copyPictures(text, doc.loc, destination, ports);
-  await writeDeckFile(ports.files, destination, rewritePicturePaths(text, moved));
+  const rewritten = rewritePicturePaths(text, moved);
+  await writeDeckFile(ports.files, destination, encode(kindOf(destination), rewritten));
 }

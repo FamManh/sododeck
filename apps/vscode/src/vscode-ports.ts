@@ -7,6 +7,9 @@ import { posix } from 'node:path';
 
 import * as vscode from 'vscode';
 
+import { isDeckMarkdown } from '@sododeck/model';
+
+import { shouldSwapToCanvas } from './note-swap';
 import type { Disposable, FilePort, Loc, Ports, SettingsPort, UiPort } from './ports';
 import { schemeOfKind } from './theme';
 
@@ -59,6 +62,19 @@ const files: FilePort = {
   dirname: (loc) => vscode.Uri.joinPath(uriOf(loc), '..').toString(),
   basename: (loc) => posix.basename(uriOf(loc).path),
   join: (loc, rel) => vscode.Uri.joinPath(uriOf(loc), ...rel.split('/')).toString(),
+  findByPathEnd: async (loc, rel) => {
+    const folder = vscode.workspace.getWorkspaceFolder(uriOf(loc));
+    if (folder === undefined) return [];
+    const name = posix.basename(rel);
+    // The name is searched as a literal: glob characters are wrapped in a character class.
+    const literal = name.replace(/[\\*?[\]{}()!]/g, '[$&]');
+    const found = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(folder, `**/${literal}`),
+      undefined,
+      50,
+    );
+    return found.filter((u) => u.path.endsWith(`/${rel}`)).map((u) => u.toString());
+  },
 };
 
 function disposable(d: vscode.Disposable): Disposable {
@@ -80,16 +96,58 @@ const settings: SettingsPort = {
     ),
 };
 
+const VIEW_TYPES = new Set(['sododeck.canvas', 'sododeck.note']);
+
 /** The URI of the deck shown in the active tab, if it is one of ours. */
 export function activeDeck(): vscode.Uri | undefined {
   const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-  return input instanceof vscode.TabInputCustom && input.viewType === 'sododeck.canvas'
+  return input instanceof vscode.TabInputCustom && VIEW_TYPES.has(input.viewType)
     ? input.uri
     : undefined;
 }
 
+/** Files the user sent to the text editor in this session; the note swap leaves them alone. */
+const chosenText = new Set<string>();
+
 export async function openAsText(deck: Loc): Promise<void> {
+  chosenText.add(deck);
   await vscode.commands.executeCommand('vscode.openWith', uriOf(deck), 'default');
+}
+
+/**
+ * Turns a `*.sododeck.md` that opened as text into the canvas (R3, spike S1). The decision is
+ * `shouldSwapToCanvas`; this only watches editors, reopens, and closes the text tab.
+ */
+export function registerNoteSwap(noteViewType: string): vscode.Disposable {
+  const swapping = new Set<string>();
+  return vscode.window.onDidChangeVisibleTextEditors((editors) => {
+    for (const editor of editors) {
+      const { document } = editor;
+      const key = document.uri.toString();
+      if (document.uri.scheme === 'untitled' || swapping.has(key)) continue;
+      const swap = shouldSwapToCanvas({
+        fileName: posix.basename(document.uri.path),
+        hasMarker: isDeckMarkdown(document.getText()),
+        chosenText: chosenText.has(key),
+      });
+      if (!swap) continue;
+      swapping.add(key);
+      void (async () => {
+        try {
+          await vscode.commands.executeCommand('vscode.openWith', document.uri, noteViewType, {
+            viewColumn: editor.viewColumn,
+          });
+          const tabs = vscode.window.tabGroups.all.flatMap((group) => group.tabs);
+          const textTab = tabs.find(
+            (tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === key,
+          );
+          if (textTab !== undefined) await vscode.window.tabGroups.close(textTab);
+        } finally {
+          swapping.delete(key);
+        }
+      })();
+    }
+  });
 }
 
 const ui: UiPort = {

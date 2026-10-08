@@ -35,7 +35,7 @@ describe('save', () => {
     expect(editor.of('flush')).toHaveLength(1);
     expect(fakes.files.get(DECK)).toBe(odd);
     expect(doc.dirty).toBe(false);
-    expect(doc.savedText).toBe(odd);
+    expect(doc.savedDeckText).toBe(odd);
     expect(doc.lastWritten).toBe(odd);
   });
 

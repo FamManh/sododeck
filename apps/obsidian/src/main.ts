@@ -2,14 +2,39 @@
  * The Sododeck plugin for Obsidian (070): registers the deck view for `.sododeck` files and, by a
  * view swap on the front matter marker, for `.sododeck.md` notes. Glue only.
  */
-import { Plugin, TFolder } from 'obsidian';
+import { Notice, Plugin, SuggestModal, TFolder, type App } from 'obsidian';
 
-import { createNewDeck } from './commands';
+import { copyAsSododeck, createNewDeck, deckJsonFiles } from './commands';
 import { DeckView, SOURCE_STATE_KEY, VIEW_TYPE } from './deck-view';
 import { deckViewOf, registerSwap } from './md-swap';
 import { SettingsHub } from './obsidian-ports';
 import { readSettings, type SododeckSettings } from './settings';
 import { SododeckSettingTab } from './settings-tab';
+
+/** Picker over the vault's `.sododeck.json` files (Obsidian's own file list hides `.json`). */
+class DeckJsonModal extends SuggestModal<string> {
+  constructor(
+    app: App,
+    private readonly paths: string[],
+    private readonly onPick: (path: string) => void,
+  ) {
+    super(app);
+    this.setPlaceholder('Choose a .sododeck.json file to copy');
+  }
+
+  override getSuggestions(query: string): string[] {
+    const q = query.toLowerCase();
+    return this.paths.filter((p) => p.toLowerCase().includes(q));
+  }
+
+  override renderSuggestion(path: string, el: HTMLElement): void {
+    el.setText(path);
+  }
+
+  override onChooseSuggestion(path: string): void {
+    this.onPick(path);
+  }
+}
 
 export default class SododeckPlugin extends Plugin {
   override settings: SododeckSettings = readSettings(undefined);
@@ -44,6 +69,20 @@ export default class SododeckPlugin extends Plugin {
       }),
     );
     this.addCommand({
+      id: 'copy-as-sododeck',
+      name: 'Copy .sododeck.json as .sododeck',
+      callback: () => {
+        const paths = deckJsonFiles(this.app.vault.getFiles().map((f) => f.path));
+        if (paths.length === 0) {
+          new Notice('No .sododeck.json files in this vault.');
+          return;
+        }
+        new DeckJsonModal(this.app, paths, (path) => {
+          void this.copyDeck(path);
+        }).open();
+      },
+    });
+    this.addCommand({
       id: 'open-as-markdown',
       name: 'Open this deck as Markdown',
       checkCallback: (checking) => {
@@ -76,6 +115,25 @@ export default class SododeckPlugin extends Plugin {
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
     this.hub.notify();
+  }
+
+  private async copyDeck(source: string): Promise<void> {
+    const result = await copyAsSododeck(
+      {
+        readText: (p) => this.app.vault.adapter.read(p),
+        exists: (p) => this.app.vault.getFileByPath(p) !== null,
+        createText: async (p, text) => {
+          await this.app.vault.create(p, text);
+        },
+      },
+      source,
+    );
+    if (!result.ok) {
+      new Notice(`Could not copy: ${result.reason}.`);
+      return;
+    }
+    const leaf = this.app.workspace.getLeaf(true);
+    await leaf.setViewState({ type: VIEW_TYPE, state: { file: result.path }, active: true });
   }
 
   private async newDeck(folder: string): Promise<void> {

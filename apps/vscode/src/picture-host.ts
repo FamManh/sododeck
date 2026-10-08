@@ -2,8 +2,14 @@ import type { HostMessage, EditorMessage } from '@sododeck/host-protocol';
 import { assetId, inspectDeckText, MAX_ASSET_BYTES, sniffType } from '@sododeck/model';
 import { checkPicturePath, PATH_VIOLATION_TEXT } from '@sododeck/schema';
 
+import { kindOf } from './file-codec';
 import type { Loc, Ports } from './ports';
-import { OUTSIDE_WORKSPACE, resolveInside } from './workspace-guard';
+import {
+  OUTSIDE_WORKSPACE,
+  resolveInside,
+  resolveLocInside,
+  type Resolved,
+} from './workspace-guard';
 
 type PicturePut = Extract<EditorMessage, { type: 'picture-put' }>;
 type PictureGet = Extract<EditorMessage, { type: 'picture-get' }>;
@@ -23,9 +29,9 @@ const EXTENSION: Record<string, string> = {
 
 export const NOT_TRUSTED = 'workspace not trusted';
 
-/** `docs/arch.sododeck` and `docs/arch.sododeck.json` both give `arch`. */
+/** `arch.sododeck`, `arch.sododeck.json`, `arch.sododeck.md` and `arch.md` all give `arch`. */
 export function deckBaseName(basename: string): string {
-  return basename.replace(/\.sododeck(?:\.json)?$/i, '');
+  return basename.replace(/\.sododeck(?:\.json|\.md)?$/i, '').replace(/\.md$/i, '');
 }
 
 /** The folder name next to the deck that holds its picture files (068). */
@@ -122,6 +128,29 @@ export class PictureHost {
       : { type: 'picture-store-failed', id, reason: result.reason };
   }
 
+  /** The one workspace file a note's link points at, or why there is none. */
+  private async findLinked(path: string): Promise<Resolved> {
+    let candidates: Loc[];
+    try {
+      candidates = await this.ports.files.findByPathEnd(this.deck, path);
+    } catch {
+      return { ok: false, reason: 'not found' };
+    }
+    const inside: Loc[] = [];
+    for (const candidate of candidates) {
+      const guard = await resolveLocInside(this.deck, candidate, this.ports);
+      if (guard.ok) inside.push(guard.loc);
+    }
+    if (inside.length === 0) {
+      return { ok: false, reason: candidates.length === 0 ? 'not found' : OUTSIDE_WORKSPACE };
+    }
+    const [only, ...rest] = inside;
+    if (only === undefined || rest.length > 0) {
+      return { ok: false, reason: 'several files have that name; link it with a longer path' };
+    }
+    return { ok: true, loc: only };
+  }
+
   async get(message: PictureGet): Promise<Answer> {
     const { id } = message;
     const missing = (reason: string): Answer => ({ type: 'picture-missing', id, reason });
@@ -136,16 +165,27 @@ export class PictureHost {
     const guard = await resolveInside(this.deck, ref.path, this.ports);
     if (!guard.ok) return missing(guard.reason);
 
+    let target = guard.loc;
     let size: number;
     try {
-      size = await files.size(guard.loc);
+      size = await files.size(target);
     } catch {
-      return missing('not found');
+      if (kindOf(this.deck) !== 'markdown') return missing('not found');
+      // A note may link a picture the way another tool writes it: a short name, not a path
+      // relative to the note (R5). Look for one unique file with that path ending.
+      const found = await this.findLinked(ref.path);
+      if (!found.ok) return missing(found.reason);
+      target = found.loc;
+      try {
+        size = await files.size(target);
+      } catch {
+        return missing('not found');
+      }
     }
     if (size > MAX_ASSET_BYTES) return missing('could not be read');
     let bytes: Uint8Array;
     try {
-      bytes = await files.read(guard.loc);
+      bytes = await files.read(target);
     } catch {
       return missing('could not be read');
     }

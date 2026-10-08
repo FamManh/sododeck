@@ -32,6 +32,12 @@ export interface FilePort {
   basename(loc: Loc): string;
   /** `rel` uses `/` and may start with `..` segments; resolved lexically. */
   join(loc: Loc, rel: string): Loc;
+  /**
+   * Files in the workspace folder that holds `loc` whose path ends with `rel` (a whole segment
+   * match, e.g. `a.png` or `pics/a.png`). Used for note picture links, which another tool may
+   * write as a short name instead of a path relative to the note (071 R5). Capped; may be empty.
+   */
+  findByPathEnd(loc: Loc, rel: string): Promise<Loc[]>;
 }
 
 export interface WatchPort {
