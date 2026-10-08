@@ -54,3 +54,6 @@
 ## Spike results
 
 - **S3** (copy picker on mobile): not done yet. The Obsidian command is built (`SuggestModal` over `.sododeck.json` files); a manual check on a phone is still to do.
+- **S1** (swap flicker in VS Code): not checked in a real editor. The swap is built (`registerNoteSwap`); the fallback (option only, "Reopen Editor With…") is documented in the ADR.
+- **S2** (Obsidian resolving `<name>.assets/<file>`): not checked in real Obsidian. VS Code writes `<name>.assets/<file>` where `<name>` is the note's file name without `.sododeck.md` or `.md` (not `billing.sododeck.assets` as first sketched in R5).
+- **Findings for 070**: none; `toMarkdown` already writes the link list for plain relative paths, and paths with `[`, `|` or `#` get no link (covered in `apps/vscode/test/note-pictures.test.ts`).

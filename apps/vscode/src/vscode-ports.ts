@@ -62,6 +62,19 @@ const files: FilePort = {
   dirname: (loc) => vscode.Uri.joinPath(uriOf(loc), '..').toString(),
   basename: (loc) => posix.basename(uriOf(loc).path),
   join: (loc, rel) => vscode.Uri.joinPath(uriOf(loc), ...rel.split('/')).toString(),
+  findByPathEnd: async (loc, rel) => {
+    const folder = vscode.workspace.getWorkspaceFolder(uriOf(loc));
+    if (folder === undefined) return [];
+    const name = posix.basename(rel);
+    // The name is searched as a literal: glob characters are wrapped in a character class.
+    const literal = name.replace(/[\\*?[\]{}()!]/g, '[$&]');
+    const found = await vscode.workspace.findFiles(
+      new vscode.RelativePattern(folder, `**/${literal}`),
+      undefined,
+      50,
+    );
+    return found.filter((u) => u.path.endsWith(`/${rel}`)).map((u) => u.toString());
+  },
 };
 
 function disposable(d: vscode.Disposable): Disposable {
