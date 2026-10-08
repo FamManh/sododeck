@@ -50,3 +50,7 @@
 ## R9. Docs
 
 `docs/shared-folder.md` (new), both READMEs, the web app's export help (one string; found in tasks), `docs/backlog-3.md`, ADR 0053. Wording follows `AGENTS.md`: no other tools named; the notes app and the code editor are named only where the product names are needed (Obsidian and VS Code are the hosts' names).
+
+## Spike results
+
+- **S3** (copy picker on mobile): not done yet. The Obsidian command is built (`SuggestModal` over `.sododeck.json` files); a manual check on a phone is still to do.
