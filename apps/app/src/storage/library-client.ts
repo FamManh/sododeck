@@ -19,6 +19,7 @@ export interface LibraryClient {
   exportDeck(
     updates: Uint8Array[],
     pictures?: Map<string, Uint8Array>,
+    format?: 'json' | 'markdown',
   ): Promise<{ json: string; name: string }>;
   rename(updates: Uint8Array[], name: string): Promise<{ delta: Uint8Array; summary: DeckSummary }>;
   duplicate(
@@ -69,7 +70,8 @@ export function createLibraryClient(): LibraryClient {
     importFile: (text, name) =>
       send({ op: 'import', text, ...(name === undefined ? {} : { name }) }),
     importMermaid: (text) => send({ op: 'importMermaid', text }),
-    exportDeck: (updates, pictures) => send({ op: 'export', updates, pictures }),
+    exportDeck: (updates, pictures, format) =>
+      send({ op: 'export', updates, pictures, ...(format === undefined ? {} : { format }) }),
     rename: (updates, name) => send({ op: 'rename', updates, name }),
     duplicate: (updates, name) => send({ op: 'duplicate', updates, name }),
     terminate() {

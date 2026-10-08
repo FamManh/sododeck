@@ -94,10 +94,10 @@ the editor hides what the host cannot do, as `features.ts` does for browser APIs
 
 ### Founder decisions (decided 2026-10-07: all three as recommended)
 
-| #   | Question                                   | Decision                                                                                                                                                                                               |
-| --- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| H1  | How the editor runs inside a host          | **An iframe in every host.** VS Code requires a webview (an iframe). In Obsidian, mounting React into its DOM would leak Tailwind's preflight and `:root` tokens and Radix portals into the host's UI. |
-| H2  | Where pictures live when a file is on disk | **Host decides; file can reference.** Make `assets[id].data` optional and add a relative `path` (068), so a host can keep pictures as sibling files or vault attachments.                              |
+| #   | Question                                   | Decision                                                                                                                                                                                                                                                                                                                                                                    |
+| --- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H1  | How the editor runs inside a host          | **An iframe in every host.** VS Code requires a webview (an iframe). In Obsidian, mounting React into its DOM would leak Tailwind's preflight and `:root` tokens and Radix portals into the host's UI.                                                                                                                                                                      |
+| H2  | Where pictures live when a file is on disk | **Host decides; file can reference.** Make `assets[id].data` optional and add a relative `path` (068), so a host can keep pictures as sibling files or vault attachments.                                                                                                                                                                                                   |
 | H3  | File name in Obsidian                      | **Both, `.sododeck.md` recommended** (amended by the founder, 2026-10-07, in the 070 spec). `.sododeck.md` is a Markdown note (readable text + the full deck as a JSON block) so search, backlinks and picture links that the app rewrites on a move all work; plain `.sododeck` is also registered and opens and edits too. `.sododeck.json` is not supported in Obsidian. |
 
 ## Dependency graph
@@ -273,8 +273,14 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ## 070-obsidian-plugin
 
-- **Status:** specified and planned (2026-10-07) — see [`spec.md`](../specs/070-obsidian-plugin/spec.md)
-  and [`plan.md`](../specs/070-obsidian-plugin/plan.md). The founder changed the scope in the
+- **Status:** implemented in code (2026-10-07), real-app checks open — see
+  [`spec.md`](../specs/070-obsidian-plugin/spec.md), [`plan.md`](../specs/070-obsidian-plugin/plan.md),
+  ADR [0051](decisions/0051-deck-markdown-form.md) and [0052](decisions/0052-obsidian-plugin.md),
+  [`apps/obsidian/`](../apps/obsidian/) and the release checklist
+  [`docs/release/obsidian-plugin.md`](release/obsidian-plugin.md). Phase A (the Markdown form in the
+  model and the web app) and phase B (the plugin) are both built and unit-tested; spikes S1, S3, S4
+  and every phone check wait for a real Obsidian (`specs/070-obsidian-plugin/research.md`, "Spike
+  results"). The founder changed the scope in the
   clarification: decks in a vault are Markdown notes (`.sododeck.md`); the former "Later" item is
   now part of this feature. The spec and plan replace the draft below where they differ.
 - **Milestone:** after 069 · **Depends on:** 066, 067, 068 (069 is the pattern, not a code
@@ -297,7 +303,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   - Pictures: new ones go to the vault's attachment location (the app's own setting) and are linked
     from the note by a link the app rewrites on move or rename; one setting keeps them embedded.
     Plain `.sododeck` keeps pictures embedded. Refuse picture paths outside the vault (068 FR-014).
-  - Theme follows the app's light / dark class; "New Sododeck deck" command and folder-menu entry.
+  - Theme follows the app's light / dark class; "New Sododeck" command and folder-menu entry.
   - Release through the community plugin list (manifest, versions file, three release assets).
 - **Out of scope:** `.sododeck.json` in Obsidian, conversion commands (the web app converts),
   clicking a `[[link]]` from a card to open a note, a deck preview inside a note, "Open in
@@ -323,6 +329,44 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
 
 ---
 
+## 071-shared-vault-decks
+
+- **Status:** not started (added 2026-10-07, founder request).
+- **Milestone:** after 070 · **Depends on:** 069 (VS Code extension), 070 (the `.sododeck.md` form
+  and the Obsidian plugin) · **Estimate:** 2–3 d
+- **Goal:** one folder of decks that opens as a canvas in both Obsidian and VS Code, with the
+  Obsidian-only gains (search by card text, backlinks, pictures that follow moves) kept.
+- **In scope (two parts, both built):**
+  1. **Cross-tool plain file.** `.sododeck` is the format that already opens in both hosts. Say so
+     where users look (the READMEs of both hosts, the web app's export help, `docs/`), and give
+     a one-step way to bring `.sododeck.json` files in (rename; a command in each host that
+     copies a `.sododeck.json` to a `.sododeck`). No code change to the formats.
+  2. **`.sododeck.md` in VS Code.** The extension also opens `*.sododeck.md` as the canvas, when
+     the front matter carries the marker (an ordinary Markdown file stays in the text editor, and
+     "Open as text" keeps working). Reads through `fromMarkdown`, saves through
+     `toMarkdown(deckText, previous)` so text the user wrote outside the owned region survives;
+     the readable part is regenerated on save. Pictures: the VS Code host keeps its own picture
+     rules (sibling folder, 069); a note's `[[link]]` list is written for Obsidian only when the
+     picture is a plain relative path (decision needed, see questions).
+- **Out of scope:** the skill (027) writing or checking `.sododeck.md`; Obsidian-style link
+  rewriting in VS Code.
+- **Acceptance criteria:**
+  - Given one folder, When it is opened as an Obsidian vault and as a VS Code workspace, Then a
+    `.sododeck` file opens as the canvas in both and an edit in one shows in the other within a second
+    (VS Code saves on its normal save).
+  - Given a `.sododeck.md` note, When it is opened in VS Code, Then it shows the canvas; When the
+    user types a paragraph after the generated region and edits on the canvas, Then the paragraph
+    is still there and Obsidian still opens the note as a deck.
+  - Given a Markdown file without the marker, When it is opened in VS Code, Then it stays a text file.
+  - Given a card title edited as text in the note, When the note is open in VS Code, Then the canvas
+    shows it in place.
+- **Questions for the founder:** how a picture added in VS Code is stored for a `.sododeck.md`
+  (sibling file with a plain relative path that Obsidian resolves, or embedded); whether the new-deck
+  command in VS Code creates `.sododeck` or `.sododeck.md`.
+- **Spec Kit:** `/speckit.specify` with this section.
+
+---
+
 ## Later (not scheduled)
 
 - **Three-way merge for outside changes** (deferred from 066, founder 2026-10-07: editing the
@@ -331,7 +375,7 @@ Order: **066 → 067 → 068 → 069 → 070**. 068 can run in parallel with 067
   user's unsaved edits; an object removed by one side and edited by the other is kept with the
   edit. Do it when users report lost edits, or when 065 needs whole-deck `edit_deck` with
   `baseRevision`.
-- **`.sododeck.md` in other hosts and tools:** the code-editor extension (069) and the skill (027) open and validate the Markdown form too. (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
+- **`.sododeck.md` in other hosts and tools:** the code-editor extension (069, now 071) and the skill (027) open and validate the Markdown form too. (The form itself and its Obsidian use moved into 070, founder 2026-10-07.)
 - **`.sododeck.svg`** / **`.sododeck.png`**: an image file that also carries the deck, so it renders
   on code hosts and in Markdown previews and still opens for editing.
 - **Links to notes and code:** a card or note links to a vault note or a workspace file and the

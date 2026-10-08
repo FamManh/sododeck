@@ -204,6 +204,19 @@ describe('Inspector', () => {
     });
     downloadBlob.mockRestore();
   });
+
+  it('also offers the .sododeck.md note form next to the .sododeck export (070)', async () => {
+    const downloadBlob = vi.spyOn(download, 'downloadBlob').mockImplementation(() => undefined);
+    const { user } = setup();
+    await user.click(screen.getByRole('tab', { name: 'General' }));
+    expect(screen.getByRole('button', { name: 'Export .sododeck' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Export .sododeck.md' }));
+    await waitFor(() => {
+      expect(downloadBlob).toHaveBeenCalled();
+    });
+    expect((await savedFile(downloadBlob)).name).toBe('Shop.sododeck.md');
+    downloadBlob.mockRestore();
+  });
 });
 
 describe('Inspector database routing (052)', () => {

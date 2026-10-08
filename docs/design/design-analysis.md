@@ -600,7 +600,7 @@ No motion tokens exist yet. ➕ Add to `packages/ui` (CSS custom properties + TS
 | ---------------------- | ------------------------------------------------------------- | ------------------------------------------------- |
 | `--sd-dur-dim`         | 250 ms, ease (default)                                        | opacity of dimmed nodes/edges (focus, flow, view) |
 | `--sd-dur-ring`        | 200 ms                                                        | node selection box-shadow; tour dot width         |
-| `--sd-flow-token-loop` | 1400 ms ÷ speed, linear, infinite                             | token travelling along the current edge           |
+| `--sd-flow-token-loop` | 1700 ms ÷ speed, linear, infinite                             | token travelling along the current edge           |
 | `--sd-flow-step`       | 1700 ms ÷ speed                                               | autoplay step interval (1× / 2× → 850 ms)         |
 | `--sd-toast`           | 2600 ms                                                       | toast auto-dismiss                                |
 | autosave debounce      | 650 ms (design) — **spec G-1/NFR says persist within 500 ms** | "Saving…" → "Saved in this browser"               |
@@ -825,7 +825,7 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
 
 - Open a flow from the left panel, the palette, ⌘K, an edge's "Used in flows" or a rule's "Used in".
 - The flow's edges turn orange, everything else dims; the current step's edge is thicker, its label
-  solid orange, and a token loops along it (1.4 s at 1×).
+  solid orange, and a token loops along it (1.7 s at 1×).
 - ← / → step backward/forward (not while typing); prev/next buttons; click a step row, a progress
   segment, a flow edge or a flow node to jump.
 - Play advances every 1.7 s (0.85 s at 2×) and stops on the last step; play on the last step

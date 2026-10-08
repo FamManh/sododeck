@@ -55,7 +55,7 @@ describe('FlowToken (035)', () => {
     draw('2', 2);
     const motion = screen.getByTestId('flow-token').querySelector('animateMotion');
     expect(motion).toHaveAttribute('path', 'M 0 0 L 100 0');
-    expect(motion).toHaveAttribute('dur', '700ms');
+    expect(motion).toHaveAttribute('dur', '850ms');
   });
 
   it('is static at the label midpoint, still numbered, under reduced motion', () => {

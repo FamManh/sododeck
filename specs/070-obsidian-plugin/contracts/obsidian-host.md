@@ -20,11 +20,11 @@ Normative text for the plugin's host side. Protocol: `packages/host-protocol` (0
 
 ## Files and views
 
-| File | Recognised by | View | Codec |
-| --- | --- | --- | --- |
-| `*.sododeck` | extension registration (`registerExtensions(['sododeck'])`) | deck view | passthrough (canonical JSON text) |
-| `*.md` with front matter `sododeck-plugin: parsed` | marker via the metadata cache, then the leaf's view is swapped | deck view | `toMarkdown` / `fromMarkdown` |
-| any other Markdown file, `.sododeck.json`, any other file | not ours | the app's own | n/a |
+| File                                                      | Recognised by                                                  | View          | Codec                             |
+| --------------------------------------------------------- | -------------------------------------------------------------- | ------------- | --------------------------------- |
+| `*.sododeck`                                              | extension registration (`registerExtensions(['sododeck'])`)    | deck view     | passthrough (canonical JSON text) |
+| `*.md` with front matter `sododeck-plugin: parsed`        | marker via the metadata cache, then the leaf's view is swapped | deck view     | `toMarkdown` / `fromMarkdown`     |
+| any other Markdown file, `.sododeck.json`, any other file | not ours                                                       | the app's own | n/a                               |
 
 - A leaf with state `sododeckSource: true` stays a Markdown view (the user chose "Open this deck as Markdown"). Removing the marker returns the view to Markdown.
 - The deck view is a `TextFileView`. `getViewData()` returns the text to write; `setViewData(data, clear)` receives the file text; `clear()` destroys the frame state.
@@ -39,19 +39,19 @@ Normative text for the plugin's host side. Protocol: `packages/host-protocol` (0
 
 ## Session: events ↔ messages
 
-| Trigger | Host does | Message |
-| --- | --- | --- |
-| frame sends `ready` | decode the file (codec), read theme, compute capabilities | → `init { protocolVersion: 1, text, theme, capabilities }` |
-| `ready` with another version | nothing (the editor shows "update the plugin" and sends `fatal`); the host shows a `Notice` naming which side to update | – |
-| `change { seq, text }` | encode (codec), compare with last written/read; if different: set view data, `save()`, remember it as last | → `change-result { seq, ok }` after the write; `ok: false, reason` on failure |
-| view unload, close, app hidden, app quit | `flush` → await `flushed` (1.5 s) → write the pending text | → `flush { requestId }` |
-| file changed in the vault (`setViewData(data, false)`) | decode; compare the deck text with the last sent/received; if different: | → `external-change { text }` |
-| decode fails (no deck block, not JSON) | show the problems in the frame by sending the raw text? **No**: a Markdown file whose deck block cannot be read is shown as an error pane by the view (plain reason + "Open as Markdown"); no message | – |
-| app theme class changes (`css-change`) | re-read `theme-dark` | → `theme { scheme }` |
-| setting `pictureStorage` changes while open | recompute capabilities; if changed | → second `init` with the same text and new capabilities |
-| `picture-put { id, mime, name, bytes }` | picture rules below | → `picture-stored { id, path }` or `picture-store-failed { id, reason }` |
-| `picture-get { id }` | picture rules below | → `picture { id, mime, bytes }` or `picture-missing { id, reason }` |
-| frame sends `open-link` / `export-file` | never (capabilities false); ignore | – |
+| Trigger                                                | Host does                                                                                                                                                                                             | Message                                                                       |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| frame sends `ready`                                    | decode the file (codec), read theme, compute capabilities                                                                                                                                             | → `init { protocolVersion: 1, text, theme, capabilities }`                    |
+| `ready` with another version                           | nothing (the editor shows "update the plugin" and sends `fatal`); the host shows a `Notice` naming which side to update                                                                               | –                                                                             |
+| `change { seq, text }`                                 | encode (codec), compare with last written/read; if different: set view data, `save()`, remember it as last                                                                                            | → `change-result { seq, ok }` after the write; `ok: false, reason` on failure |
+| view unload, close, app hidden, app quit               | `flush` → await `flushed` (1.5 s) → write the pending text                                                                                                                                            | → `flush { requestId }`                                                       |
+| file changed in the vault (`setViewData(data, false)`) | decode; compare the deck text with the last sent/received; if different:                                                                                                                              | → `external-change { text }`                                                  |
+| decode fails (no deck block, not JSON)                 | show the problems in the frame by sending the raw text? **No**: a Markdown file whose deck block cannot be read is shown as an error pane by the view (plain reason + "Open as Markdown"); no message | –                                                                             |
+| app theme class changes (`css-change`)                 | re-read `theme-dark`                                                                                                                                                                                  | → `theme { scheme }`                                                          |
+| setting `pictureStorage` changes while open            | recompute capabilities; if changed                                                                                                                                                                    | → second `init` with the same text and new capabilities                       |
+| `picture-put { id, mime, name, bytes }`                | picture rules below                                                                                                                                                                                   | → `picture-stored { id, path }` or `picture-store-failed { id, reason }`      |
+| `picture-get { id }`                                   | picture rules below                                                                                                                                                                                   | → `picture { id, mime, bytes }` or `picture-missing { id, reason }`           |
+| frame sends `open-link` / `export-file`                | never (capabilities false); ignore                                                                                                                                                                    | –                                                                             |
 
 Capabilities declared: `openLinks: false`, `exportFiles: false`, `pictures: true` only when the setting is `attachments` **and** the open file is a `.sododeck.md` note, else `false`.
 
@@ -83,13 +83,13 @@ Never sent: any message for a change that equals the file already on disk; `exte
 
 ## Commands, menu, settings
 
-| Entry point | Title | Does |
-| --- | --- | --- |
-| Command palette | `New Sododeck deck` | create `<folder of active file or vault root>/Untitled deck.sododeck.md` (numbered if taken, never overwrite) from the empty deck, open it |
-| Folder menu in the file list (`file-menu` for a folder) | `New Sododeck deck` | same, in that folder |
-| Command palette (when the active leaf is a deck) | `Open this deck as Markdown` | leaf state `sododeckSource: true`, reopen as Markdown |
-| Command palette (when the active leaf is a deck note shown as Markdown) | `Open this deck as canvas` | clear the flag, swap |
-| Settings tab "Sododeck" | `Save new pictures` | `In the attachment folder (recommended)` / `Inside the deck file`; default the first; nothing else |
+| Entry point                                                             | Title                        | Does                                                                                                                                       |
+| ----------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Command palette                                                         | `New Sododeck deck`          | create `<folder of active file or vault root>/Untitled deck.sododeck.md` (numbered if taken, never overwrite) from the empty deck, open it |
+| Folder menu in the file list (`file-menu` for a folder)                 | `New Sododeck deck`          | same, in that folder                                                                                                                       |
+| Command palette (when the active leaf is a deck)                        | `Open this deck as Markdown` | leaf state `sododeckSource: true`, reopen as Markdown                                                                                      |
+| Command palette (when the active leaf is a deck note shown as Markdown) | `Open this deck as canvas`   | clear the flag, swap                                                                                                                       |
+| Settings tab "Sododeck"                                                 | `Save new pictures`          | `In the attachment folder (recommended)` / `Inside the deck file`; default the first; nothing else                                         |
 
 ## Notices (plain words)
 
@@ -100,4 +100,6 @@ Never sent: any message for a change that equals the file already on disk; `exte
 
 ## Bundle guard (`scripts/check-bundle.ts`, run after build)
 
-Fails if `main.js`: contains `fetch(`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `navigator.sendBeacon`, `importScripts` with a URL, `http://` or `https://` URLs other than allow-listed documentation strings in comments/license text, any `posthog`/`sentry`/analytics marker, or the embed's forbidden markers from `apps/app/scripts/check-embed-bundle.mjs`; if the embed HTML inside has an absolute `src`/`href`; or if `main.js` exceeds the size budget. Passes only on exact release asset names.
+Implemented as: the plugin's **own code** (`main.js` with the page left out) fails on `fetch(`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `sendBeacon`, `requestUrl`, an analytics marker, `importScripts` with a URL, or a remote `http(s)://` URL other than the schema's own id, the JSON Schema dialect ids and XML namespaces. The **inlined page** fails on any `src`/`href`/`srcset` attribute, a `url()` that is not a data URL, `@import`, the embed's forbidden markers (`apps/app/scripts/check-embed-bundle.mjs`), and a Content-Security-Policy that is missing, does not start from `default-src 'none'`, or lets `connect-src` (or any source) reach a remote origin. The release folder `release/` must hold exactly `main.js`, `manifest.json`, `styles.css`, and `main.js` must be within the size budget (16 MiB). The page's third-party libraries (code editor, layout engine) mention `fetch(` and `WebSocket` in paths this page never runs, so text matching is not applied to them; the policy contains them (measured: a blocked `fetch` in the real page).
+
+(The first draft applied every text check to all of `main.js`; that cannot pass with those libraries inside.)

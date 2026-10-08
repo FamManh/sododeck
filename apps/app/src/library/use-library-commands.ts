@@ -22,7 +22,7 @@ export interface LibraryCommands {
   startRename: (deck: DeckRecord) => void;
   duplicate: (deck: DeckRecord) => Promise<void>;
   move: (deck: DeckRecord, folderId: string | null) => Promise<void>;
-  exportDeck: (deck: DeckRecord) => Promise<void>;
+  exportDeck: (deck: DeckRecord, format?: 'json' | 'markdown') => Promise<void>;
   requestDelete: (deck: DeckRecord) => void;
   undo: () => Promise<void>;
 }
@@ -61,9 +61,9 @@ export function useLibraryCommands(): LibraryCommands | null {
       move: async (deck, folderId) => {
         await moveDeckTo(ctx, deck.id, folderId);
       },
-      exportDeck: async (deck) => {
+      exportDeck: async (deck, format) => {
         try {
-          await exportDeckFile(ctx, deck.id);
+          await exportDeckFile(ctx, deck.id, format);
         } catch (error) {
           failed(error);
         }

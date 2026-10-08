@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./report-json": "./src/report-json.ts"
+    "./report-json": "./src/report-json.ts",
+    "./markdown-marker": "./src/markdown-marker.ts"
   },
   "scripts": {
     "lint": "eslint .",

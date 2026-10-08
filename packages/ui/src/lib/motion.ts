@@ -24,7 +24,7 @@ export const MOTION = {
   dimMs: 250,
   ringMs: 200,
   overlayMs: 120,
-  tokenLoopMs: 1400,
+  tokenLoopMs: 1700,
   stepMs: 1700,
   toastMs: 2600,
   toastUndoMs: 6000,

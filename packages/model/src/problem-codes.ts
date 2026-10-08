@@ -7,6 +7,7 @@
  */
 import type { IssueCode } from '@sododeck/schema';
 
+import { MD_PROBLEMS, type MdProblemCode } from './markdown-problems';
 import { SEVERITY, type ProblemKind, type Severity } from './problems';
 
 /** Where a construct of another format went (062 FR-013). */
@@ -97,6 +98,7 @@ export type Code =
   | 'picture-damaged'
   | 'picture-file-ref'
   | 'crop-trimmed'
+  | MdProblemCode
   | ProblemKind
   | 'orphan'
   | FidelityCode
@@ -160,6 +162,19 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
   'unsupported-version': file(
     'Newer file format',
     'Open it in a newer Sododeck, or write it for format version 1.',
+  ),
+  'md-no-marker': file(MD_PROBLEMS['md-no-marker'].title, MD_PROBLEMS['md-no-marker'].fix),
+  'md-no-deck-block': file(
+    MD_PROBLEMS['md-no-deck-block'].title,
+    MD_PROBLEMS['md-no-deck-block'].fix,
+  ),
+  'md-deck-block-not-json': file(
+    MD_PROBLEMS['md-deck-block-not-json'].title,
+    MD_PROBLEMS['md-deck-block-not-json'].fix,
+  ),
+  'md-two-deck-blocks': file(
+    MD_PROBLEMS['md-two-deck-blocks'].title,
+    MD_PROBLEMS['md-two-deck-blocks'].fix,
   ),
   'schema-required': file('Missing key', 'Add the missing key with a value of the expected type.'),
   'schema-type': file('Wrong type', 'Change the value to the expected type.'),

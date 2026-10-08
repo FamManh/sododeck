@@ -20,7 +20,7 @@ export function inProcessLibraryClient(): LibraryClient {
     create: (name) => run(() => ops.create(name)),
     importFile: (text, name) => run(() => ops.importFile(text, name)),
     importMermaid: (text) => run(() => ops.importMermaid(text)),
-    exportDeck: (updates, pictures) => run(() => ops.exportDeck(updates, pictures)),
+    exportDeck: (updates, pictures, format) => run(() => ops.exportDeck(updates, pictures, format)),
     rename: (updates, name) => run(() => ops.rename(updates, name)),
     duplicate: (updates, name) => run(() => ops.duplicate(updates, name)),
     terminate: () => undefined,

@@ -118,6 +118,11 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - `meta.assets` entries are written for every picture the file lists and never removed (an undone image delete keeps its facts).
   - **Rule:** a new stored list or nested map must be added to the apply diff in `apply-file.ts`; `test/apply-file-roundtrip.test.ts` (every corpus pair, 200 generated edit rounds) fails otherwise.
 
+- **Added by 070** (the `.sododeck.md` note form, ADR 0051; contract: `specs/070-obsidian-plugin/contracts/markdown-form.md`): pure text in and out, **no Yjs** (`test/markdown-no-yjs.test.ts` follows the import graph of `src/markdown-form.ts`).
+  - `markdown-form.ts`: `toMarkdown(deckText, previous?)` wraps canonical deck JSON as a note (front matter marker, owned region with the readable part, picture list and the deck block; text outside the region, other front matter keys and foreign blocks come from `previous`); `fromMarkdown(markdown)` → `{ ok, deckText, edited }` or the four `md-*` entries (a block that parses but is not a valid deck is returned, not refused); `isDeckMarkdown(text)`, `emptyDeckText()`, `READABLE_FIELDS` (the one table of mirrored titles and prose fields: writer, reader and `test/markdown-fields-sync.test.ts` use it; a new long-text field in `text-fields.ts` is a failing test until the table or `READABLE_IGNORED` says what to do).
+  - `markdown-marker.ts` (also `@sododeck/model/markdown-marker`): `MARKER_KEY`, `MARKER_VALUE`, `isDeckMarkdown`; the library route's import uses only this so it loads no schema. `markdown-problems.ts`: the four problem codes, imported by the catalogue.
+  - Rules: reading applies title and prose edits **by id** (readable wins; an invalid new value is ignored; a present empty body clears an optional field); an edit counts only when it differs from what the writer would have produced for the block's value (`settledTitle` / `settledBody`), so formatting never makes false edits and the round trip is byte-exact. Ids never change. `%%` in text is written `%&#37;`, in the deck block `%\u0025`. 500-node deck: each way under 50 ms (tested). `is-record.ts` holds `isRecord` so `key-order.ts` needs no Yjs.
+
 ## Rules
 
 - Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case (`test/round-trip.test.ts`).
@@ -146,6 +151,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `dialect.ts` the deck's SQL dialect (040)
 - `schema-groups.ts` the derived schema group ids `schema:<name>` (048): `schemaGroupId`, `isSchemaGroupId`, `splitStoredGroups` (skips and reports a stored group in that namespace)
 - `fragment.ts` clipboard fragments (016)
+- `markdown-form.ts`, `markdown-marker.ts`, `markdown-problems.ts` the `.sododeck.md` form (070, no Yjs)
 
 ## Boundaries
 

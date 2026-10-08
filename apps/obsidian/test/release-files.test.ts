@@ -1,0 +1,58 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+import { describe, expect, it } from 'vitest';
+
+const text = (name: string): string =>
+  readFileSync(fileURLToPath(new URL(`../${name}`, import.meta.url)), 'utf8');
+const read = (name: string): unknown => JSON.parse(text(name));
+
+interface Manifest {
+  id: string;
+  name: string;
+  version: string;
+  minAppVersion: string;
+  description: string;
+  isDesktopOnly: boolean;
+}
+
+const manifest = read('manifest.json') as Manifest;
+const versions = read('versions.json') as Record<string, string>;
+const pkg = read('package.json') as { version: string };
+
+describe('release files (US7, FR-039)', () => {
+  it('versions.json maps the manifest version to its minimum app version', () => {
+    expect(versions[manifest.version]).toBe(manifest.minAppVersion);
+    for (const [version, min] of Object.entries(versions)) {
+      expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(min).toMatch(/^\d+\.\d+\.\d+$/);
+    }
+  });
+
+  it('the package version follows the manifest', () => {
+    expect(pkg.version).toBe(manifest.version);
+  });
+
+  it('the id has no forbidden word and the description follows the list rules', () => {
+    expect(manifest.id).toBe('sododeck');
+    expect(manifest.id.toLowerCase()).not.toContain('obsidian');
+    expect(manifest.name.toLowerCase()).not.toContain('obsidian');
+    expect(manifest.description).not.toMatch(/^this is a plugin/i);
+    expect(manifest.description.length).toBeLessThanOrEqual(250);
+    expect(manifest.description.endsWith('.')).toBe(true);
+  });
+
+  it('works on mobile, as the plan decided (nothing desktop-only is used)', () => {
+    expect(manifest.isDesktopOnly).toBe(false);
+  });
+
+  it('claims no more than the API used needs (getAvailablePathForAttachment is 1.5.7)', () => {
+    expect(manifest.minAppVersion).toBe('1.5.7');
+  });
+
+  it('the repository root carries identical copies for the community list', () => {
+    // The list reads manifest.json (and versions.json) at the root of the repository.
+    expect(text('../../manifest.json')).toBe(text('manifest.json'));
+    expect(text('../../versions.json')).toBe(text('versions.json'));
+  });
+});

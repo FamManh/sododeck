@@ -886,14 +886,14 @@ describe('DeckEdge in flow mode (007)', () => {
     expect(label).toHaveAttribute('data-in-flow');
     expect(label).toHaveAttribute('aria-current', 'step');
     const token = screen.getByTestId('flow-token');
-    expect(token.querySelector('animateMotion')).toHaveAttribute('dur', '1400ms');
+    expect(token.querySelector('animateMotion')).toHaveAttribute('dur', '1700ms');
   });
 
   it('loops twice as fast at 2×', () => {
     renderEdge({ flow: mark({ speed: 2, number: '2' }) });
     expect(screen.getByTestId('flow-token').querySelector('animateMotion')).toHaveAttribute(
       'dur',
-      '700ms',
+      '850ms',
     );
   });
 

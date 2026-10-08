@@ -19,6 +19,10 @@ The file cannot be read as a format v1 deck. Schema violations use one generic c
 | --- | --- | --- | --- |
 | `invalid-json` | error | Not JSON | Fix the JSON syntax at the given line and column (often a missing comma, quote or bracket). |
 | `unsupported-version` | error | Newer file format | Open it in a newer Sododeck, or write it for format version 1. |
+| `md-no-marker` | error | Not a Sododeck note | Add "sododeck-plugin: parsed" to the front matter, or export the deck again as .sododeck.md. |
+| `md-no-deck-block` | error | Deck data missing | Restore the deck data block from your sync history or backup, or export the deck again. |
+| `md-deck-block-not-json` | error | Deck data is not JSON | Fix the JSON syntax inside the "sododeck:data" block, or restore it from your sync history. |
+| `md-two-deck-blocks` | error | Two deck data blocks | Delete the extra "sododeck:data" block so exactly one remains. |
 | `schema-required` | error | Missing key | Add the missing key with a value of the expected type. |
 | `schema-type` | error | Wrong type | Change the value to the expected type. |
 | `schema-enum` | error | Value not allowed | Use one of the allowed values. |

@@ -6,12 +6,15 @@
 import {
   createEditor,
   fromJSON,
+  fromMarkdown,
+  isDeckMarkdown,
   inspectDeckText,
   NEW_DECK_PACKS,
   isLegacyLayout,
   problemReport,
   serializeDeck,
   toJSON,
+  toMarkdown,
   type DeckDoc,
   type ProblemEntry,
   type ProblemReport,
@@ -146,7 +149,21 @@ const REFUSAL_MESSAGE: Record<'invalid-json' | 'unsupported-version' | 'invalid-
  * throws `LibraryOpError` with the report of every problem found, and nothing is created. `name`
  * is the file name the reports carry.
  */
-export function importFile(text: string, name = 'deck file'): ImportedDeck {
+export function importFile(source: string, name = 'deck file'): ImportedDeck {
+  // A `.sododeck.md` note (070) is unwrapped to the deck's JSON first; everything after is the
+  // same as for a `.sododeck`. A note whose deck block is unreadable is refused with its entries.
+  let text = source;
+  if (isDeckMarkdown(source)) {
+    const read = fromMarkdown(source);
+    if (!read.ok) {
+      throw new LibraryOpError(
+        'invalid-deck',
+        REFUSAL_MESSAGE['invalid-deck'],
+        reportOf(name, 'refused', read.entries),
+      );
+    }
+    text = read.deckText;
+  }
   const result = inspectDeckText(text);
   if (!result.ok) {
     const first = result.entries[0]?.code;
@@ -192,11 +209,13 @@ export function importMermaid(text: string): MermaidImport {
 
 /**
  * The model's export of a stored deck (FR-025). `pictures` are the deck's blob rows: the file
- * embeds those its images use, and a picture with no bytes is written as missing (055).
+ * embeds those its images use, and a picture with no bytes is written as missing (055). `json` is
+ * the file's text: the deck JSON, or for `format: 'markdown'` the `.sododeck.md` note (070).
  */
 export function exportDeck(
   updates: readonly Uint8Array[],
   pictures: ReadonlyMap<string, Uint8Array> = new Map(),
+  format: 'json' | 'markdown' = 'json',
 ): { json: string; name: string } {
   const doc = load(updates);
   // A deck stored before ADR 0041 and not opened since may still pin notes: the file never does.
@@ -204,7 +223,11 @@ export function exportDeck(
   editor.freeLegacyStickies();
   editor.destroy();
   const file = toJSON(doc);
-  return { json: serializeDeck(file, pictures), name: file.name ?? 'Untitled deck' };
+  const json = serializeDeck(file, pictures);
+  return {
+    json: format === 'markdown' ? toMarkdown(json) : json,
+    name: file.name ?? 'Untitled deck',
+  };
 }
 
 /** Renames through the model (research R6); returns only the change, to append to the log. */

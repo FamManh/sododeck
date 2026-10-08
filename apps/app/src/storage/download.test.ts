@@ -41,6 +41,20 @@ describe('deckFileName', () => {
   });
 });
 
+describe('deckFileName for the Markdown form (070)', () => {
+  it('names the file <name>.sododeck.md', () => {
+    expect(deckFileName('Payments', 'markdown')).toBe('Payments.sododeck.md');
+    expect(deckFileName('', 'markdown')).toBe('Untitled deck.sododeck.md');
+  });
+
+  it('strips any deck extension before adding its own', () => {
+    expect(deckFileName('Shop.sododeck', 'markdown')).toBe('Shop.sododeck.md');
+    expect(deckFileName('Shop.sododeck.json', 'markdown')).toBe('Shop.sododeck.md');
+    expect(deckFileName('Shop.sododeck.md', 'markdown')).toBe('Shop.sododeck.md');
+    expect(deckFileName('Shop.sododeck.md')).toBe('Shop.sododeck');
+  });
+});
+
 describe('downloadText', () => {
   it('downloads a supplied blob with its MIME type', async () => {
     const create = vi.fn(() => 'blob:svg');
