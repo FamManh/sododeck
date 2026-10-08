@@ -14,7 +14,11 @@ The plugin makes no network requests of any kind and reads and writes only files
 
 ## Bring a deck in
 
-Export from the Sododeck web app (**Export .sododeck.md**) and drop the file into your vault, or run the command **New Sododeck** (also in the folder menu of the file list).
+Export from the Sododeck web app (**Export .sododeck.md**) and drop the file into your vault, or run the command **New Sododeck** (also in the folder menu of the file list). To use an older `.sododeck.json` file, run the command **Copy .sododeck.json as .sododeck**: it makes a `.sododeck` next to it and leaves the original alone.
+
+## One folder, two tools
+
+Open the same folder as an Obsidian vault and as a VS Code workspace. A `.sododeck` file opens as a canvas in both. A `.sododeck.md` note adds search by card text, backlinks and links that follow moves here, and VS Code opens it as a canvas too. See [the shared folder guide](../../docs/shared-folder.md).
 
 ## Edit the text
 
@@ -26,7 +30,7 @@ Obsidian 1.5.7 or later, desktop and mobile.
 
 ## Known limits
 
-- `.sododeck.json` files are not supported here; rename them to `.sododeck`.
+- `.sododeck.json` files do not open here; copy them with **Copy .sododeck.json as .sododeck**.
 - Cards cannot link to other notes yet.
 - Obsidian's search also finds the generated deck data (ids and numbers), not only the readable text.
 

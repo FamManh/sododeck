@@ -52,7 +52,7 @@ export async function resolveInside(
   ports: GuardPorts,
   options: { kind?: 'picture' | 'link' } = {},
 ): Promise<Resolved> {
-  const { files, workspace } = ports;
+  const { files } = ports;
   const violation = checkPicturePath(relPath);
   // A link may be written `./a/../b.md`; the lexical join below settles it. Everything else the
   // picture rule refuses (absolute, drive letters, backslashes, control characters) stays refused.
@@ -61,8 +61,21 @@ export async function resolveInside(
     return { ok: false, reason: `The path ${PATH_VIOLATION_TEXT[violation]}` };
   }
 
+  return resolveLocInside(deckLoc, files.join(files.dirname(deckLoc), relPath), ports);
+}
+
+/**
+ * The same check for a location that is already known (a search result): its real location,
+ * links followed, must be inside the workspace, or inside the deck's own folder when the deck is
+ * outside every workspace folder.
+ */
+export async function resolveLocInside(
+  deckLoc: Loc,
+  target: Loc,
+  ports: GuardPorts,
+): Promise<Resolved> {
+  const { files, workspace } = ports;
   const deckFolder = files.dirname(deckLoc);
-  const target = files.join(deckFolder, relPath);
   const fold = (path: string): string => (files.caseInsensitive ? path.toLowerCase() : path);
 
   const [realTarget, realDeckFolder] = await Promise.all([

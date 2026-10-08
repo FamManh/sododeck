@@ -9,13 +9,19 @@ import type { EditorMessage, HostMessage, Transport } from '@sododeck/host-proto
 
 import type { DeckDocument } from './deck-document';
 import { DiskSync } from './disk-sync';
+import { describeProblems } from './file-codec';
 import { backupDocument, openDocument, revertDocument, saveDocument } from './document-ops';
 import { HostSession } from './host-session';
 import type { Ports } from './ports';
 import { saveDocumentAs } from './save-as';
 import { buildWebviewPage, makeNonce, messagePage } from './webview-html';
 
+/**
+ * Two view types, one provider: VS Code takes `priority` per contribution, and a note must be an
+ * option (R3) while `.sododeck` stays the default.
+ */
 export const VIEW_TYPE = 'sododeck.canvas';
+export const NOTE_VIEW_TYPE = 'sododeck.note';
 
 class DeckHandle implements vscode.CustomDocument {
   session: HostSession | null = null;
@@ -95,6 +101,13 @@ export class DeckEditorProvider implements vscode.CustomEditorProvider<DeckHandl
     const { webview } = panel;
     const media = vscode.Uri.joinPath(this.context.extensionUri, 'media');
     webview.options = { enableScripts: true, localResourceRoots: [media] };
+
+    if (handle.doc.problems !== null) {
+      // FR-012: an unreadable note is explained and left alone; no canvas, no session.
+      webview.html = messagePage(describeProblems(handle.doc.problems), webview.cspSource);
+      this.ports.ui.offerOpenAsText(handle.doc.loc);
+      return;
+    }
 
     if (handle.session !== null) {
       // FR-027: one canvas per file.

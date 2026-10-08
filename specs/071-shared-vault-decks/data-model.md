@@ -4,16 +4,16 @@ No change to the deck schema, the `.sododeck` file or the `.sododeck.md` form. H
 
 ## DeckDocument (VS Code, extended)
 
-| Field | Meaning |
-|-------|---------|
-| `loc` | the file's location |
-| `kind` | `plain` or `markdown`, from the name (`.md` suffix) |
-| `text` | the deck text the canvas last sent (or started with): always deck text |
-| `fileText` | the file text last read or written; `previous` for `toMarkdown` |
-| `savedDeckText` | `decode(fileText)`, what a clean document's `text` equals |
-| `lastWritten` | file text of our last save, to recognise its echo |
-| `problems` | set when a note cannot be decoded; the document is then read-only and never dirty |
-| `dirty` | `text !== savedDeckText \|\| missing` (unreadable: false) |
+| Field           | Meaning                                                                           |
+| --------------- | --------------------------------------------------------------------------------- |
+| `loc`           | the file's location                                                               |
+| `kind`          | `plain` or `markdown`, from the name (`.md` suffix)                               |
+| `text`          | the deck text the canvas last sent (or started with): always deck text            |
+| `fileText`      | the file text last read or written; `previous` for `toMarkdown`                   |
+| `savedDeckText` | `decode(fileText)`, what a clean document's `text` equals                         |
+| `lastWritten`   | file text of our last save, to recognise its echo                                 |
+| `problems`      | set when a note cannot be decoded; the document is then read-only and never dirty |
+| `dirty`         | `text !== savedDeckText \|\| missing` (unreadable: false)                         |
 
 Transitions:
 

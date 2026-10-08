@@ -30,16 +30,16 @@ Two parts. (1) Docs and one small command per host so a folder of `.sododeck` fi
 
 ## Constitution Check
 
-| Principle | Result |
-|-----------|--------|
-| I. Single source of truth | Pass. The Yjs doc stays in the embedded editor; hosts hold file text only. The codec holds no second copy of the deck. |
-| II. Schema-owned format, lossless round-trip | Pass. All Markdown conversion goes through `@sododeck/model`; no format change. Round-trip across hosts is tested on shared fixtures (FR-017). |
-| III. Stable identity | Pass. Nothing derives ids from titles; picture links stay keyed by asset id. |
-| IV. Local-first, private | Pass. No network; picture reads stay inside the workspace (`workspace-guard`); the bundle check keeps failing the build on network APIs. |
-| V. Performance off main thread | Pass (n/a). No canvas change; no `pnpm bench` needed. |
-| VI. Strict types, tested | Pass. Unit tests for the codec, document, disk sync, commands, link resolution; no new e2e (smoke suite must stay green). |
-| VII. Accessible | Pass. Commands are palette-reachable; messages are plain text. |
-| VIII. Simplicity, dependencies | Pass. No new dependency. One new ADR (0053). The Markdown codec is copied in shape from the Obsidian host rather than shared, because hosts may not import each other (spec 0050/0052 boundaries); the 20-line duplication is accepted. |
+| Principle                                    | Result                                                                                                                                                                                                                                  |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| I. Single source of truth                    | Pass. The Yjs doc stays in the embedded editor; hosts hold file text only. The codec holds no second copy of the deck.                                                                                                                  |
+| II. Schema-owned format, lossless round-trip | Pass. All Markdown conversion goes through `@sododeck/model`; no format change. Round-trip across hosts is tested on shared fixtures (FR-017).                                                                                          |
+| III. Stable identity                         | Pass. Nothing derives ids from titles; picture links stay keyed by asset id.                                                                                                                                                            |
+| IV. Local-first, private                     | Pass. No network; picture reads stay inside the workspace (`workspace-guard`); the bundle check keeps failing the build on network APIs.                                                                                                |
+| V. Performance off main thread               | Pass (n/a). No canvas change; no `pnpm bench` needed.                                                                                                                                                                                   |
+| VI. Strict types, tested                     | Pass. Unit tests for the codec, document, disk sync, commands, link resolution; no new e2e (smoke suite must stay green).                                                                                                               |
+| VII. Accessible                              | Pass. Commands are palette-reachable; messages are plain text.                                                                                                                                                                          |
+| VIII. Simplicity, dependencies               | Pass. No new dependency. One new ADR (0053). The Markdown codec is copied in shape from the Obsidian host rather than shared, because hosts may not import each other (spec 0050/0052 boundaries); the 20-line duplication is accepted. |
 
 Re-check after design: unchanged.
 

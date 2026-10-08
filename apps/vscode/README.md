@@ -8,11 +8,11 @@ Sododeck is local-first: the extension makes **no network requests, sends no tel
 
 ## Getting started
 
-1. Run **Sododeck: New Sododeck deck** from the Command Palette (or right-click a folder in the Explorer).
+1. Run **Sododeck: New Sododeck** from the Command Palette (or right-click a folder in the Explorer).
 2. Draw on the canvas. The tab shows it has changed, like any file.
 3. Save with `Cmd/Ctrl+S`. Commit the `.sododeck` file with your code.
 
-Any existing `*.sododeck` or `*.sododeck.json` file opens as a canvas automatically.
+Any existing `*.sododeck` or `*.sododeck.json` file opens as a canvas automatically. A `*.sododeck.md` note (the Markdown form Obsidian uses) opens as a canvas too.
 
 ## Features
 
@@ -28,6 +28,10 @@ After a `git pull`, a branch switch, or a tool or AI agent rewriting the file, t
 
 By default pictures are stored inside the deck file. Switch the setting to save new pictures as image files in a folder next to the deck (`my-deck.assets/`), which keeps the deck small and the pictures reviewable in a pull request. Pictures are only read or written inside your workspace.
 
+### One folder, two tools
+
+Open the same folder in VS Code and in Obsidian. A `.sododeck` file opens as a canvas in both, and an edit in one shows up in the other within a second. A `.sododeck.md` note adds search by card text, backlinks and links that follow moves in Obsidian, and VS Code opens it as a canvas as well. Text you write outside the generated part of a note is kept when you save. A note that is not a Sododeck note (no marker) stays a normal text file, and **Open as text** shows the Markdown of any note. See [the shared folder guide](../../docs/shared-folder.md).
+
 ### Light and dark
 
 The canvas follows your VS Code color theme and switches live.
@@ -42,7 +46,9 @@ No network requests, no telemetry, no accounts. Everything the canvas needs ship
 
 | Command                            | What it does                                                                                            |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Sododeck: New Sododeck deck**    | Creates an empty deck and opens it. Never overwrites an existing file.                                  |
+| **Sododeck: New Sododeck**         | Creates an empty `.sododeck` deck and opens it. Never overwrites an existing file.                      |
+| **Sododeck: New Sododeck note**    | Creates an empty `.sododeck.md` note and opens it. Never overwrites an existing file.                   |
+| **Sododeck: Copy as .sododeck**    | Copies a `.sododeck.json` file to a `.sododeck` file next to it. The original stays as it is.           |
 | **Sododeck: Open in Sododeck web** | Shows the file in your file manager and opens the web app in your browser, so you can drag the file in. |
 | **Sododeck: Open as text**         | Opens the raw JSON of the current deck in the text editor.                                              |
 
@@ -58,7 +64,7 @@ No network requests, no telemetry, no accounts. Everything the canvas needs ship
 
 ## Restricted Mode
 
-In an untrusted workspace the canvas still opens and saves the deck. Picture files next to the deck are not read or written until you trust the workspace.
+In an untrusted workspace the canvas still opens and saves the deck or note. Picture files next to the deck are not read or written until you trust the workspace.
 
 ## Limits
 

@@ -134,6 +134,11 @@ export class FakeFiles implements FilePort {
   join(loc: Loc, rel: string): Loc {
     return normalize(`${loc}/${rel}`);
   }
+
+  /** Every file whose location ends with `/<rel>`, anywhere; the host's guard narrows it. */
+  async findByPathEnd(_loc: Loc, rel: string): Promise<Loc[]> {
+    return [...this.data.keys()].filter((key) => key.endsWith(`/${rel}`));
+  }
 }
 
 export class FakeClock implements ClockPort {
