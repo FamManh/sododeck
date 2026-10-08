@@ -31,4 +31,4 @@
 
 ## Notes
 
-- The backlog's two founder questions (picture storage, new-deck default) are answered with the backlog's recommended options and recorded in Clarifications and Assumptions for the founder to confirm.
+- Both founder questions were answered 2026-10-08 (picture storage: option A; new-deck default: `.sododeck`, command renamed "New Sododeck"); recorded in Clarifications.

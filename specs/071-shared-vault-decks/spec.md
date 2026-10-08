@@ -26,8 +26,8 @@ This feature closes both gaps in two parts:
 
 ### Session 2026-10-08
 
-- Q: How is a picture added in VS Code stored for a `.sododeck.md`? → A: Same rule as VS Code's plain decks (069): with "save next to the deck" on, the picture goes to a sibling folder and the deck points at it by a plain relative path, which Obsidian resolves and tracks; otherwise it stays embedded in the file. The note's picture link list (the part Obsidian keeps up to date when files move) is written only for plain relative paths; an embedded picture needs no link. *(Assumed default from the backlog's first option; founder may overrule.)*
-- Q: Does the VS Code "new deck" command create `.sododeck` or `.sododeck.md`? → A: `.sododeck` stays the default (it opens in every host and tool). A second command, "New Sododeck note", creates a `.sododeck.md`. *(Assumed default; founder may overrule.)*
+- Q: How is a picture added in VS Code stored for a `.sododeck.md`? → A: Same rule as VS Code's plain decks (069): with "save next to the deck" on, the picture goes to a sibling folder and the deck points at it by a plain relative path, which Obsidian resolves and tracks; otherwise it stays embedded in the file. The note's picture link list (the part Obsidian keeps up to date when files move) is written only for plain relative paths; an embedded picture needs no link. *(Confirmed by the founder, 2026-10-08.)*
+- Q: Does the VS Code "new deck" command create `.sododeck` or `.sododeck.md`? → A: `.sododeck` stays the default (it opens in every host and tool). A second command, "New Sododeck note", creates a `.sododeck.md`. The default command is renamed from "New Sododeck deck" to "New Sododeck" in both hosts (the last word is dropped). *(Confirmed by the founder, 2026-10-08.)*
 - Q: Does VS Code take over every Markdown file? → A: No. Only a `.sododeck.md` file whose front matter carries the Sododeck marker opens as a canvas. Any other Markdown file stays in the text editor, and "Open as text" works on a deck note as on any other deck.
 - Q: Does the skill (027) or Obsidian-style link rewriting come with this? → A: No, both are out of scope (backlog).
 
@@ -149,7 +149,7 @@ The user adds a picture to a deck note in VS Code and later opens the note in Ob
 - **FR-010**: The extension MUST write a note only in response to the editor's save, save as, or a new-note command, never on open or close (069 FR-010).
 - **FR-011**: When the note changes on disk, the canvas MUST update in place without losing selection, viewport or undo history (066), with the file winning over unsaved edits and a one-line notice if edits were replaced.
 - **FR-012**: A note that cannot be read MUST show a plain message and offer "Open as text"; the file MUST NOT be changed.
-- **FR-013**: The extension MUST provide a "New Sododeck note" command that creates a `.sododeck.md`; the existing "New Sododeck deck" command MUST keep creating a `.sododeck`.
+- **FR-013**: The extension MUST provide a "New Sododeck note" command that creates a `.sododeck.md`; the default command MUST be named "New Sododeck" (renamed from "New Sododeck deck", in the VS Code extension and in the Obsidian plugin, in command palette, folder menu, docs and READMEs) and MUST keep creating a `.sododeck`.
 - **FR-014**: For a note, pictures MUST follow the extension's existing picture rules (sibling folder when "save next to the deck" is on, otherwise embedded; nothing read or written in an untrusted workspace; nothing outside the workspace).
 - **FR-015**: When a picture of a note is stored as a plain relative path inside the workspace, the note's link list MUST include a link to it that Obsidian resolves; other pictures MUST have no link written.
 - **FR-016**: Link rewriting as Obsidian does it (on a move inside VS Code) is NOT done; a picture moved in VS Code shows as missing with a plain reason until it is moved back or re-added.
@@ -180,7 +180,7 @@ The user adds a picture to a deck note in VS Code and later opens the note in Ob
 ## Assumptions
 
 - Both hosts (069, 070) and the Markdown form with its reader and writer (070) are built and merged.
-- Picture storage and new-deck defaults in Clarifications are the backlog's recommended options, assumed until the founder says otherwise; changing them changes only FR-013 and FR-014/FR-015.
+- Picture storage (FR-014/FR-015) and the new-deck default and name (FR-013) are confirmed by the founder (2026-10-08).
 - `.sododeck.json` support in the hosts is limited to the one-step copy command; neither host registers that name as a canvas.
 - Out of scope: the skill (027) writing or checking `.sododeck.md`; rewriting links in VS Code; links from cards to notes; deck previews inside notes.
 - The marker, the generated region and the reader/writer behave as specified in 070; this feature adds no new rule to them.
